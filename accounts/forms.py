@@ -1,5 +1,4 @@
-from django.contrib.auth.forms import UserChangeForm
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserChangeForm, UserCreationForm, AuthenticationForm
 from django.contrib.auth.password_validation import validate_password
 
 from .models import User, PendingRegistration
@@ -52,3 +51,11 @@ class PendingRegistrationForm(forms.Form):
             raise forms.ValidationError("The passwords do not match")
 
         return password_2
+
+
+class EmailAuthenticationForm(AuthenticationForm):
+    username = forms.EmailField(label="Email")
+
+    def clean_username(self):
+        email = self.cleaned_data["username"]
+        return email.lower()

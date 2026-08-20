@@ -3,10 +3,15 @@
 {% block content %}
 
 <div class="container">
-    <form >
-    {% csrf_token %}
-        <p>form will be here</p>
-    </form>
+    <div>Log in here</div>
+    <div>
+        <form method="POST">
+            {% csrf_token %}
+            {{ form.as_div }}
+            <button type="submit" class="btn btn-primary">Log in</button>
+        </form>
+    </div>
+
 </div>
 
 

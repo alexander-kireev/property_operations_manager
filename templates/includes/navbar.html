@@ -35,7 +35,7 @@
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a class="nav-link" href="#">Dashboard</a>
+          <a class="nav-link" href="{% url 'pages:dashboard' %}">Dashboard</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="#">My work</a>
@@ -47,7 +47,16 @@
           <a class="nav-link" href="#">Contacts</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'accounts:logout' %}">Log out</a>
+          <a class="nav-link">
+
+            <form method="post" action="{% url 'accounts:logout' %}">
+              {% csrf_token %}
+              <button type="submit">
+                  Log out
+              </button>
+          </form>
+
+          </a>
         </li>
       </ul>
     </div>

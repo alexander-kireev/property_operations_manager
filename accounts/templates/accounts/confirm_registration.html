@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Registration confirmed | Property Operations Manager{% endblock %}
+{% block content %}
+
+    {% if error %}
+        <div>{{ error }}</div>
+    {% else %}
+        <div>yay your registration has been confirmed</div>
+    {% endif %}
+    
+{% endblock %}

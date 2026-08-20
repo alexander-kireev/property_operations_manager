@@ -1,9 +1,15 @@
+from datetime import timedelta
+
 from django.test import TestCase
 from .models import User, PendingRegistration
 
 from django.urls import reverse
+from django.core import mail
+from django.utils import timezone
 
 from .forms import PendingRegistrationForm
+
+from .tokens import create_confirmation_token
 
 
 class UserManagerTests(TestCase):
@@ -47,7 +53,6 @@ class UserManagerTests(TestCase):
             User.objects.create_superuser(email=self.TEST_EMAIL, password=self.TEST_PASSWORD, is_superuser=False)
 
         self.assertEqual(User.objects.count(), 0)
-
 
 
 class PendingRegistrationFormTests(TestCase):
@@ -139,7 +144,6 @@ class PendingRegistrationFormTests(TestCase):
         self.assertIn("email", form.errors)
 
 
-
 class RegistrationViewTests(TestCase):
     VALID_DATA = {
         "first_name": "  Alice  ",
@@ -148,6 +152,43 @@ class RegistrationViewTests(TestCase):
         "password_1": "HolidayHome123!",
         "password_2": "HolidayHome123!",
     }
+
+    VALID_CLEANED_DATA = {
+        "first_name": "Alice",
+        "last_name": "Smith",
+        "email": "alice.smith@example.com",
+        "password_1": "HolidayHome123!",
+        "password_2": "HolidayHome123!",
+    }
+
+    def create_valid_pending_registration(self):
+        pending_registration = PendingRegistration(
+            first_name=self.VALID_CLEANED_DATA["first_name"],
+            last_name=self.VALID_CLEANED_DATA["last_name"],
+            email=self.VALID_CLEANED_DATA["email"]
+        )
+
+        pending_registration.set_password(self.VALID_CLEANED_DATA["password_1"])
+
+        return pending_registration
+
+    def create_valid_pending_registration_and_token_and_return(self):
+        pending_registration = self.create_valid_pending_registration()
+        pending_registration.save()
+
+        token = create_confirmation_token(pending_registration)
+
+        confirmation_url = reverse("accounts:confirm_registration", kwargs={"token": token})
+
+        response = self.client.get(confirmation_url)
+
+        return {
+            "token": token,
+            "pending_registration": pending_registration,
+            "confirmation_url": confirmation_url,
+            "response": response,
+            "pk": pending_registration.pk,
+        }
 
     def test_get_registration_page(self):
         response = self.client.get(reverse("accounts:register"))
@@ -171,7 +212,107 @@ class RegistrationViewTests(TestCase):
 
         self.assertRedirects(response, reverse("accounts:registration_pending"))
         pending_registration = PendingRegistration.objects.get(email=self.VALID_DATA["email"])
-        self.assertEqual(pending_registration.first_name, "Alice")
-        self.assertEqual(pending_registration.last_name, "Smith")
+        self.assertEqual(pending_registration.first_name, self.VALID_CLEANED_DATA["first_name"])
+        self.assertEqual(pending_registration.last_name, self.VALID_CLEANED_DATA["last_name"])
         self.assertTrue(pending_registration.check_password(self.VALID_DATA["password_1"]))
         self.assertNotEqual(pending_registration.password_hash, self.VALID_DATA["password_1"])
+
+    def test_valid_registration_sends_confirmation_email(self):
+        self.client.post(
+            reverse("accounts:register"),
+            data=self.VALID_DATA
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+
+        sent_email = mail.outbox[0]
+
+        self.assertEqual(sent_email.to, [self.VALID_DATA["email"]])
+
+        self.assertEqual(sent_email.subject, "Confirm your registration")
+
+        self.assertIn("http://testserver/accounts/confirm/", sent_email.body,)
+
+    def test_pending_registration_deleted_after_user_created_and_user_is_created(self):
+        r = self.create_valid_pending_registration_and_token_and_return()
+
+        self.assertTrue(User.objects.filter(email=self.VALID_CLEANED_DATA["email"]).exists())
+        self.assertFalse(PendingRegistration.objects.filter(pk=r["pk"]).exists())
+    
+    def test_invalid_token_returns_400_and_does_not_create_user_and_does_not_delete_pending_request(self):
+        pending_registration = self.create_valid_pending_registration()
+        pending_registration.save()
+
+        token = create_confirmation_token(pending_registration)
+        token = token + "invalid_token"
+
+        confirmation_url = reverse("accounts:confirm_registration", kwargs={"token": token})
+
+        response = self.client.get(confirmation_url)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTemplateUsed(response, "accounts/confirm_registration.html")
+
+        pending_registration_id = pending_registration.pk
+
+        self.assertTrue(PendingRegistration.objects.filter(pk=pending_registration_id).exists())
+        self.assertFalse(User.objects.filter(email=pending_registration.email).exists())
+
+    def test_expired_registration_returns_400_and_does_not_create_user_and_does_not_delete_pending_request(self):
+        pending_registration = self.create_valid_pending_registration()
+
+        pending_registration.expires_at = (
+            timezone.now() - timedelta(seconds=1)
+        )
+
+        pending_registration.save()
+
+        token = create_confirmation_token(pending_registration)
+
+        confirmation_url = reverse("accounts:confirm_registration", kwargs={"token": token})
+
+        response = self.client.get(confirmation_url)
+
+        self.assertEqual(response.status_code, 400)
+
+        self.assertEqual(User.objects.count(), 0)
+        self.assertTrue(PendingRegistration.objects.filter(pk=pending_registration.pk).exists())
+
+    def test_reused_token_returns_is_rejected_and_does_not_create_duplicate_user(self):
+        r = self.create_valid_pending_registration_and_token_and_return()
+
+        self.assertTrue(User.objects.filter(email=self.VALID_CLEANED_DATA["email"]).exists())
+        self.assertFalse(PendingRegistration.objects.filter(pk=r["pk"]).exists())
+
+        response_2 = self.client.get(r["confirmation_url"])
+
+        self.assertEqual(response_2.status_code, 400)
+        self.assertTemplateUsed(response_2, "accounts/confirm_registration.html")
+
+        self.assertEqual(User.objects.count(), 1)
+        self.assertEqual(PendingRegistration.objects.count(), 0)
+
+    def test_valid_token_creates_and_authenticates_user(self):
+        r = self.create_valid_pending_registration_and_token_and_return()
+
+        self.assertTrue(User.objects.filter(email=self.VALID_CLEANED_DATA["email"]).exists())
+        user = User.objects.get(email=self.VALID_CLEANED_DATA["email"])
+
+        self.assertRedirects(r["response"], reverse("pages:dashboard"))
+
+        dashboard_response = self.client.get(reverse("pages:dashboard"))
+
+        self.assertEqual(dashboard_response.status_code, 200)
+
+    def test_password_works_after_hash_transfer(self):
+        r = self.create_valid_pending_registration_and_token_and_return()
+
+        user = User.objects.get(email=r["pending_registration"].email)
+
+        self.assertTrue(user.check_password(self.VALID_DATA["password_1"]))
+
+        
+
+
+
+
