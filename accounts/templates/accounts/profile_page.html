@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Profile | Property Operations Manager{% endblock %}
+
+{% block content %}
+
+    <div class="container profile-content">
+        <div class="mb-4">
+            <h1 class="h2 mb-2">Profile</h1>
+            <p class="text-body-secondary mb-0">
+                Manage your personal information and account.
+            </p>
+        </div>
+
+        <section class="card border-0 shadow-sm mb-4" aria-labelledby="personal-details-heading">
+            <div class="card-body p-4 p-md-5">
+                <h2 class="h5 mb-4" id="personal-details-heading">Personal details</h2>
+
+                <form action="" method="post">
+                    
+                    {% csrf_token %}
+
+                    {% for error in profile_form.non_field_errors %}
+                        <div class="alert alert-danger">{{ error }}</div>
+                    {% endfor%}
+
+                    <div class="row align-items-center mb-3">
+                        <label class="col-md-3 col-form-label" for="{{ profile_form.first_name.id_for_label }}">First name</label>
+                        <div class="col-md-9">
+                            {{ profile_form.first_name }}
+
+                            {% for error in profile_form.first_name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor%}
+                        </div>
+                    </div>
+
+                    <div class="row align-items-center mb-3">
+                        <label class="col-md-3 col-form-label" for="{{ profile_form.last_name.id_for_label }}">Last name</label>
+                        <div class="col-md-9">
+                            {{ profile_form.last_name }}
+
+                            {% for error in profile_form.last_name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor%}
+                        </div>
+                    </div>
+
+                    <div class="row align-items-center mb-4">
+                        <label class="col-md-3 col-form-label" for="email">Email</label>
+                        <div class="col-md-9">
+                            <div class="row g-2">
+                                <div class="col">
+                                    <input
+                                        class="form-control"
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        value="{{ request.user.email }}"
+                                        readonly
+                                    >
+                                </div>
+                                <div class="col-auto">
+                                    <a class="btn btn-outline-secondary" href="{% url 'accounts:change_email' %}">
+                                        Change email
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-9 offset-md-3">
+                            <button class="btn theme-action" type="submit">Save changes</button>
+                        </div>
+                    </div>
+
+                </form>
+            
+            </div>
+        </section>
+
+        <section class="card border-0 shadow-sm mb-4" aria-labelledby="account-heading">
+            <div class="card-body p-4 p-md-5">
+                <h2 class="h5 mb-4" id="account-heading">Account</h2>
+
+                <div class="row align-items-center mb-3">
+                    <div class="col-md-3 fw-medium">Password</div>
+                    <div class="col-md-9">
+                        <a class="btn btn-outline-secondary" href="{% url 'accounts:change_password' %}">Change password</a>
+                    </div>
+                </div>
+
+                <div class="row align-items-center">
+                    <div class="col-md-3 fw-medium">Current session</div>
+                    <div class="col-md-9">
+                        <form method="post" action="{% url 'accounts:logout' %}">
+                            {% csrf_token %}
+                            <button class="dropdown-item" type="submit">Log out</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card border-danger-subtle mb-4" aria-labelledby="danger-zone-heading">
+            <div class="card-body p-4 p-md-5">
+                <h2 class="h5 text-danger mb-3" id="danger-zone-heading">Danger zone</h2>
+
+                <div class="row align-items-center gy-3">
+                    <div class="col-md-8">
+                        <h3 class="h6 mb-1">Delete account</h3>
+                        <p class="text-body-secondary mb-0">
+                            Permanently remove your account and personal information.
+                            This action cannot be undone.
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <button
+                            class="btn btn-outline-danger"
+                            type="button"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteAccountModal"
+                        >
+                            Delete account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+
+    <div
+    class="modal fade"
+    id="deleteAccountModal"
+    tabindex="-1"
+    aria-labelledby="deleteAccountModalLabel"
+    aria-hidden="true"
+    >
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="deleteAccountModalLabel">Delete your account?</h2>
+                    <button
+                        class="btn-close"
+                        type="button"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        This will permanently remove your account. You will be asked to confirm your identity before deletion.
+                    </p>
+                    <p class="mb-0 fw-medium">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-danger" type="button">Continue to deletion</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

@@ -1,8 +1,10 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, update_session_auth_hash, views as auth_views
 from django.contrib.auth.decorators import login_required
 
-from .forms import PendingRegistrationForm, EmailAuthenticationForm
+from django.contrib.auth.forms import PasswordResetForm
+
+from .forms import AccountPasswordChangeForm, PendingRegistrationForm, EmailAuthenticationForm, ProfileForm, EmailChangeForm
 
 from .models import PendingRegistration, User
 
@@ -123,8 +125,85 @@ def confirm_registration_view(request, token):
 
     return redirect("pages:dashboard")
 
+@login_required
+def profile_page_view(request):
+
+    if request.method == "POST":
+        profile_form = ProfileForm(data=request.POST, instance=request.user)
+
+        if profile_form.is_valid():
+            profile_form.save()
+            return redirect("accounts:profile_page")
+
+    else:
+        profile_form = ProfileForm(instance=request.user)
+    
+    return render(request, "accounts/profile_page.html", {"profile_form": profile_form})
 
 
+@login_required
+def change_password_view(request):
+
+    if request.method == "POST":
+        form = AccountPasswordChangeForm(user=request.user, data=request.POST)
+
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            return redirect("accounts:change_password")
+
+    else:
+        form = AccountPasswordChangeForm(user=request.user)
+
+    return render(request, "accounts/change_password.html", {"form": form })
+
+
+@login_required
+def change_email_view(request):
+
+    if request.method == "POST":
+        form = EmailChangeForm(request.POST)
+
+        if form.is_valid():
+
+            current_password = form.cleaned_data["current_password"]
+
+            if not request.user.check_password(current_password):
+                form.add_error(
+                "current_password",
+                "Your current password is incorrect."
+                )
+            else:
+                request.user.email = form.cleaned_data["new_email"]
+                request.user.save(update_fields=["email"])
+
+                return redirect("accounts:change_email")
+    else:
+        form = EmailChangeForm()
+
+    return render(request, "accounts/change_email.html", {"form": form})
+
+
+@login_required
+def delete_account_view(request):
+
+    pass
+
+
+@login_required
+@require_POST
+def reset_password_protected_view(request):
+    form = PasswordResetForm({"email": request.user.email})
+
+    if form.is_valid():
+        form.save(
+            request=request,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            email_template_name="accounts/password_reset_email.txt",
+            subject_template_name="accounts/password_reset_subject.txt"
+        )
+
+    return redirect("accounts:profile_page")
 
 
 

@@ -2,7 +2,6 @@ from datetime import timedelta
 
 from django.core import signing
 
-
 CONFIRMATION_SALT = "accounts.registration-confirmation"
 CONFIRMATION_MAX_AGE = timedelta(hours=72)
 
@@ -20,3 +19,5 @@ def decode_confirmation_token(token):
         salt=CONFIRMATION_SALT,
         max_age=CONFIRMATION_MAX_AGE,
     )
+
+
