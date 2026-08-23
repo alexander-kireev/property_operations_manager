@@ -1,0 +1,96 @@
+<nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark">
+  <div class="container-fluid px-5">
+    <a class="navbar-brand fw-semibold" href="{% url 'pages:home' %}">PoM</a>
+      <button 
+        class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#siteNavbar" 
+        aria-controls="siteNavbar" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+      </button>
+
+    {% if not user.is_authenticated %}
+
+    <div class="collapse navbar-collapse" id="siteNavbar">
+      <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+          <li class="nav-item">
+              <a class="nav-link" href="{% url 'pages:home' %}">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'pages:about_us' %}">About us</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'pages:contact_us' %}">Contact us</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'accounts:login' %}">Login</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'accounts:register' %}">Register</a>
+          </li>
+      </ul>
+    </div>
+
+    {% endif %}
+    
+
+    {% if user.is_authenticated %}
+
+    <div class="collapse navbar-collapse" id="siteNavbar">
+        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'pages:dashboard' %}">Dashboard</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">My work</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">Properties</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">Contacts</a>
+            </li>
+            <li class="nav-item dropdown ms-lg-2">
+                <button
+                    class="account-menu-button btn btn-outline-light rounded-circle d-inline-flex align-items-center justify-content-center dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    aria-label="Open account menu"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <circle cx="12" cy="8" r="4"></circle>
+                        <path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path>
+                    </svg>
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item" href="{% url 'accounts:profile_page' %}">Go to profile</a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form method="post" action="{% url 'accounts:logout' %}">
+                            {% csrf_token %}
+                            <button class="dropdown-item" type="submit">Log out</button>
+                        </form>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    {% endif %}
+
+  
+  
+  </div>
+</nav>
+
+
