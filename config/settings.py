@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'accounts.apps.AccountsConfig',
-    "pages.apps.PagesConfig",
+    'pages.apps.PagesConfig',
+    'property.apps.PropertyConfig',
 ]
 
 AUTH_USER_MODEL = "accounts.User"
