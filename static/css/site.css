@@ -30,6 +30,18 @@ body {
     display: none;
 }
 
+@media (min-width: 992px) and (hover: hover) and (pointer: fine) {
+    .navbar .dropdown:hover > .dropdown-menu {
+        display: block;
+        margin-top: 0;
+    }
+
+    .navbar .dropdown:hover > .dropdown-menu-end {
+        right: 0;
+        left: auto;
+    }
+}
+
 .theme-action {
     background-color: var(--bs-emphasis-color);
     border-color: var(--bs-emphasis-color);
@@ -53,30 +65,36 @@ body {
     text-decoration: underline;
 }
 
-.property-row + .property-row {
+.property-row + .property-row,
+.task-row + .task-row {
     border-top: var(--bs-border-width) solid var(--bs-border-color);
 }
 
-.property-summary {
+.property-summary,
+.task-summary {
     min-height: 4.75rem;
 }
 
-.property-toggle {
+.property-toggle,
+.task-toggle {
     width: 2.25rem;
     height: 2.25rem;
 }
 
-.property-toggle svg {
+.property-toggle svg,
+.task-toggle svg {
     width: 1rem;
     height: 1rem;
     transition: transform 0.2s ease;
 }
 
-.property-toggle[aria-expanded="true"] svg {
+.property-toggle[aria-expanded="true"] svg,
+.task-toggle[aria-expanded="true"] svg {
     transform: rotate(180deg);
 }
 
-.property-details {
+.property-details,
+.task-details {
     background-color: var(--bs-tertiary-bg);
 }
 
@@ -84,43 +102,52 @@ body {
     min-height: 100%;
 }
 
-.property-row-deactivated .property-summary {
+.property-row-deactivated .property-summary,
+.task-row-terminated .task-summary {
     opacity: 0.72;
 }
 
-.property-actions::after {
+.property-actions::after,
+.task-actions::after {
     display: none;
 }
 
-.property-menu-button::after {
+.property-menu-button::after,
+.task-menu-button::after {
     display: none;
 }
 
-.property-section-nav {
+.property-section-nav,
+.my-work-section-nav {
     overflow-x: auto;
     scrollbar-width: thin;
 }
 
-.property-section-nav .nav {
+.property-section-nav .nav,
+.my-work-section-nav .nav {
     min-width: max-content;
 }
 
-.property-section-nav .nav-link {
+.property-section-nav .nav-link,
+.my-work-section-nav .nav-link {
     color: var(--bs-secondary-color);
     border-bottom: 2px solid transparent;
 }
 
-.property-section-nav .nav-link.active {
+.property-section-nav .nav-link.active,
+.my-work-section-nav .nav-link.active {
     color: var(--bs-emphasis-color);
     border-bottom-color: var(--bs-emphasis-color);
 }
 
 @media (max-width: 767.98px) {
-    .property-list-heading {
+    .property-list-heading,
+    .task-list-heading {
         display: none;
     }
 
-    .property-summary {
+    .property-summary,
+    .task-summary {
         padding-top: 1rem !important;
         padding-bottom: 1rem !important;
     }

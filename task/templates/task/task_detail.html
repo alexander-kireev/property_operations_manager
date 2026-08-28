@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} | Property Operations Manager{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <nav aria-label="Breadcrumb" class="mb-3">
+            <a class="link-body-emphasis text-decoration-none" href="{% url 'task:tasks' %}">Tasks</a>
+            <span class="text-body-secondary mx-2" aria-hidden="true">/</span>
+            <span class="text-body-secondary">{{ task.title }}</span>
+        </nav>
+
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-4 mb-4">
+            <div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <h1 class="h2 mb-0">{{ task.title }}</h1>
+                    {% if task.state == "active" %}
+                        <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis">{{ task.get_state_display }}</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary-subtle border text-secondary-emphasis">{{ task.get_state_display }}</span>
+                    {% endif %}
+
+                    {% if task.priority == 4 %}
+                        <span class="badge text-bg-danger-subtle border border-danger-subtle text-danger-emphasis">{{ task.get_priority_display }}</span>
+                    {% elif task.priority == 3 %}
+                        <span class="badge text-bg-warning-subtle border border-warning-subtle text-warning-emphasis">{{ task.get_priority_display }}</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary-subtle border text-secondary-emphasis">{{ task.get_priority_display }}</span>
+                    {% endif %}
+                </div>
+
+                <p class="text-body-secondary mb-2">
+                    {% if task.property %}
+                        Property: <a class="link-body-emphasis" href="{% url 'property:property_detail' task.property.pk %}">{{ task.property.name }}</a>
+                    {% elif task.issue %}
+                        Issue: {{ task.issue.title }}
+                    {% else %}
+                        Standalone task
+                    {% endif %}
+                </p>
+                <p class="small text-body-secondary mb-0">Task created {{ task.created_at|date:"j F Y" }}</p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                {% if task.state == "active" %}
+                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editTaskModal">Edit task</button>
+                    <button class="btn theme-action" type="button" data-bs-toggle="modal" data-bs-target="#completeTaskModal">Complete task</button>
+                {% else %}
+                    <form action="{% url 'task:reactivate_task' task.pk %}" method="post">
+                        {% csrf_token %}
+                        <button class="btn theme-action" type="submit">Reactivate task</button>
+                    </form>
+                {% endif %}
+
+                <div class="dropdown">
+                    <button class="task-menu-button btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Open task actions">⋮</button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        {% if task.state == "active" %}
+                            <li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#dismissTaskModal">Dismiss task</button></li>
+                            <li><hr class="dropdown-divider"></li>
+                        {% endif %}
+                        <li><button class="dropdown-item text-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteTaskModal">Delete task</button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {% if task.state != "active" %}
+            <div class="alert alert-secondary" role="status">
+                This task was {{ task.get_state_display|lower }}{% if task.terminated_at %} on {{ task.terminated_at|date:"j F Y" }}{% endif %}.
+                It is retained as history and can be reactivated.
+            </div>
+        {% endif %}
+
+        {% include "includes/my_work_nav.html" with active_section="tasks" %}
+
+        <div class="row g-4">
+            <div class="col-xl-8">
+                <section class="card border-0 shadow-sm mb-4" aria-labelledby="task-overview-heading">
+                    <div class="card-header bg-body p-4">
+                        <h2 class="h5 mb-1" id="task-overview-heading">Task overview</h2>
+                        <p class="small text-body-secondary mb-0">The work required and where it belongs.</p>
+                    </div>
+                    <div class="card-body p-4">
+                        <h3 class="h6">Description</h3>
+                        <p class="text-body-secondary mb-4">{{ task.description|default:"No description provided." }}</p>
+
+                        <h3 class="h6">Related to</h3>
+                        {% if task.property %}
+                            <p class="mb-0">
+                                <span class="text-body-secondary">Property:</span>
+                                <a href="{% url 'property:property_detail' task.property.pk %}">{{ task.property.name }}</a>
+                            </p>
+                        {% elif task.issue %}
+                            <p class="mb-0"><span class="text-body-secondary">Issue:</span> {{ task.issue.title }}</p>
+                        {% else %}
+                            <p class="text-body-secondary mb-0">This task is not attached to a Property or Issue.</p>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="card border-0 shadow-sm" aria-labelledby="task-notes-heading">
+                    <div class="card-header bg-body p-4">
+                        <h2 class="h5 mb-1" id="task-notes-heading">Task notes</h2>
+                        <p class="small text-body-secondary mb-0">Supporting information for this task.</p>
+                    </div>
+                    <div class="card-body p-4 text-center">
+                        <p class="small text-body-secondary mb-0">NotesBoard functionality follows in a later slice.</p>
+                    </div>
+                </section>
+            </div>
+
+            <div class="col-xl-4">
+                <section class="card border-0 shadow-sm" aria-labelledby="task-timing-heading">
+                    <div class="card-header bg-body p-4">
+                        <h2 class="h5 mb-1" id="task-timing-heading">Schedule and status</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <dl class="row mb-0">
+                            <dt class="col-6 text-body-secondary fw-normal">Priority</dt>
+                            <dd class="col-6 text-end">{{ task.get_priority_display }}</dd>
+                            <dt class="col-6 text-body-secondary fw-normal">Scheduled</dt>
+                            <dd class="col-6 text-end">{{ task.scheduled_date|date:"j M Y"|default:"Not scheduled" }}</dd>
+                            <dt class="col-6 text-body-secondary fw-normal">Deadline</dt>
+                            <dd class="col-6 text-end">{{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}</dd>
+                            <dt class="col-6 text-body-secondary fw-normal">State</dt>
+                            <dd class="col-6 text-end">{{ task.get_state_display }}</dd>
+                            {% if task.terminated_at %}
+                                <dt class="col-6 text-body-secondary fw-normal">Terminated</dt>
+                                <dd class="col-6 text-end">{{ task.terminated_at|date:"j M Y" }}</dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    {% if task.state == "active" %}
+        <div class="modal fade" id="editTaskModal" tabindex="-1" aria-labelledby="editTaskModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="editTaskModalLabel">Edit {{ task.title }}</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form action="{% url 'task:edit_task' task.pk %}" method="post">
+                        <div class="modal-body">
+                            {% csrf_token %}
+                            {% for error in edit_task_form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endfor %}
+                            {% for field in edit_task_form %}
+                                <div class="row align-items-start mb-3">
+                                    <label class="col-md-3 col-form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    <div class="col-md-9">
+                                        {{ field }}
+                                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                                        {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                            <button class="btn theme-action px-4" type="submit">Save changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="completeTaskModal" tabindex="-1" aria-labelledby="completeTaskModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="completeTaskModalLabel">Complete {{ task.title }}?</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">The task will be marked as completed and retained in your history. You can reactivate it later.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <form action="{% url 'task:complete_task' task.pk %}" method="post">
+                            {% csrf_token %}
+                            <button class="btn theme-action" type="submit">Complete task</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="dismissTaskModal" tabindex="-1" aria-labelledby="dismissTaskModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="dismissTaskModalLabel">Dismiss {{ task.title }}?</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">The task will be marked as dismissed and retained in your history. You can reactivate it later.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <form action="{% url 'task:dismiss_task' task.pk %}" method="post">
+                            {% csrf_token %}
+                            <button class="btn btn-outline-secondary" type="submit">Dismiss task</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="deleteTaskModalLabel">Delete {{ task.title }}?</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">This task will be removed from your workspace.</p>
+                    <p class="text-body-secondary mb-0">This action cannot be undone from the application.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <form action="{% url 'task:delete_task' task.pk %}" method="post">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-danger" type="submit">Delete task</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    {% if edit_task_form.errors %}
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById("editTaskModal")).show();
+            });
+        </script>
+    {% elif request.GET.confirm_delete == "1" %}
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById("deleteTaskModal")).show();
+            });
+        </script>
+    {% elif task.state == "active" %}
+        {% if request.GET.edit == "1" %}
+            <script>
+                document.addEventListener("DOMContentLoaded", () => {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById("editTaskModal")).show();
+                });
+            </script>
+        {% elif request.GET.complete == "1" %}
+            <script>
+                document.addEventListener("DOMContentLoaded", () => {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById("completeTaskModal")).show();
+                });
+            </script>
+        {% elif request.GET.dismiss == "1" %}
+            <script>
+                document.addEventListener("DOMContentLoaded", () => {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById("dismissTaskModal")).show();
+                });
+            </script>
+        {% endif %}
+    {% endif %}
+{% endblock %}

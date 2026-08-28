@@ -1,0 +1,13 @@
+<nav class="my-work-section-nav card border-0 shadow-sm mb-4" aria-label="My Work sections">
+    <div class="nav px-3">
+        <a
+            class="nav-link px-3 py-3{% if active_section == 'tasks' %} active{% endif %}"
+            href="{% url 'task:tasks' %}"
+            {% if active_section == "tasks" %}aria-current="page"{% endif %}
+        >
+            Tasks
+        </a>
+        <a class="nav-link disabled px-3 py-3" href="#" aria-disabled="true">Issues</a>
+        <a class="nav-link disabled px-3 py-3" href="#" aria-disabled="true">Events</a>
+    </div>
+</nav>

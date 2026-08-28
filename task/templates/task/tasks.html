@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}Tasks | Property Operations Manager{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+            <div>
+                <h1 class="h2 mb-2">Your tasks</h1>
+                <p class="text-body-secondary mb-0">
+                    Plan, prioritise and track work across your portfolio.
+                </p>
+            </div>
+
+            <button
+                class="btn theme-action px-4"
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#addTaskModal"
+            >
+                Add task
+            </button>
+        </div>
+
+        {% include "includes/my_work_nav.html" with active_section="tasks" %}
+
+        <section class="card border-0 shadow-sm" aria-labelledby="task-list-title">
+            <h2 class="visually-hidden" id="task-list-title">Task list</h2>
+
+            <form class="card-body border-bottom p-3 p-md-4" method="get" role="search">
+                <div class="row g-2">
+                    <div class="col-12 col-xl-4">
+                        <label class="visually-hidden" for="taskSearch">Search tasks</label>
+                        <input
+                            class="form-control"
+                            id="taskSearch"
+                            name="search"
+                            type="search"
+                            value="{{ search }}"
+                            placeholder="Search tasks, properties or issues"
+                        >
+                    </div>
+
+                    <div class="col-6 col-md-3 col-xl-2">
+                        <label class="visually-hidden" for="taskStateFilter">Filter by state</label>
+                        <select class="form-select" id="taskStateFilter" name="state">
+                            <option value="">All states</option>
+                            <option value="active" {% if state == "active" %}selected{% endif %}>Active</option>
+                            <option value="completed" {% if state == "completed" %}selected{% endif %}>Completed</option>
+                            <option value="dismissed" {% if state == "dismissed" %}selected{% endif %}>Dismissed</option>
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-md-3 col-xl-2">
+                        <label class="visually-hidden" for="taskPriorityFilter">Filter by priority</label>
+                        <select class="form-select" id="taskPriorityFilter" name="priority">
+                            <option value="">All priorities</option>
+                            <option value="1" {% if priority == 1 %}selected{% endif %}>Low</option>
+                            <option value="2" {% if priority == 2 %}selected{% endif %}>Medium</option>
+                            <option value="3" {% if priority == 3 %}selected{% endif %}>High</option>
+                            <option value="4" {% if priority == 4 %}selected{% endif %}>Urgent</option>
+                        </select>
+                    </div>
+
+                    <div class="col-8 col-md-4 col-xl-2">
+                        <label class="visually-hidden" for="taskSort">Sort tasks</label>
+                        <select class="form-select" id="taskSort" name="sort">
+                            <option value="title" {% if sort == "title" %}selected{% endif %}>Title: A–Z</option>
+                            <option value="-title" {% if sort == "-title" %}selected{% endif %}>Title: Z–A</option>
+                            <option value="-priority" {% if sort == "-priority" %}selected{% endif %}>Priority: highest</option>
+                            <option value="priority" {% if sort == "priority" %}selected{% endif %}>Priority: lowest</option>
+                            <option value="scheduled_date" {% if sort == "scheduled_date" %}selected{% endif %}>Schedule: soonest</option>
+                            <option value="-scheduled_date" {% if sort == "-scheduled_date" %}selected{% endif %}>Schedule: latest</option>
+                            <option value="completion_deadline" {% if sort == "completion_deadline" %}selected{% endif %}>Deadline: soonest</option>
+                            <option value="-completion_deadline" {% if sort == "-completion_deadline" %}selected{% endif %}>Deadline: latest</option>
+                            <option value="-created_at" {% if sort == "-created_at" %}selected{% endif %}>Newest first</option>
+                            <option value="created_at" {% if sort == "created_at" %}selected{% endif %}>Oldest first</option>
+                        </select>
+                    </div>
+
+                    <div class="col-4 col-md-2 col-xl-2 d-grid">
+                        <button class="btn btn-outline-secondary" type="submit">Apply</button>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="visually-hidden" for="taskSchedulePeriod">Filter by scheduled period</label>
+                        <select class="form-select" id="taskSchedulePeriod" name="scheduled_period">
+                            <option value="">Any schedule</option>
+                            {% for option_value, option_label in schedule_period_options.items %}
+                                <option value="{{ option_value }}" {% if scheduled_period == option_value %}selected{% endif %}>
+                                    Scheduled: {{ option_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="visually-hidden" for="taskDeadlinePeriod">Filter by deadline period</label>
+                        <select class="form-select" id="taskDeadlinePeriod" name="deadline_period">
+                            <option value="">Any deadline</option>
+                            {% for option_value, option_label in deadline_period_options.items %}
+                                <option value="{{ option_value }}" {% if deadline_period == option_value %}selected{% endif %}>
+                                    Deadline: {{ option_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </form>
+
+            {% if page_obj %}
+                <div class="task-list-heading border-bottom px-4 py-2 text-body-secondary small fw-medium">
+                    <div class="row align-items-center gx-3">
+                        <div class="col-auto" style="width: 3.25rem;"></div>
+                        <div class="col-md-4">Task</div>
+                        <div class="col">Context</div>
+                        <div class="col-md-2">Deadline</div>
+                        <div class="col-md-1">State</div>
+                        <div class="col-auto" style="width: 3.25rem;"></div>
+                    </div>
+                </div>
+
+                <div id="taskList">
+                    {% for task in page_obj %}
+                        <article class="task-row{% if task.state != 'active' %} task-row-terminated{% endif %}">
+                            <div class="task-summary px-3 px-md-4 py-2">
+                                <div class="row align-items-center gx-3 gy-2 h-100">
+                                    <div class="col-auto">
+                                        <button
+                                            class="task-toggle btn btn-sm btn-outline-secondary rounded-circle d-inline-flex align-items-center justify-content-center"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#taskDetails{{ task.pk }}"
+                                            aria-expanded="false"
+                                            aria-controls="taskDetails{{ task.pk }}"
+                                            aria-label="Expand {{ task.title }} summary"
+                                        >
+                                            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                <path d="M3.2 5.7a.75.75 0 0 1 1.1 0L8 9.4l3.7-3.7a.75.75 0 1 1 1.1 1.1l-4.25 4.25a.75.75 0 0 1-1.1 0L3.2 6.8a.75.75 0 0 1 0-1.1Z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div class="col-9 col-md-4">
+                                        <a class="fw-semibold link-body-emphasis text-decoration-none" href="{% url 'task:task_detail' task.pk %}">
+                                            {{ task.title }}
+                                        </a>
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                            {% if task.priority == 4 %}
+                                                <span class="badge text-bg-danger-subtle border border-danger-subtle text-danger-emphasis">{{ task.get_priority_display }}</span>
+                                            {% elif task.priority == 3 %}
+                                                <span class="badge text-bg-warning-subtle border border-warning-subtle text-warning-emphasis">{{ task.get_priority_display }}</span>
+                                            {% else %}
+                                                <span class="badge text-bg-secondary-subtle border text-secondary-emphasis">{{ task.get_priority_display }}</span>
+                                            {% endif %}
+                                            <span class="small text-body-secondary d-md-none">
+                                                {% if task.property %}{{ task.property.name }}{% elif task.issue %}{{ task.issue.title }}{% else %}Standalone{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col d-none d-md-block text-body-secondary">
+                                        {% if task.property %}
+                                            <a class="link-body-emphasis text-decoration-none" href="{% url 'property:property_detail' task.property.pk %}">{{ task.property.name }}</a>
+                                        {% elif task.issue %}
+                                            <span>{{ task.issue.title }}</span>
+                                            <span class="d-block small">Issue</span>
+                                        {% else %}
+                                            Standalone task
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="col-7 col-md-2 ms-5 ms-md-0">
+                                        <span class="small{% if task.completion_deadline %} fw-medium{% else %} text-body-secondary{% endif %}">
+                                            {{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}
+                                        </span>
+                                    </div>
+
+                                    <div class="col-4 col-md-1">
+                                        {% if task.state == "active" %}
+                                            <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis">{{ task.get_state_display }}</span>
+                                        {% else %}
+                                            <span class="badge text-bg-secondary-subtle border text-secondary-emphasis">{{ task.get_state_display }}</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="col-auto ms-auto">
+                                        <div class="dropdown">
+                                            <button
+                                                class="task-actions btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                aria-label="Actions for {{ task.title }}"
+                                            >
+                                                ⋮
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}">Open task</a></li>
+                                                {% if task.state == "active" %}
+                                                    <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}?edit=1">Edit task</a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}?complete=1">Complete task</a></li>
+                                                    <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}?dismiss=1">Dismiss task</a></li>
+                                                {% else %}
+                                                    <li>
+                                                        <form action="{% url 'task:reactivate_task' task.pk %}" method="post">
+                                                            {% csrf_token %}
+                                                            <button class="dropdown-item" type="submit">Reactivate task</button>
+                                                        </form>
+                                                    </li>
+                                                {% endif %}
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" href="{% url 'task:task_detail' task.pk %}?confirm_delete=1">Delete task</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="collapse" id="taskDetails{{ task.pk }}" data-bs-parent="#taskList">
+                                <div class="task-details border-top px-4 py-4">
+                                    <div class="row g-4 align-items-start">
+                                        <div class="col-lg-6">
+                                            <h3 class="h6">Task summary</h3>
+                                            <p class="text-body-secondary mb-3">{{ task.description|default:"No description provided." }}</p>
+                                            <a class="btn theme-action" href="{% url 'task:task_detail' task.pk %}">Open task</a>
+                                        </div>
+                                        <div class="col-lg-6">
+                                            <dl class="row mb-0">
+                                                <dt class="col-sm-5 text-body-secondary fw-normal">Priority</dt>
+                                                <dd class="col-sm-7">{{ task.get_priority_display }}</dd>
+                                                <dt class="col-sm-5 text-body-secondary fw-normal">Scheduled</dt>
+                                                <dd class="col-sm-7">{{ task.scheduled_date|date:"j F Y"|default:"Not scheduled" }}</dd>
+                                                <dt class="col-sm-5 text-body-secondary fw-normal">Deadline</dt>
+                                                <dd class="col-sm-7">{{ task.completion_deadline|date:"j F Y"|default:"No deadline" }}</dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+
+                <div class="card-footer bg-body px-4 py-3">
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+                        <span class="text-body-secondary small">
+                            Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }} tasks
+                        </span>
+
+                        {% if page_obj.paginator.num_pages > 1 %}
+                            <nav aria-label="Task pagination">
+                                <ul class="pagination pagination-sm mb-0">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item"><a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a></li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link" aria-disabled="true">Previous</span></li>
+                                    {% endif %}
+
+                                    {% for page_number in page_obj.paginator.page_range %}
+                                        {% if page_number == page_obj.number %}
+                                            <li class="page-item active" aria-current="page"><span class="page-link">{{ page_number }}</span></li>
+                                        {% else %}
+                                            <li class="page-item"><a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_number }}">{{ page_number }}</a></li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item"><a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a></li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link" aria-disabled="true">Next</span></li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="card-body py-5 text-center">
+                    {% if has_filters %}
+                        <h3 class="h5">No matching tasks</h3>
+                        <p class="text-body-secondary">Try changing or clearing your search and filters.</p>
+                        <a class="btn btn-outline-secondary" href="{% url 'task:tasks' %}">Clear filters</a>
+                    {% else %}
+                        <h3 class="h5">No tasks yet</h3>
+                        <p class="text-body-secondary">Add your first task to begin organising your work.</p>
+                        <button class="btn theme-action" type="button" data-bs-toggle="modal" data-bs-target="#addTaskModal">Add your first task</button>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </section>
+    </div>
+
+    <div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="addTaskModalLabel">Add task</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <form action="{% url 'task:add_task' %}{% if list_query %}?{{ list_query }}{% endif %}" method="post">
+                    <div class="modal-body">
+                        {% csrf_token %}
+
+                        {% for error in add_task_form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">{{ error }}</div>
+                        {% endfor %}
+
+                        {% for field in add_task_form %}
+                            <div class="row align-items-start mb-3">
+                                <label class="col-md-3 col-form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                <div class="col-md-9">
+                                    {{ field }}
+                                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                                    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn theme-action px-4" type="submit">Save task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    {% if add_task_form.errors %}
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const modalElement = document.getElementById("addTaskModal");
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            });
+        </script>
+    {% endif %}
+{% endblock %}
