@@ -10,6 +10,7 @@ class PropertyForm(forms.ModelForm):
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+            field.widget.attrs["autocomplete"] = "off"
 
     class Meta:
         model = Property

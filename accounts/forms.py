@@ -30,6 +30,7 @@ class PendingRegistrationForm(forms.Form):
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+            field.widget.attrs["autocomplete"] = "off"
 
     def clean_email(self):
         email = self.cleaned_data["email"].lower()
@@ -67,6 +68,7 @@ class EmailAuthenticationForm(AuthenticationForm):
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+            field.widget.attrs["autocomplete"] = "off"
 
     def clean_username(self):
         email = self.cleaned_data["username"]
@@ -79,6 +81,7 @@ class ProfileForm(forms.ModelForm):
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+            field.widget.attrs["autocomplete"] = "off"
 
     class Meta:
         model = User
@@ -95,6 +98,7 @@ class EmailChangeForm(forms.Form):
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+            field.widget.attrs["autocomplete"] = "off"
 
     def clean_new_email(self):
         new_email = self.cleaned_data["new_email"].lower()
@@ -121,6 +125,7 @@ class PasswordResetConfirmForm(SetPasswordForm):
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+            field.widget.attrs["autocomplete"] = "off"
 
 
 class AccountPasswordChangeForm(PasswordChangeForm):
@@ -129,4 +134,5 @@ class AccountPasswordChangeForm(PasswordChangeForm):
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+            field.widget.attrs["autocomplete"] = "off"
 

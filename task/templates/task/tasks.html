@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Tasks | Property Operations Manager{% endblock %}
 
@@ -27,43 +28,23 @@
         <section class="card border-0 shadow-sm" aria-labelledby="task-list-title">
             <h2 class="visually-hidden" id="task-list-title">Task list</h2>
 
-            <form class="card-body border-bottom p-3 p-md-4" method="get" role="search">
-                <div class="row g-2">
-                    <div class="col-12 col-xl-4">
-                        <label class="visually-hidden" for="taskSearch">Search tasks</label>
+            <form class="card-body border-bottom p-3 p-md-4" method="get" role="search" autocomplete="off">
+                <div class="row g-3 align-items-end mb-1">
+                    <div class="col-12 col-lg-7">
+                        <label class="form-label" for="taskSearch">Search</label>
                         <input
                             class="form-control"
                             id="taskSearch"
                             name="search"
                             type="search"
+                            autocomplete="off"
                             value="{{ search }}"
                             placeholder="Search tasks, properties or issues"
                         >
                     </div>
 
-                    <div class="col-6 col-md-3 col-xl-2">
-                        <label class="visually-hidden" for="taskStateFilter">Filter by state</label>
-                        <select class="form-select" id="taskStateFilter" name="state">
-                            <option value="">All states</option>
-                            <option value="active" {% if state == "active" %}selected{% endif %}>Active</option>
-                            <option value="completed" {% if state == "completed" %}selected{% endif %}>Completed</option>
-                            <option value="dismissed" {% if state == "dismissed" %}selected{% endif %}>Dismissed</option>
-                        </select>
-                    </div>
-
-                    <div class="col-6 col-md-3 col-xl-2">
-                        <label class="visually-hidden" for="taskPriorityFilter">Filter by priority</label>
-                        <select class="form-select" id="taskPriorityFilter" name="priority">
-                            <option value="">All priorities</option>
-                            <option value="1" {% if priority == 1 %}selected{% endif %}>Low</option>
-                            <option value="2" {% if priority == 2 %}selected{% endif %}>Medium</option>
-                            <option value="3" {% if priority == 3 %}selected{% endif %}>High</option>
-                            <option value="4" {% if priority == 4 %}selected{% endif %}>Urgent</option>
-                        </select>
-                    </div>
-
-                    <div class="col-8 col-md-4 col-xl-2">
-                        <label class="visually-hidden" for="taskSort">Sort tasks</label>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <label class="form-label" for="taskSort">Sort by</label>
                         <select class="form-select" id="taskSort" name="sort">
                             <option value="title" {% if sort == "title" %}selected{% endif %}>Title: A–Z</option>
                             <option value="-title" {% if sort == "-title" %}selected{% endif %}>Title: Z–A</option>
@@ -78,12 +59,35 @@
                         </select>
                     </div>
 
-                    <div class="col-4 col-md-2 col-xl-2 d-grid">
-                        <button class="btn btn-outline-secondary" type="submit">Apply</button>
+                    <div class="col-12 col-sm-6 col-lg-2 d-grid">
+                        <button class="btn theme-action" type="submit">Apply filters</button>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-0">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label class="form-label" for="taskStateFilter">State</label>
+                        <select class="form-select" id="taskStateFilter" name="state">
+                            <option value="">All states</option>
+                            <option value="active" {% if state == "active" %}selected{% endif %}>Active</option>
+                            <option value="completed" {% if state == "completed" %}selected{% endif %}>Completed</option>
+                            <option value="dismissed" {% if state == "dismissed" %}selected{% endif %}>Dismissed</option>
+                        </select>
                     </div>
 
-                    <div class="col-12 col-md-6">
-                        <label class="visually-hidden" for="taskSchedulePeriod">Filter by scheduled period</label>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label class="form-label" for="taskPriorityFilter">Priority</label>
+                        <select class="form-select" id="taskPriorityFilter" name="priority">
+                            <option value="">All priorities</option>
+                            <option value="1" {% if priority == 1 %}selected{% endif %}>Low</option>
+                            <option value="2" {% if priority == 2 %}selected{% endif %}>Medium</option>
+                            <option value="3" {% if priority == 3 %}selected{% endif %}>High</option>
+                            <option value="4" {% if priority == 4 %}selected{% endif %}>Urgent</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label class="form-label" for="taskSchedulePeriod">Scheduled</label>
                         <select class="form-select" id="taskSchedulePeriod" name="scheduled_period">
                             <option value="">Any schedule</option>
                             {% for option_value, option_label in schedule_period_options.items %}
@@ -94,8 +98,8 @@
                         </select>
                     </div>
 
-                    <div class="col-12 col-md-6">
-                        <label class="visually-hidden" for="taskDeadlinePeriod">Filter by deadline period</label>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label class="form-label" for="taskDeadlinePeriod">Deadline</label>
                         <select class="form-select" id="taskDeadlinePeriod" name="deadline_period">
                             <option value="">Any deadline</option>
                             {% for option_value, option_label in deadline_period_options.items %}
@@ -106,114 +110,105 @@
                         </select>
                     </div>
                 </div>
+
+                {% if has_filters or sort != "title" %}
+                    <div class="mt-3">
+                        <a class="link-secondary" href="{% url 'task:tasks' %}">Clear filters</a>
+                    </div>
+                {% endif %}
             </form>
 
             {% if page_obj %}
                 <div class="task-list-heading border-bottom px-4 py-2 text-body-secondary small fw-medium">
                     <div class="row align-items-center gx-3">
-                        <div class="col-auto" style="width: 3.25rem;"></div>
                         <div class="col-md-4">Task</div>
                         <div class="col">Context</div>
                         <div class="col-md-2">Deadline</div>
                         <div class="col-md-1">State</div>
-                        <div class="col-auto" style="width: 3.25rem;"></div>
+                        <div class="col-auto" style="width: 4.75rem;"></div>
                     </div>
                 </div>
 
                 <div id="taskList">
                     {% for task in page_obj %}
                         <article class="task-row{% if task.state != 'active' %} task-row-terminated{% endif %}">
-                            <div class="task-summary px-3 px-md-4 py-2">
-                                <div class="row align-items-center gx-3 gy-2 h-100">
-                                    <div class="col-auto">
-                                        <button
-                                            class="task-toggle btn btn-sm btn-outline-secondary rounded-circle d-inline-flex align-items-center justify-content-center"
-                                            type="button"
-                                            data-bs-toggle="collapse"
-                                            data-bs-target="#taskDetails{{ task.pk }}"
-                                            aria-expanded="false"
-                                            aria-controls="taskDetails{{ task.pk }}"
-                                            aria-label="Expand {{ task.title }} summary"
-                                        >
-                                            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                                                <path d="M3.2 5.7a.75.75 0 0 1 1.1 0L8 9.4l3.7-3.7a.75.75 0 1 1 1.1 1.1l-4.25 4.25a.75.75 0 0 1-1.1 0L3.2 6.8a.75.75 0 0 1 0-1.1Z"></path>
-                                            </svg>
-                                        </button>
-                                    </div>
-
-                                    <div class="col-9 col-md-4">
-                                        <a class="fw-semibold link-body-emphasis text-decoration-none" href="{% url 'task:task_detail' task.pk %}">
-                                            {{ task.title }}
-                                        </a>
-                                        <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
-                                            {% if task.priority == 4 %}
-                                                <span class="badge text-bg-danger-subtle border border-danger-subtle text-danger-emphasis">{{ task.get_priority_display }}</span>
-                                            {% elif task.priority == 3 %}
-                                                <span class="badge text-bg-warning-subtle border border-warning-subtle text-warning-emphasis">{{ task.get_priority_display }}</span>
-                                            {% else %}
-                                                <span class="badge text-bg-secondary-subtle border text-secondary-emphasis">{{ task.get_priority_display }}</span>
-                                            {% endif %}
-                                            <span class="small text-body-secondary d-md-none">
-                                                {% if task.property %}{{ task.property.name }}{% elif task.issue %}{{ task.issue.title }}{% else %}Standalone{% endif %}
+                            <div class="task-summary d-flex align-items-stretch">
+                                <button
+                                    class="task-summary-toggle flex-grow-1 border-0 rounded-0 bg-transparent text-start px-3 px-md-4 py-2"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#taskDetails{{ task.pk }}"
+                                    aria-expanded="false"
+                                    aria-controls="taskDetails{{ task.pk }}"
+                                    aria-label="Toggle {{ task.title }} summary"
+                                >
+                                    <span class="row align-items-center gx-3 gy-2 h-100">
+                                        <span class="col-12 col-md-4">
+                                            <span class="d-block fw-semibold">{{ task.title }}</span>
+                                            <span class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                                {% include "task/includes/priority_badge.html" with task=task %}
+                                                <span class="small text-body-secondary d-md-none">
+                                                    {% if task.property %}{{ task.property.name }}{% elif task.issue %}{{ task.issue.title }}{% else %}Standalone{% endif %}
+                                                </span>
                                             </span>
-                                        </div>
-                                    </div>
-
-                                    <div class="col d-none d-md-block text-body-secondary">
-                                        {% if task.property %}
-                                            <a class="link-body-emphasis text-decoration-none" href="{% url 'property:property_detail' task.property.pk %}">{{ task.property.name }}</a>
-                                        {% elif task.issue %}
-                                            <span>{{ task.issue.title }}</span>
-                                            <span class="d-block small">Issue</span>
-                                        {% else %}
-                                            Standalone task
-                                        {% endif %}
-                                    </div>
-
-                                    <div class="col-7 col-md-2 ms-5 ms-md-0">
-                                        <span class="small{% if task.completion_deadline %} fw-medium{% else %} text-body-secondary{% endif %}">
-                                            {{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}
                                         </span>
-                                    </div>
 
-                                    <div class="col-4 col-md-1">
-                                        {% if task.state == "active" %}
-                                            <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis">{{ task.get_state_display }}</span>
-                                        {% else %}
-                                            <span class="badge text-bg-secondary-subtle border text-secondary-emphasis">{{ task.get_state_display }}</span>
-                                        {% endif %}
-                                    </div>
+                                        <span class="col d-none d-md-block text-body-secondary">
+                                            {% if task.property %}
+                                                {{ task.property.name }}
+                                            {% elif task.issue %}
+                                                <span class="d-block">{{ task.issue.title }}</span>
+                                                <span class="d-block small">Issue</span>
+                                            {% else %}
+                                                Standalone task
+                                            {% endif %}
+                                        </span>
 
-                                    <div class="col-auto ms-auto">
-                                        <div class="dropdown">
-                                            <button
-                                                class="task-actions btn btn-sm btn-outline-secondary dropdown-toggle"
-                                                type="button"
-                                                data-bs-toggle="dropdown"
-                                                aria-expanded="false"
-                                                aria-label="Actions for {{ task.title }}"
-                                            >
-                                                ⋮
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}">Open task</a></li>
-                                                {% if task.state == "active" %}
-                                                    <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}?edit=1">Edit task</a></li>
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}?complete=1">Complete task</a></li>
-                                                    <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}?dismiss=1">Dismiss task</a></li>
-                                                {% else %}
-                                                    <li>
-                                                        <form action="{% url 'task:reactivate_task' task.pk %}" method="post">
-                                                            {% csrf_token %}
-                                                            <button class="dropdown-item" type="submit">Reactivate task</button>
-                                                        </form>
-                                                    </li>
-                                                {% endif %}
+                                        <span class="col-7 col-md-2">
+                                            <span class="small{% if task.completion_deadline %} fw-medium{% else %} text-body-secondary{% endif %}{% if task.state == 'active' and task.completion_deadline and task.completion_deadline < today %} text-danger{% elif task.state == 'active' and task.completion_deadline == today %} text-warning-emphasis{% endif %}">
+                                                {{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}
+                                            </span>
+                                        </span>
+
+                                        <span class="col-4 col-md-1">
+                                            {% if task.state == "active" %}
+                                                <span class="badge bg-success-subtle border border-success-subtle text-success-emphasis">{{ task.get_state_display }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary-subtle border border-secondary-subtle text-secondary-emphasis">{{ task.get_state_display }}</span>
+                                            {% endif %}
+                                        </span>
+                                    </span>
+                                </button>
+
+                                <div class="task-summary-actions d-flex align-items-center justify-content-end pe-3 pe-md-4 py-2">
+                                    <div class="dropdown">
+                                        <button
+                                            class="task-actions btn btn-sm btn-outline-secondary dropdown-toggle"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false"
+                                            aria-label="Actions for {{ task.title }}"
+                                        >
+                                            ⋮
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}">Open task</a></li>
+                                            {% if task.state == "active" %}
+                                                <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}?edit=1">Edit task</a></li>
                                                 <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item text-danger" href="{% url 'task:task_detail' task.pk %}?confirm_delete=1">Delete task</a></li>
-                                            </ul>
-                                        </div>
+                                                <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}?complete=1">Complete task</a></li>
+                                                <li><a class="dropdown-item" href="{% url 'task:task_detail' task.pk %}?dismiss=1">Dismiss task</a></li>
+                                            {% else %}
+                                                <li>
+                                                    <form action="{% url 'task:reactivate_task' task.pk %}" method="post" autocomplete="off">
+                                                        {% csrf_token %}
+                                                        <button class="dropdown-item" type="submit">Reactivate task</button>
+                                                    </form>
+                                                </li>
+                                            {% endif %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="{% url 'task:task_detail' task.pk %}?confirm_delete=1">Delete task</a></li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
@@ -227,14 +222,36 @@
                                             <a class="btn theme-action" href="{% url 'task:task_detail' task.pk %}">Open task</a>
                                         </div>
                                         <div class="col-lg-6">
-                                            <dl class="row mb-0">
-                                                <dt class="col-sm-5 text-body-secondary fw-normal">Priority</dt>
-                                                <dd class="col-sm-7">{{ task.get_priority_display }}</dd>
-                                                <dt class="col-sm-5 text-body-secondary fw-normal">Scheduled</dt>
-                                                <dd class="col-sm-7">{{ task.scheduled_date|date:"j F Y"|default:"Not scheduled" }}</dd>
-                                                <dt class="col-sm-5 text-body-secondary fw-normal">Deadline</dt>
-                                                <dd class="col-sm-7">{{ task.completion_deadline|date:"j F Y"|default:"No deadline" }}</dd>
-                                            </dl>
+                                            <div class="row g-3">
+                                                <div class="col-6">
+                                                    <div class="task-metadata-item border rounded bg-body p-3">
+                                                        <div class="mb-1">{% include "task/includes/priority_badge.html" with task=task %}</div>
+                                                        <div class="small text-body-secondary">Priority</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="task-metadata-item border rounded bg-body p-3">
+                                                        <div class="fw-semibold mb-1">{{ task.created_at|date:"j F Y" }}</div>
+                                                        <div class="small text-body-secondary">Created</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="task-metadata-item border rounded bg-body p-3">
+                                                        <div class="mb-1{% if task.scheduled_date %} fw-semibold{% else %} text-body-secondary{% endif %}">
+                                                            {{ task.scheduled_date|date:"j F Y"|default:"Not scheduled" }}
+                                                        </div>
+                                                        <div class="small text-body-secondary">Scheduled</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="task-metadata-item border rounded bg-body p-3">
+                                                        <div class="mb-1{% if task.completion_deadline %} fw-semibold{% else %} text-body-secondary{% endif %}{% if task.state == 'active' and task.completion_deadline and task.completion_deadline < today %} text-danger{% elif task.state == 'active' and task.completion_deadline == today %} text-warning-emphasis{% endif %}">
+                                                            {{ task.completion_deadline|date:"j F Y"|default:"No deadline" }}
+                                                        </div>
+                                                        <div class="small text-body-secondary">Deadline</div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -293,31 +310,17 @@
     </div>
 
     <div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="task-form-dialog modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="modal-title fs-5" id="addTaskModalLabel">Add task</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <form action="{% url 'task:add_task' %}{% if list_query %}?{{ list_query }}{% endif %}" method="post">
+                <form action="{% url 'task:add_task' %}{% if list_query %}?{{ list_query }}{% endif %}" method="post" autocomplete="off" data-task-form>
                     <div class="modal-body">
                         {% csrf_token %}
-
-                        {% for error in add_task_form.non_field_errors %}
-                            <div class="alert alert-danger" role="alert">{{ error }}</div>
-                        {% endfor %}
-
-                        {% for field in add_task_form %}
-                            <div class="row align-items-start mb-3">
-                                <label class="col-md-3 col-form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                <div class="col-md-9">
-                                    {{ field }}
-                                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                                    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                                </div>
-                            </div>
-                        {% endfor %}
+                        {% include "task/includes/task_form_fields.html" with task_form=add_task_form %}
                     </div>
 
                     <div class="modal-footer">
@@ -331,6 +334,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{% static 'js/task-form.js' %}"></script>
     {% if add_task_form.errors %}
         <script>
             document.addEventListener("DOMContentLoaded", () => {

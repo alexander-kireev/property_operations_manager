@@ -24,7 +24,23 @@ class TaskForm(forms.ModelForm):
             deleted_at__isnull=True,
         )
 
+        self.has_property_choices = self.fields["property"].queryset.exists()
+        self.has_issue_choices = self.fields["issue"].queryset.exists()
+
+        self.fields["property"].empty_label = (
+            "Choose a property"
+            if self.has_property_choices
+            else "No active properties available"
+        )
+        self.fields["issue"].empty_label = (
+            "Choose an issue"
+            if self.has_issue_choices
+            else "No active issues available"
+        )
+
         for field_name, field in self.fields.items():
+            field.widget.attrs["autocomplete"] = "off"
+
             if field_name in ("property", "issue", "priority"):
                 field.widget.attrs["class"] = "form-select"
             else:
@@ -35,6 +51,17 @@ class TaskForm(forms.ModelForm):
         fields = (
             "title", "description", "property", "issue", 
             "priority", "scheduled_date", "completion_deadline")
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 4}),
+            "scheduled_date": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
+            "completion_deadline": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
+        }
 
     def clean(self):
         cleaned_data = super().clean()
