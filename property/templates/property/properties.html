@@ -25,7 +25,7 @@
         <section class="card border-0 shadow-sm" aria-labelledby="property-list-title">
             <h2 class="visually-hidden" id="property-list-title">Property list</h2>
 
-            <form class="card-body border-bottom p-3 p-md-4" method="get" role="search">
+            <form class="card-body border-bottom p-3 p-md-4" method="get" role="search" autocomplete="off">
                 <div class="row g-2">
                     <div class="col-12 col-lg-5">
                         <label class="visually-hidden" for="propertySearch">Search properties</label>
@@ -137,7 +137,7 @@
                                                     <li><a class="dropdown-item text-danger" href="{% url 'property:property_detail' property.pk %}?deactivate=1">Deactivate property</a></li>
                                                 {% else %}
                                                     <li>
-                                                        <form action="{% url 'property:reactivate_property' property.pk %}" method="post">
+                                                        <form action="{% url 'property:reactivate_property' property.pk %}" method="post" autocomplete="off">
                                                             {% csrf_token %}
                                                             <button class="dropdown-item" type="submit">Reactivate property</button>
                                                         </form>
@@ -280,7 +280,7 @@
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <form action="{% url 'property:add_property' %}{% if list_query %}?{{ list_query }}{% endif %}" method="post">
+                <form action="{% url 'property:add_property' %}{% if list_query %}?{{ list_query }}{% endif %}" method="post" autocomplete="off">
                     <div class="modal-body">
                         {% csrf_token %}
 

@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'pages.apps.PagesConfig',
     'property.apps.PropertyConfig',
+    'issue.apps.IssueConfig',
+    'task.apps.TaskConfig',
 ]
 
 AUTH_USER_MODEL = "accounts.User"

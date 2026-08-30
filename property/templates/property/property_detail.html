@@ -42,7 +42,7 @@
                         Edit property
                     </button>
                 {% else %}
-                    <form action="{% url 'property:reactivate_property' property.pk %}" method="post">
+                    <form action="{% url 'property:reactivate_property' property.pk %}" method="post" autocomplete="off">
                         {% csrf_token %}
                         <button class="btn theme-action" type="submit">Reactivate property</button>
                     </form>
@@ -193,7 +193,7 @@
                         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
 
-                    <form action="{% url 'property:edit_property' property.pk %}" method="post">
+                    <form action="{% url 'property:edit_property' property.pk %}" method="post" autocomplete="off">
                         <div class="modal-body">
                             {% csrf_token %}
 
@@ -262,7 +262,7 @@
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                        <form action="{% url 'property:deactivate_property' property.pk %}" method="post">
+                        <form action="{% url 'property:deactivate_property' property.pk %}" method="post" autocomplete="off">
                             {% csrf_token %}
                             <button class="btn btn-outline-danger" type="submit">Deactivate property</button>
                         </form>
@@ -291,7 +291,7 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                    <form action="{% url 'property:delete_property' property.pk %}" method="post">
+                    <form action="{% url 'property:delete_property' property.pk %}" method="post" autocomplete="off">
                         {% csrf_token %}
                         <button class="btn btn-outline-danger" type="submit">Delete property</button>
                     </form>

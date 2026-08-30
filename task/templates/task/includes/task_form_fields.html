@@ -1,0 +1,114 @@
+{% for error in task_form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endfor %}
+
+<div class="row align-items-start mb-3">
+    <label class="col-md-4 col-form-label" for="{{ task_form.title.id_for_label }}">{{ task_form.title.label }}</label>
+    <div class="col-md-8">
+        {{ task_form.title }}
+        {% for error in task_form.title.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+</div>
+
+<div class="row align-items-start mb-3">
+    <label class="col-md-4 col-form-label" for="{{ task_form.description.id_for_label }}">{{ task_form.description.label }}</label>
+    <div class="col-md-8">
+        {{ task_form.description }}
+        {% for error in task_form.description.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+</div>
+
+<fieldset class="row align-items-start mb-3" data-task-relationship>
+    <legend class="col-md-4 col-form-label pt-0 pt-md-2">Related to</legend>
+    <div class="col-md-8">
+        <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-label="Task relationship type">
+            <input
+                class="btn-check"
+                id="{{ task_form.prefix|default:'task' }}RelationshipStandalone"
+                name="relationship_type"
+                type="radio"
+                value="standalone"
+                autocomplete="off"
+                {% if task_form.data.relationship_type == "standalone" %}checked{% elif not task_form.is_bound and not task_form.instance.property_id and not task_form.instance.issue_id %}checked{% elif task_form.is_bound and not task_form.data.relationship_type and not task_form.data.property and not task_form.data.issue %}checked{% endif %}
+            >
+            <label class="btn btn-outline-secondary" for="{{ task_form.prefix|default:'task' }}RelationshipStandalone">Standalone</label>
+
+            <input
+                class="btn-check"
+                id="{{ task_form.prefix|default:'task' }}RelationshipProperty"
+                name="relationship_type"
+                type="radio"
+                value="property"
+                autocomplete="off"
+                {% if task_form.data.relationship_type == "property" %}checked{% elif not task_form.is_bound and task_form.instance.property_id %}checked{% endif %}
+                {% if not task_form.has_property_choices %}disabled{% endif %}
+            >
+            <label class="btn btn-outline-secondary" for="{{ task_form.prefix|default:'task' }}RelationshipProperty">Property</label>
+
+            <input
+                class="btn-check"
+                id="{{ task_form.prefix|default:'task' }}RelationshipIssue"
+                name="relationship_type"
+                type="radio"
+                value="issue"
+                autocomplete="off"
+                {% if task_form.data.relationship_type == "issue" %}checked{% elif not task_form.is_bound and task_form.instance.issue_id %}checked{% endif %}
+                {% if not task_form.has_issue_choices %}disabled{% endif %}
+            >
+            <label class="btn btn-outline-secondary" for="{{ task_form.prefix|default:'task' }}RelationshipIssue">Issue</label>
+        </div>
+
+        {% if not task_form.has_property_choices or not task_form.has_issue_choices %}
+            <div class="form-text">
+                {% if not task_form.has_property_choices %}No active properties available.{% endif %}
+                {% if not task_form.has_property_choices and not task_form.has_issue_choices %} {% endif %}
+                {% if not task_form.has_issue_choices %}No active issues available.{% endif %}
+            </div>
+        {% endif %}
+
+    </div>
+
+    <div class="col-12 mt-3" data-relationship-panel="property">
+        <div class="row align-items-start">
+            <label class="col-md-4 col-form-label" for="{{ task_form.property.id_for_label }}">Property</label>
+            <div class="col-md-8">
+                {{ task_form.property }}
+                {% for error in task_form.property.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 mt-3" data-relationship-panel="issue">
+        <div class="row align-items-start">
+            <label class="col-md-4 col-form-label" for="{{ task_form.issue.id_for_label }}">Issue</label>
+            <div class="col-md-8">
+                {{ task_form.issue }}
+                {% for error in task_form.issue.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+        </div>
+    </div>
+</fieldset>
+
+<div class="row align-items-start mb-3">
+    <label class="col-md-4 col-form-label" for="{{ task_form.priority.id_for_label }}">{{ task_form.priority.label }}</label>
+    <div class="col-md-8 task-form-field-compact">
+        {{ task_form.priority }}
+        {% for error in task_form.priority.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+</div>
+
+<div class="row align-items-start mb-3">
+    <label class="col-md-4 col-form-label" for="{{ task_form.scheduled_date.id_for_label }}">{{ task_form.scheduled_date.label }}</label>
+    <div class="col-md-8 task-form-field-compact">
+        {{ task_form.scheduled_date }}
+        {% for error in task_form.scheduled_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+</div>
+
+<div class="row align-items-start mb-0">
+    <label class="col-md-4 col-form-label" for="{{ task_form.completion_deadline.id_for_label }}">{{ task_form.completion_deadline.label }}</label>
+    <div class="col-md-8 task-form-field-compact">
+        {{ task_form.completion_deadline }}
+        {% for error in task_form.completion_deadline.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+</div>

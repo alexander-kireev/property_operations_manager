@@ -15,7 +15,7 @@
             <div class="card-body p-4 p-md-5">
                 <h2 class="visually-hidden" id="registration-heading">Registration form</h2>
 
-                <form method="post">
+                <form method="post" autocomplete="off">
                     {% csrf_token %}
 
                     {% for error in form.non_field_errors %}
