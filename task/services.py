@@ -69,3 +69,23 @@ def delete_task(*, task):
     task.save(update_fields=["deleted_at"])
 
     return task
+
+
+def dismiss_active_tasks_for_issue(*, issue, terminated_at=None):
+    return Task.objects.filter(
+        user=issue.user,
+        issue=issue,
+        state=Task.State.ACTIVE,
+        deleted_at__isnull=True,
+    ).update(
+        state=Task.State.DISMISSED,
+        terminated_at=terminated_at or timezone.now(),
+    )
+
+
+def delete_tasks_for_issue(*, issue, deleted_at=None):
+    return Task.objects.filter(
+        user=issue.user,
+        issue=issue,
+        deleted_at__isnull=True,
+    ).update(deleted_at=deleted_at or timezone.now())

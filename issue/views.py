@@ -1,3 +1,403 @@
-from django.shortcuts import render
+from urllib.parse import urlencode
 
-# Create your views here.
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST
+
+from property.selectors import properties_for_user
+from task.forms import TaskForm
+from task.models import Task
+from task.selectors import tasks_for_issue, tasks_for_user
+from task.services import create_task, update_task
+
+from .forms import IssueForm
+from .models import Issue
+from .selectors import (
+    ISSUE_DEADLINE_PERIOD_OPTIONS,
+    ISSUE_SORT_OPTIONS,
+    filtered_issues_for_user,
+    issues_for_user,
+)
+from .services import (
+    create_issue,
+    delete_issue,
+    dismiss_issue,
+    reactivate_issue,
+    resolve_issue,
+    update_issue,
+)
+
+
+ISSUES_PER_PAGE = 20
+
+
+def _normalised_list_values(request):
+    search = request.GET.get("search", "").strip()
+    state = request.GET.get("state", "")
+    sort = request.GET.get("sort", "resolution_deadline")
+    priority_value = request.GET.get("priority", "")
+    property_value = request.GET.get("property", "")
+    deadline_period = request.GET.get("deadline_period", "")
+
+    if state not in Issue.State.values:
+        state = ""
+    if sort not in ISSUE_SORT_OPTIONS:
+        sort = "resolution_deadline"
+    if deadline_period not in ISSUE_DEADLINE_PERIOD_OPTIONS:
+        deadline_period = ""
+
+    try:
+        priority = int(priority_value)
+    except (TypeError, ValueError):
+        priority = ""
+    if priority not in Issue.Priority.values:
+        priority = ""
+
+    try:
+        property_id = int(property_value)
+    except (TypeError, ValueError):
+        property_id = ""
+
+    return {
+        "search": search,
+        "state": state,
+        "priority": priority,
+        "property_id": property_id,
+        "deadline_period": deadline_period,
+        "sort": sort,
+    }
+
+
+def _list_query_parameters(values):
+    parameters = {}
+    for name in ("search", "state", "priority", "deadline_period"):
+        if values[name]:
+            parameters[name] = values[name]
+    if values["property_id"]:
+        parameters["property"] = values["property_id"]
+    if values["sort"] != "resolution_deadline":
+        parameters["sort"] = values["sort"]
+    return parameters
+
+
+def _issue_workspace_url(request, *, issue_id=None, tab="details"):
+    parameters = _list_query_parameters(_normalised_list_values(request))
+    page = request.GET.get("page", "")
+    if page.isdigit() and int(page) > 1:
+        parameters["page"] = page
+    if issue_id is not None:
+        parameters["selected"] = issue_id
+    if tab == "tasks":
+        parameters["tab"] = "tasks"
+
+    url = reverse("issue:issues")
+    return f"{url}?{urlencode(parameters)}" if parameters else url
+
+
+def _issue_list_context(
+    request,
+    *,
+    selected_issue=None,
+    add_issue_form=None,
+    edit_issue_form=None,
+    add_task_form=None,
+    edit_task_form=None,
+    edit_task=None,
+    active_tab=None,
+    open_modal=None,
+):
+    values = _normalised_list_values(request)
+    issues = filtered_issues_for_user(user=request.user, **values)
+    paginator = Paginator(issues, ISSUES_PER_PAGE)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    if selected_issue is None:
+        try:
+            selected_id = int(request.GET.get("selected", ""))
+        except (TypeError, ValueError):
+            selected_id = None
+        selected_issue = next(
+            (issue for issue in page_obj if issue.pk == selected_id),
+            None,
+        )
+
+    if selected_issue is None and page_obj.object_list:
+        selected_issue = page_obj.object_list[0]
+
+    selected_tasks = (
+        tasks_for_issue(user=request.user, issue=selected_issue)
+        if selected_issue is not None
+        else Task.objects.none()
+    )
+
+    requested_tab = active_tab or request.GET.get("tab", "details")
+    if requested_tab not in ("details", "tasks"):
+        requested_tab = "details"
+
+    list_parameters = _list_query_parameters(values)
+    navigation_parameters = dict(list_parameters)
+    if page_obj.number > 1:
+        navigation_parameters["page"] = page_obj.number
+
+    properties = properties_for_user(user=request.user).order_by("name", "pk")
+    return {
+        "page_obj": page_obj,
+        "selected_issue": selected_issue,
+        "selected_tasks": selected_tasks,
+        "active_task_count": selected_tasks.filter(state=Task.State.ACTIVE).count(),
+        "linked_task_count": selected_tasks.count(),
+        "add_issue_form": add_issue_form or IssueForm(
+            user=request.user,
+            auto_id="add_issue_%s",
+        ),
+        "edit_issue_form": edit_issue_form or (
+            IssueForm(
+                user=request.user,
+                instance=selected_issue,
+                auto_id="edit_issue_%s",
+            )
+            if selected_issue and selected_issue.state == Issue.State.ACTIVE
+            else None
+        ),
+        "add_task_form": add_task_form or (
+            TaskForm(
+                user=request.user,
+                parent_issue=selected_issue,
+                auto_id="add_issue_task_%s",
+            )
+            if selected_issue and selected_issue.state == Issue.State.ACTIVE
+            else None
+        ),
+        "edit_task_form": edit_task_form or (
+            TaskForm(
+                user=request.user,
+                parent_issue=selected_issue,
+                auto_id="edit_issue_task_%s",
+            )
+            if selected_issue and selected_issue.state == Issue.State.ACTIVE
+            else None
+        ),
+        "edit_task": edit_task,
+        "active_tab": requested_tab,
+        "open_modal": open_modal,
+        "search": values["search"],
+        "state": values["state"],
+        "priority": values["priority"],
+        "property_id": values["property_id"],
+        "deadline_period": values["deadline_period"],
+        "sort": values["sort"],
+        "deadline_period_options": ISSUE_DEADLINE_PERIOD_OPTIONS,
+        "issue_state_choices": Issue.State.choices,
+        "deadline_period_label": ISSUE_DEADLINE_PERIOD_OPTIONS.get(
+            values["deadline_period"], ""
+        ),
+        "properties": properties,
+        "list_query": urlencode(list_parameters),
+        "navigation_query": urlencode(navigation_parameters),
+        "has_filters": any(
+            (
+                values["search"],
+                values["state"],
+                values["priority"],
+                values["property_id"],
+                values["deadline_period"],
+            )
+        ),
+        "filter_count": sum(
+            bool(value)
+            for value in (
+                values["state"],
+                values["priority"],
+                values["property_id"],
+                values["deadline_period"],
+            )
+        ),
+        "today": timezone.localdate(),
+        "issue_count": issues_for_user(user=request.user).count(),
+        "task_count": tasks_for_user(user=request.user).count(),
+        "task_workspace_url": (
+            _issue_workspace_url(
+                request,
+                issue_id=selected_issue.pk,
+                tab="tasks",
+            )
+            if selected_issue
+            else reverse("issue:issues")
+        ),
+    }
+
+
+@login_required
+@require_GET
+def issues_view(request):
+    return render(request, "issue/issues.html", _issue_list_context(request))
+
+
+@login_required
+@require_POST
+def add_issue_view(request):
+    form = IssueForm(
+        request.POST,
+        user=request.user,
+        auto_id="add_issue_%s",
+    )
+    if form.is_valid():
+        issue = create_issue(user=request.user, **form.cleaned_data)
+        return redirect(_issue_workspace_url(request, issue_id=issue.pk))
+    return render(
+        request,
+        "issue/issues.html",
+        _issue_list_context(request, add_issue_form=form, open_modal="addIssueModal"),
+    )
+
+
+@login_required
+@require_POST
+def edit_issue_view(request, issue_id):
+    issue = get_object_or_404(
+        issues_for_user(user=request.user), pk=issue_id, state=Issue.State.ACTIVE
+    )
+    form = IssueForm(
+        request.POST,
+        user=request.user,
+        instance=issue,
+        auto_id="edit_issue_%s",
+    )
+    if form.is_valid():
+        update_issue(issue=issue, **form.cleaned_data)
+        return redirect(_issue_workspace_url(request, issue_id=issue.pk))
+    return render(
+        request,
+        "issue/issues.html",
+        _issue_list_context(
+            request,
+            selected_issue=issue,
+            edit_issue_form=form,
+            open_modal="editIssueModal",
+        ),
+    )
+
+
+@login_required
+@require_POST
+def resolve_issue_view(request, issue_id):
+    issue = get_object_or_404(
+        issues_for_user(user=request.user), pk=issue_id, state=Issue.State.ACTIVE
+    )
+    resolve_issue(
+        issue=issue,
+        dismiss_linked_tasks=request.POST.get("affect_linked_tasks") == "yes",
+    )
+    return redirect(_issue_workspace_url(request, issue_id=issue.pk))
+
+
+@login_required
+@require_POST
+def dismiss_issue_view(request, issue_id):
+    issue = get_object_or_404(
+        issues_for_user(user=request.user), pk=issue_id, state=Issue.State.ACTIVE
+    )
+    dismiss_issue(
+        issue=issue,
+        dismiss_linked_tasks=request.POST.get("affect_linked_tasks") == "yes",
+    )
+    return redirect(_issue_workspace_url(request, issue_id=issue.pk))
+
+
+@login_required
+@require_POST
+def reactivate_issue_view(request, issue_id):
+    issue = get_object_or_404(
+        issues_for_user(user=request.user),
+        pk=issue_id,
+        state__in=[Issue.State.RESOLVED, Issue.State.DISMISSED],
+    )
+    reactivate_issue(issue=issue)
+    return redirect(_issue_workspace_url(request, issue_id=issue.pk))
+
+
+@login_required
+@require_POST
+def delete_issue_view(request, issue_id):
+    issue = get_object_or_404(issues_for_user(user=request.user), pk=issue_id)
+    delete_issue(
+        issue=issue,
+        delete_linked_tasks=request.POST.get("affect_linked_tasks") == "yes",
+    )
+    return redirect(_issue_workspace_url(request))
+
+
+@login_required
+@require_POST
+def add_issue_task_view(request, issue_id):
+    issue = get_object_or_404(
+        issues_for_user(user=request.user), pk=issue_id, state=Issue.State.ACTIVE
+    )
+    form = TaskForm(
+        request.POST,
+        user=request.user,
+        parent_issue=issue,
+        auto_id="add_issue_task_%s",
+    )
+    if form.is_valid():
+        create_task(
+            user=request.user,
+            property=None,
+            issue=issue,
+            **form.cleaned_data,
+        )
+        return redirect(_issue_workspace_url(request, issue_id=issue.pk, tab="tasks"))
+    return render(
+        request,
+        "issue/issues.html",
+        _issue_list_context(
+            request,
+            selected_issue=issue,
+            add_task_form=form,
+            active_tab="tasks",
+            open_modal="addIssueTaskModal",
+        ),
+    )
+
+
+@login_required
+@require_POST
+def edit_issue_task_view(request, issue_id, task_id):
+    issue = get_object_or_404(
+        issues_for_user(user=request.user), pk=issue_id, state=Issue.State.ACTIVE
+    )
+    task = get_object_or_404(
+        tasks_for_issue(user=request.user, issue=issue),
+        pk=task_id,
+        state=Task.State.ACTIVE,
+    )
+    form = TaskForm(
+        request.POST,
+        user=request.user,
+        parent_issue=issue,
+        instance=task,
+        auto_id="edit_issue_task_%s",
+    )
+    if form.is_valid():
+        update_task(
+            task=task,
+            property=None,
+            issue=issue,
+            **form.cleaned_data,
+        )
+        return redirect(_issue_workspace_url(request, issue_id=issue.pk, tab="tasks"))
+    return render(
+        request,
+        "issue/issues.html",
+        _issue_list_context(
+            request,
+            selected_issue=issue,
+            edit_task_form=form,
+            edit_task=task,
+            active_tab="tasks",
+            open_modal="editIssueTaskModal",
+        ),
+    )

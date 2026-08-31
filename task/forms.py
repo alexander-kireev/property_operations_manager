@@ -7,9 +7,10 @@ from property.models import Property
 
 
 class TaskForm(forms.ModelForm):
-    def __init__(self, *args, user, **kwargs):
+    def __init__(self, *args, user, parent_issue=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
+        self.parent_issue = parent_issue
 
         self.fields["property"].queryset = Property.objects.filter(
             user=user,
@@ -38,6 +39,10 @@ class TaskForm(forms.ModelForm):
             else "No active issues available"
         )
 
+        if parent_issue is not None:
+            self.fields.pop("property")
+            self.fields.pop("issue")
+
         for field_name, field in self.fields.items():
             field.widget.attrs["autocomplete"] = "off"
 
@@ -65,6 +70,10 @@ class TaskForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+
+        if self.parent_issue is not None:
+            return cleaned_data
+
         property_record = cleaned_data.get("property")
         issue = cleaned_data.get("issue")
 

@@ -1,9 +1,11 @@
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
 
 from .selectors import (
@@ -27,6 +29,24 @@ from .forms import TaskForm
 from .models import Task
 
 TASKS_PER_PAGE = 20
+
+
+def _task_action_redirect(request, *, task, fallback_name, **fallback_kwargs):
+    next_url = request.POST.get("next", "")
+
+    if (
+        task.issue_id
+        and next_url
+        and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        )
+        and urlsplit(next_url).path == reverse("issue:issues")
+    ):
+        return redirect(next_url)
+
+    return redirect(fallback_name, **fallback_kwargs)
 
 
 def _task_list_context(request, *, add_task_form=None):
@@ -194,7 +214,12 @@ def dismiss_task_view(request, task_id):
 
     dismiss_task(task=task)
 
-    return redirect("task:task_detail", task_id=task.pk)
+    return _task_action_redirect(
+        request,
+        task=task,
+        fallback_name="task:task_detail",
+        task_id=task.pk,
+    )
 
 
 @login_required
@@ -208,7 +233,12 @@ def complete_task_view(request, task_id):
 
     complete_task(task=task)
 
-    return redirect("task:task_detail", task_id=task.pk)
+    return _task_action_redirect(
+        request,
+        task=task,
+        fallback_name="task:task_detail",
+        task_id=task.pk,
+    )
 
 
 @login_required
@@ -225,7 +255,12 @@ def reactivate_task_view(request, task_id):
 
     reactivate_task(task=task)
 
-    return redirect("task:task_detail", task_id=task.pk)
+    return _task_action_redirect(
+        request,
+        task=task,
+        fallback_name="task:task_detail",
+        task_id=task.pk,
+    )
 
 
 
@@ -258,4 +293,8 @@ def delete_task_view(request, task_id):
 
     delete_task(task=task)
 
-    return redirect("task:tasks")
+    return _task_action_redirect(
+        request,
+        task=task,
+        fallback_name="task:tasks",
+    )

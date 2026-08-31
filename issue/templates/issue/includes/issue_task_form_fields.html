@@ -1,0 +1,11 @@
+{% for error in task_form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endfor %}
+<p class="small text-body-secondary">This task will remain linked to <strong>{{ selected_issue.title }}</strong>.</p>
+{% for field in task_form %}
+    <div class="row align-items-start mb-3">
+        <label class="col-md-4 col-form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        <div class="col-md-8{% if field.name == 'priority' or field.name == 'scheduled_date' or field.name == 'completion_deadline' %} task-form-field-compact{% endif %}">
+            {{ field }}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+    </div>
+{% endfor %}

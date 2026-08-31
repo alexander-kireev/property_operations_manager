@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.db.models import F, Q
+from django.db.models import Case, F, IntegerField, Q, Value, When
 from django.db.models.functions import Lower
 from django.utils import timezone
 
@@ -47,6 +47,18 @@ def tasks_for_user(*, user):
     return Task.objects.select_related("property", "issue").filter(
         user=user,
         deleted_at__isnull=True,
+    )
+
+
+def tasks_for_issue(*, user, issue):
+    return tasks_for_user(user=user).filter(issue=issue).order_by(
+        Case(
+            When(state=Task.State.ACTIVE, then=Value(0)),
+            default=Value(1),
+            output_field=IntegerField(),
+        ),
+        F("completion_deadline").asc(nulls_last=True),
+        "pk",
     )
 
 
