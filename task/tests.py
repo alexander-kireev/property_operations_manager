@@ -1,6 +1,6 @@
 from django.db import IntegrityError, transaction
 from django.test import TestCase
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
 from datetime import timedelta
@@ -1066,6 +1066,8 @@ class TaskViewTests(TestCase):
         state=Task.State.ACTIVE,
         terminated_at=None,
         deleted_at=None,
+        property_record=None,
+        issue=None,
     ):
         return Task.objects.create(
             user=user or self.user,
@@ -1075,6 +1077,8 @@ class TaskViewTests(TestCase):
             state=state,
             terminated_at=terminated_at,
             deleted_at=deleted_at,
+            property=property_record,
+            issue=issue,
         )
 
     def task_url(self, name, task):
@@ -1090,7 +1094,6 @@ class TaskViewTests(TestCase):
         )
         endpoints = (
             ("get", reverse("task:tasks"), None),
-            ("get", self.task_url("task_detail", task), None),
             ("post", reverse("task:add_task"), self.VALID_DATA),
             ("post", self.task_url("edit_task", task), self.VALID_DATA),
             ("post", self.task_url("dismiss_task", task), None),
@@ -1127,7 +1130,6 @@ class TaskViewTests(TestCase):
         self.client.force_login(self.user)
         endpoints = (
             ("post", reverse("task:tasks")),
-            ("post", self.task_url("task_detail", task)),
             ("get", reverse("task:add_task")),
             ("get", self.task_url("edit_task", task)),
             ("get", self.task_url("dismiss_task", task)),
@@ -1260,40 +1262,72 @@ class TaskViewTests(TestCase):
         self.assertEqual(response.context["priority"], "")
         self.assertEqual(response.context["scheduled_period"], "")
         self.assertEqual(response.context["deadline_period"], "")
-        self.assertEqual(response.context["sort"], "title")
+        self.assertEqual(response.context["sort"], "completion_deadline")
         self.assertEqual(response.context["list_query"], "search=roof")
 
-    def test_task_detail_view_displays_owned_task_and_clean_edit_form(self):
-        task = self.create_task()
+    def test_tasks_view_selects_first_task_and_supplies_clean_edit_form(self):
+        task = self.create_task(title="First task")
+        self.create_task(title="Second task")
         self.client.force_login(self.user)
 
-        response = self.client.get(self.task_url("task_detail", task))
+        response = self.client.get(reverse("task:tasks"))
         form = response.context["edit_task_form"]
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "task/task_detail.html")
-        self.assertEqual(response.context["task"], task)
+        self.assertTemplateUsed(response, "task/tasks.html")
+        self.assertEqual(response.context["selected_task"], task)
         self.assertContains(response, task.title)
         self.assertIsInstance(form, TaskForm)
         self.assertFalse(form.is_bound)
         self.assertEqual(form.instance, task)
         self.assertEqual(form.errors, {})
 
-    def test_task_detail_view_returns_404_for_another_users_task(self):
-        task = self.create_task(user=self.other_user)
+    def test_tasks_view_honours_selected_task_on_displayed_page(self):
+        self.create_task(title="First task")
+        selected_task = self.create_task(title="Selected task")
         self.client.force_login(self.user)
 
-        response = self.client.get(self.task_url("task_detail", task))
+        response = self.client.get(
+            reverse("task:tasks"),
+            {"selected": selected_task.pk},
+        )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.context["selected_task"], selected_task)
+        self.assertContains(response, 'aria-current="true"')
 
-    def test_task_detail_view_returns_404_for_soft_deleted_task(self):
-        task = self.create_task(deleted_at=timezone.now())
+    def test_tasks_view_rejects_inaccessible_selected_task(self):
+        visible_task = self.create_task(title="Visible task")
+        other_task = self.create_task(user=self.other_user, title="Other task")
+        deleted_task = self.create_task(
+            title="Deleted task",
+            deleted_at=timezone.now(),
+        )
         self.client.force_login(self.user)
 
-        response = self.client.get(self.task_url("task_detail", task))
+        for selected_id in (other_task.pk, deleted_task.pk, "invalid"):
+            with self.subTest(selected=selected_id):
+                response = self.client.get(
+                    reverse("task:tasks"),
+                    {"selected": selected_id},
+                )
+                self.assertEqual(response.context["selected_task"], visible_task)
+                self.assertNotContains(response, other_task.title)
+                self.assertNotContains(response, deleted_task.title)
 
-        self.assertEqual(response.status_code, 404)
+    def test_tasks_view_does_not_select_task_outside_current_page(self):
+        tasks = [self.create_task(title=f"Task {number:02}") for number in range(21)]
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("task:tasks"),
+            {"page": 1, "selected": tasks[-1].pk},
+        )
+
+        self.assertEqual(response.context["selected_task"], tasks[0])
+
+    def test_task_detail_route_has_been_removed(self):
+        with self.assertRaises(NoReverseMatch):
+            reverse("task:task_detail", kwargs={"task_id": 1})
 
     def test_mutation_views_return_404_for_another_users_task(self):
         active_task = self.create_task(user=self.other_user)
@@ -1327,7 +1361,7 @@ class TaskViewTests(TestCase):
         self.assertIsNone(active_task.deleted_at)
         self.assertEqual(dismissed_task.state, Task.State.DISMISSED)
 
-    def test_edit_task_view_updates_active_task_and_redirects_to_detail(self):
+    def test_edit_task_view_updates_active_task_and_redirects_to_workspace(self):
         task = self.create_task(title="Original title")
         property_record = Property.objects.create(
             user=self.user,
@@ -1354,7 +1388,7 @@ class TaskViewTests(TestCase):
 
         self.assertRedirects(
             response,
-            self.task_url("task_detail", task),
+            f"{reverse('task:tasks')}?selected={task.pk}",
         )
         self.assertEqual(task.title, data["title"])
         self.assertEqual(task.description, data["description"])
@@ -1387,7 +1421,9 @@ class TaskViewTests(TestCase):
         form = response.context["edit_task_form"]
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "task/task_detail.html")
+        self.assertTemplateUsed(response, "task/tasks.html")
+        self.assertEqual(response.context["selected_task"], task)
+        self.assertEqual(response.context["open_modal"], "editTaskModal")
         self.assertTrue(form.is_bound)
         self.assertEqual(form.data["title"], data["title"])
         self.assertEqual(form.data["description"], data["description"])
@@ -1436,7 +1472,7 @@ class TaskViewTests(TestCase):
 
         self.assertRedirects(
             response,
-            self.task_url("task_detail", task),
+            f"{reverse('task:tasks')}?selected={task.pk}",
         )
         self.assertEqual(task.state, Task.State.DISMISSED)
         self.assertEqual(task.terminated_at, dismissed_at)
@@ -1469,7 +1505,7 @@ class TaskViewTests(TestCase):
 
         self.assertRedirects(
             response,
-            self.task_url("task_detail", task),
+            f"{reverse('task:tasks')}?selected={task.pk}",
         )
         self.assertEqual(task.state, Task.State.COMPLETED)
         self.assertEqual(task.terminated_at, completed_at)
@@ -1509,7 +1545,7 @@ class TaskViewTests(TestCase):
 
                 self.assertRedirects(
                     response,
-                    self.task_url("task_detail", task),
+                    f"{reverse('task:tasks')}?selected={task.pk}",
                 )
                 self.assertEqual(task.state, Task.State.ACTIVE)
                 self.assertIsNone(task.terminated_at)
@@ -1560,7 +1596,6 @@ class TaskViewTests(TestCase):
         )
         self.client.force_login(self.user)
         endpoints = (
-            ("get", "task_detail", active_task, None),
             ("post", "edit_task", active_task, self.VALID_DATA),
             ("post", "dismiss_task", active_task, None),
             ("post", "complete_task", active_task, None),
@@ -1596,10 +1631,7 @@ class TaskViewTests(TestCase):
         self.assertEqual(task.user, self.user)
         self.assertRedirects(
             response,
-            reverse(
-                "task:task_detail",
-                kwargs={"task_id": task.pk}
-            ),
+            f"{reverse('task:tasks')}?selected={task.pk}",
         )
 
     def test_add_task_view_with_invalid_data_returns_bound_form_with_error_and_does_not_create_task(self):
@@ -1617,6 +1649,73 @@ class TaskViewTests(TestCase):
         self.assertTrue(response.context["add_task_form"].is_bound)
         self.assertEqual(response.context["search"], "call_plumber")
         self.assertEqual(response.context["sort"], "-created_at")
-        self.assertContains(response, "bootstrap.Modal.getOrCreateInstance")
+        self.assertEqual(response.context["open_modal"], "addTaskModal")
         self.assertEqual(Task.objects.count(), 0)
         self.assertEqual(response.context["list_query"], "search=call_plumber&sort=-created_at")
+
+    def test_tasks_view_supplies_navigation_counts_and_no_notes_ui(self):
+        self.create_task()
+        Issue.objects.create(user=self.user, title="Roof leak")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("task:tasks"))
+
+        self.assertEqual(response.context["task_count"], 1)
+        self.assertEqual(response.context["issue_count"], 1)
+        self.assertNotContains(response, "Task notes")
+        self.assertNotContains(response, "NotesBoard")
+
+    def test_tasks_view_distinguishes_filtered_empty_from_first_use(self):
+        self.create_task(title="Existing task")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("task:tasks"), {"search": "missing"})
+
+        self.assertEqual(response.context["task_count"], 1)
+        self.assertIsNone(response.context["selected_task"])
+        self.assertContains(response, "No matching tasks")
+        self.assertNotContains(response, "Add your first task")
+
+    def test_linked_task_action_accepts_its_issue_workspace_return(self):
+        issue = Issue.objects.create(user=self.user, title="Roof leak")
+        task = self.create_task(issue=issue)
+        next_url = f"{reverse('issue:issues')}?selected={issue.pk}&tab=tasks"
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            self.task_url("complete_task", task),
+            {"next": next_url},
+        )
+
+        self.assertRedirects(response, next_url)
+
+    def test_task_action_rejects_external_and_forged_issue_returns(self):
+        issue = Issue.objects.create(user=self.user, title="Roof leak")
+        other_issue = Issue.objects.create(user=self.user, title="Boiler fault")
+        linked_task = self.create_task(issue=issue)
+        unlinked_task = self.create_task(title="Standalone task")
+        self.client.force_login(self.user)
+
+        for task, next_url in (
+            (linked_task, "https://example.com/steal"),
+            (
+                linked_task,
+                f"{reverse('issue:issues')}?selected={other_issue.pk}&tab=tasks",
+            ),
+            (
+                unlinked_task,
+                f"{reverse('issue:issues')}?selected={issue.pk}&tab=tasks",
+            ),
+        ):
+            task.state = Task.State.ACTIVE
+            task.terminated_at = None
+            task.save(update_fields=["state", "terminated_at"])
+            with self.subTest(next=next_url):
+                response = self.client.post(
+                    self.task_url("complete_task", task),
+                    {"next": next_url},
+                )
+                self.assertRedirects(
+                    response,
+                    f"{reverse('task:tasks')}?selected={task.pk}",
+                )

@@ -608,6 +608,6 @@ class TaskIssueReturnTests(IssueTestMixin, TestCase):
 
         self.assertRedirects(
             response,
-            reverse("task:task_detail", args=[task.pk]),
+            f"{reverse('task:tasks')}?selected={task.pk}",
             fetch_redirect_response=False,
         )

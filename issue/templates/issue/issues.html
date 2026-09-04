@@ -141,21 +141,26 @@
                     {% if selected_issue %}
                         <header class="issue-detail-header border-bottom p-3 p-md-4">
                             <a class="issue-mobile-back btn btn-sm btn-link px-0 mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to issues</a>
-                            <div class="d-flex align-items-start justify-content-between gap-3">
-                                <div class="min-w-0">
-                                    <div class="d-flex align-items-center flex-wrap gap-2">
-                                        <h2 class="h3 mb-0">{{ selected_issue.title }}</h2>
+                            <div class="issue-detail-header-layout">
+                                <div class="issue-detail-heading-copy">
+                                    <h2 class="issue-detail-title h3">{{ selected_issue.title }}</h2>
+                                    <div class="issue-detail-meta">
                                         <span class="badge {% if selected_issue.state == 'active' %}bg-success-subtle border border-success-subtle text-success-emphasis{% else %}text-bg-light border{% endif %}">{{ selected_issue.get_state_display }}</span>
                                         {% include "issue/includes/priority_badge.html" with issue=selected_issue %}
+                                        <span class="small text-body-secondary">Created {{ selected_issue.created_at|date:"j F Y" }}{% if selected_issue.property %} · {{ selected_issue.property.name }}{% endif %}</span>
                                     </div>
-                                    <p class="small text-body-secondary mb-0 mt-2">Created {{ selected_issue.created_at|date:"j F Y" }}{% if selected_issue.property %} · {{ selected_issue.property.name }}{% endif %}</p>
                                 </div>
-                                <div class="d-flex gap-2 flex-shrink-0">
-                                    {% if selected_issue.state == 'active' %}<button class="btn theme-action" type="button" data-bs-toggle="modal" data-bs-target="#resolveIssueModal">Resolve issue</button>{% else %}<button class="btn theme-action" type="button" data-bs-toggle="modal" data-bs-target="#reactivateIssueModal">Reactivate</button>{% endif %}
+                                <div class="issue-detail-actions">
+                                    {% if selected_issue.state == 'active' %}
+                                        <button class="btn theme-action" type="button" data-bs-toggle="modal" data-bs-target="#resolveIssueModal">Resolve issue</button>
+                                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editIssueModal">Edit issue</button>
+                                    {% else %}
+                                        <button class="btn theme-action" type="button" data-bs-toggle="modal" data-bs-target="#reactivateIssueModal">Reactivate</button>
+                                    {% endif %}
                                     <div class="dropdown">
                                         <button class="btn btn-outline-secondary dropdown-toggle issue-menu-button" type="button" data-bs-toggle="dropdown" aria-label="Issue actions">⋮</button>
                                         <ul class="dropdown-menu dropdown-menu-end">
-                                            {% if selected_issue.state == 'active' %}<li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editIssueModal">Edit issue</button></li><li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#dismissIssueModal">Dismiss issue</button></li>{% endif %}
+                                            {% if selected_issue.state == 'active' %}<li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#dismissIssueModal">Dismiss issue</button></li>{% endif %}
                                             <li><hr class="dropdown-divider"></li><li><button class="dropdown-item text-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteIssueModal">Delete issue</button></li>
                                         </ul>
                                     </div>
