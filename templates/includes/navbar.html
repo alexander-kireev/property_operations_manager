@@ -41,7 +41,7 @@
             </li>
             <li class="nav-item dropdown">
                 <button
-                    class="nav-link"
+                    class="my-work-menu-toggle nav-link"
                     type="button"
                     data-bs-toggle="dropdown"
                     aria-expanded="false"
@@ -50,7 +50,6 @@
                 </button>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="{% url 'task:tasks' %}">Tasks</a></li>
-                    <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="{% url 'issue:issues' %}">Issues</a></li>
                     <li><span class="dropdown-item disabled" aria-disabled="true">Events</span></li>
                 </ul>
