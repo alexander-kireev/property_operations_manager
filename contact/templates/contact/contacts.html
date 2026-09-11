@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Contacts | Property Operations Manager{% endblock %}
+{% block body_class %}bg-body-tertiary contact-command-page{% endblock %}
+{% block main_class %}contact-command-main flex-grow-1 py-3{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="container-xl h-100">
+    <section class="contact-command-centre card border-0 shadow-sm h-100" aria-label="Contacts command centre">
+        {% if contact_count == 0 %}
+            <div class="contact-first-empty flex-grow-1 d-flex align-items-center justify-content-center p-4 p-md-5 text-center">
+                <div class="contact-first-empty-content">
+                    <div class="contact-first-empty-mark mx-auto mb-4" aria-hidden="true">@</div>
+                    <h1 class="h3 mb-3">No contacts yet</h1>
+                    <p class="text-body-secondary mb-2">Keep the people involved in your property operations in one place.</p>
+                    <p class="small text-body-secondary mb-4">Add a name and, if you want, their first email address and telephone number.</p>
+                    <button class="btn theme-action px-4" type="button" data-bs-toggle="modal" data-bs-target="#addContactModal">Add your first contact</button>
+                </div>
+            </div>
+        {% else %}
+            <div class="contact-workspace row g-0{% if show_mobile_detail %} show-detail{% endif %}" id="contactWorkspace">
+                <aside class="contact-list-column col-lg-4 border-end" aria-label="Contact results">
+                    <div class="contact-pane">
+                        <form class="contact-list-controls border-bottom p-3" method="get" autocomplete="off">
+                            <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                                <h1 class="h5 mb-0">Contacts</h1>
+                                <button class="btn btn-sm theme-action px-3" type="button" data-bs-toggle="modal" data-bs-target="#addContactModal">+ Add contact</button>
+                            </div>
+
+                            <div class="contact-local-control-row">
+                                <label class="visually-hidden" for="contactSearch">Search contacts</label>
+                                <input class="form-control form-control-sm" id="contactSearch" name="search" type="search" value="{{ search }}" placeholder="Search contacts">
+                                <button class="btn btn-sm theme-action" type="submit">Apply</button>
+                            </div>
+
+                            <div class="contact-local-control-row mt-2">
+                                <label class="visually-hidden" for="contactSort">Sort contacts</label>
+                                <select class="form-select form-select-sm" id="contactSort" name="sort">
+                                    <option value="name" {% if sort == "name" %}selected{% endif %}>Name: A–Z</option>
+                                    <option value="-name" {% if sort == "-name" %}selected{% endif %}>Name: Z–A</option>
+                                    <option value="-created_at" {% if sort == "-created_at" %}selected{% endif %}>Newest first</option>
+                                    <option value="created_at" {% if sort == "created_at" %}selected{% endif %}>Oldest first</option>
+                                </select>
+                                <select class="form-select form-select-sm" name="state" aria-label="Filter by state">
+                                    <option value="">All states</option>
+                                    <option value="active" {% if state == "active" %}selected{% endif %}>Active</option>
+                                    <option value="deactivated" {% if state == "deactivated" %}selected{% endif %}>Deactivated</option>
+                                </select>
+                            </div>
+
+                            {% if has_filters %}
+                                <div class="small mt-2">
+                                    <a class="link-secondary" href="{% url 'contact:contacts' %}">Clear search and filters</a>
+                                </div>
+                            {% endif %}
+                        </form>
+
+                        {% if page_obj.object_list %}
+                            <div class="contact-command-list list-group list-group-flush" aria-label="Contacts">
+                                {% for contact in page_obj %}
+                                    <a
+                                        class="contact-command-row list-group-item list-group-item-action{% if contact == selected_contact %} active{% endif %}{% if contact.state != 'active' %} terminated{% endif %}"
+                                        href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ contact.pk }}"
+                                        {% if contact == selected_contact %}aria-current="true"{% endif %}
+                                    >
+                                        <span class="contact-command-title d-block">{{ contact }}</span>
+                                        <span class="contact-command-methods d-block mt-2">
+                                            {% for method in contact.contact_methods.all %}
+                                                {% if not forloop.first %} · {% endif %}{{ method.value }}
+                                            {% empty %}
+                                                No contact details
+                                            {% endfor %}
+                                        </span>
+                                        {% if contact.state != "active" %}<span class="badge bg-secondary-subtle border text-secondary-emphasis mt-2">{{ contact.get_state_display }}</span>{% endif %}
+                                    </a>
+                                {% endfor %}
+                            </div>
+
+                            <div class="contact-pagination d-flex justify-content-center border-top px-3 py-2">
+                                {% if page_obj.paginator.num_pages > 1 %}
+                                    <nav aria-label="Contact pagination">
+                                        <ul class="pagination pagination-sm mb-0">
+                                            <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
+                                                {% if page_obj.has_previous %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Previous page">‹</a>{% else %}<span class="page-link" aria-disabled="true">‹</span>{% endif %}
+                                            </li>
+                                            {% for page_number in page_obj.paginator.page_range %}
+                                                <li class="page-item{% if page_number == page_obj.number %} active{% endif %}">
+                                                    {% if page_number == page_obj.number %}<span class="page-link" aria-current="page">{{ page_number }}</span>{% else %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_number }}">{{ page_number }}</a>{% endif %}
+                                                </li>
+                                            {% endfor %}
+                                            <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
+                                                {% if page_obj.has_next %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}" aria-label="Next page">›</a>{% else %}<span class="page-link" aria-disabled="true">›</span>{% endif %}
+                                            </li>
+                                        </ul>
+                                    </nav>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4 text-center">
+                                <div><h2 class="h5">No matching contacts</h2><p class="small text-body-secondary mb-3">Try changing your search or state filter.</p><a class="btn btn-sm btn-outline-secondary" href="{% url 'contact:contacts' %}">Clear filters</a></div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </aside>
+
+                <section class="contact-detail-column col-lg-8" aria-label="Selected contact">
+                    <div class="contact-pane">
+                        {% if selected_contact %}
+                            <header class="contact-detail-header">
+                                <a class="contact-mobile-back btn btn-sm btn-outline-secondary mb-3" href="{% url 'contact:contacts' %}{% if list_query %}?{{ list_query }}{% endif %}">← Back to contacts</a>
+                                <div class="contact-detail-header-layout">
+                                    <div class="contact-detail-heading-copy">
+                                        <h2 class="contact-detail-title h3">{{ selected_contact }}</h2>
+                                        <div class="contact-detail-meta">
+                                            <span class="badge {% if selected_contact.state == 'active' %}text-bg-success-subtle border border-success-subtle text-success-emphasis{% else %}bg-secondary-subtle border text-secondary-emphasis{% endif %}">{{ selected_contact.get_state_display }}</span>
+                                            <span class="small text-body-secondary">Added {{ selected_contact.created_at|date:"j M Y" }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="contact-detail-actions">
+                                        {% if selected_contact.state == "active" %}
+                                            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editContactModal">Edit contact</button>
+                                        {% else %}
+                                            <form action="{% url 'contact:reactivate_contact' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn theme-action" type="submit">Reactivate</button></form>
+                                        {% endif %}
+                                        <div class="dropdown">
+                                            <button class="btn btn-outline-secondary dropdown-toggle contact-menu-button" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Open contact actions">⋮</button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                {% if selected_contact.state == "active" %}<li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#deactivateContactModal">Deactivate contact</button></li><li><hr class="dropdown-divider"></li>{% endif %}
+                                                <li><button class="dropdown-item text-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteContactModal">Delete contact</button></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </header>
+
+                            <div class="contact-detail-scroll p-4">
+                                {% if selected_contact.state != "active" %}<div class="alert alert-secondary" role="status">This contact is read-only and retained as history. Reactivate it to make changes.</div>{% endif %}
+
+                                <section class="card" aria-labelledby="contact-methods-heading">
+                                    <div class="card-header bg-body d-flex align-items-center justify-content-between gap-3 p-3 p-md-4">
+                                        <div><h3 class="h5 mb-1" id="contact-methods-heading">Contact details</h3><p class="small text-body-secondary mb-0">Email addresses and international telephone numbers.</p></div>
+                                        {% if selected_contact.state == "active" %}<button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#addContactMethodModal">+ Add detail</button>{% endif %}
+                                    </div>
+                                    {% if contact_methods %}
+                                        <div class="list-group list-group-flush">
+                                            {% for method in contact_methods %}
+                                                <div class="list-group-item d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 px-3 px-md-4 py-3">
+                                                    <div>
+                                                        <div class="small text-body-secondary">{{ method.get_type_display }}</div>
+                                                        {% if method.type == "email" %}<a class="link-body-emphasis" href="mailto:{{ method.value }}">{{ method.value }}</a>{% else %}<a class="link-body-emphasis" href="tel:{{ method.value }}">{{ method.value }}</a>{% endif %}
+                                                    </div>
+                                                    {% if selected_contact.state == "active" %}
+                                                        <div class="d-flex gap-2">
+                                                            <a class="btn btn-sm btn-outline-secondary" href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ selected_contact.pk }}&amp;edit_method={{ method.pk }}">Edit</a>
+                                                            <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteContactMethodModal{{ method.pk }}">Delete</button>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="card-body p-4 text-center text-body-secondary">No contact details have been added.</div>
+                                    {% endif %}
+                                </section>
+                            </div>
+                        {% else %}
+                            <div class="flex-grow-1 d-flex align-items-center justify-content-center p-5 text-center"><div><h2 class="h4">No contact selected</h2><p class="text-body-secondary mb-0">Select a contact from the list.</p></div></div>
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+        {% endif %}
+    </section>
+</div>
+
+<div class="modal fade" id="addContactModal" tabindex="-1" aria-labelledby="addContactModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="addContactModalLabel">Add contact</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <form action="{% url 'contact:add_contact' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
+            <div class="modal-body">{% csrf_token %}
+                {% for error in add_contact_form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endfor %}
+                {% for field in add_contact_form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}
+            </div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action px-4" type="submit">Save contact</button></div>
+        </form>
+    </div></div>
+</div>
+
+{% if selected_contact %}
+    {% if selected_contact.state == "active" %}
+        <div class="modal fade" id="editContactModal" tabindex="-1" aria-labelledby="editContactModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title fs-5" id="editContactModalLabel">Edit {{ selected_contact }}</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <form action="{% url 'contact:edit_contact' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
+                    <div class="modal-body">{% csrf_token %}{% for field in edit_contact_form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}</div>
+                    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save changes</button></div>
+                </form>
+            </div></div>
+        </div>
+
+        <div class="modal fade" id="addContactMethodModal" tabindex="-1" aria-labelledby="addContactMethodModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title fs-5" id="addContactMethodModalLabel">Add contact detail</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <form action="{% url 'contact:add_contact_method' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
+                    <div class="modal-body">{% csrf_token %}{% for field in add_contact_method_form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}</div>
+                    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Add detail</button></div>
+                </form>
+            </div></div>
+        </div>
+
+        {% if edit_contact_method and edit_contact_method_form %}
+            <div class="modal fade" id="editContactMethodModal" tabindex="-1" aria-labelledby="editContactMethodModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+                    <div class="modal-header"><h2 class="modal-title fs-5" id="editContactMethodModalLabel">Edit contact detail</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <form action="{% url 'contact:edit_contact_method' selected_contact.pk edit_contact_method.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
+                        <div class="modal-body">{% csrf_token %}{% for field in edit_contact_method_form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}</div>
+                        <div class="modal-footer"><a class="btn btn-outline-secondary" href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ selected_contact.pk }}">Cancel</a><button class="btn theme-action" type="submit">Save changes</button></div>
+                    </form>
+                </div></div>
+            </div>
+        {% endif %}
+
+        <div class="modal fade" id="deactivateContactModal" tabindex="-1" aria-labelledby="deactivateContactModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="deactivateContactModalLabel">Deactivate {{ selected_contact }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body">The contact will become read-only and remain available as history.</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'contact:deactivate_contact' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Deactivate</button></form></div></div></div>
+        </div>
+
+        {% for method in contact_methods %}
+            <div class="modal fade" id="deleteContactMethodModal{{ method.pk }}" tabindex="-1" aria-labelledby="deleteContactMethodModalLabel{{ method.pk }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="deleteContactMethodModalLabel{{ method.pk }}">Delete {{ method.get_type_display|lower }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-0">{{ method.value }} will be permanently removed from this contact.</p></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'contact:delete_contact_method' selected_contact.pk method.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Delete detail</button></form></div></div></div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="modal fade" id="deleteContactModal" tabindex="-1" aria-labelledby="deleteContactModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="deleteContactModalLabel">Delete {{ selected_contact }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-2">This contact will be removed from your workspace.</p><p class="text-body-secondary mb-0">The underlying record and its contact details are retained as history.</p></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'contact:delete_contact' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Delete contact</button></form></div></div></div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+    {% if open_modal %}
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const modalElement = document.getElementById("{{ open_modal|escapejs }}");
+                if (modalElement) bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            });
+        </script>
+    {% endif %}
+{% endblock %}

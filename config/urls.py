@@ -24,4 +24,5 @@ urlpatterns = [
     path("properties/", include("property.urls")),
     path("issues/", include("issue.urls")),
     path("tasks/", include("task.urls")),
+    path("contacts/", include("contact.urls")),
 ]
