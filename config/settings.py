@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'property.apps.PropertyConfig',
     'issue.apps.IssueConfig',
     'task.apps.TaskConfig',
+    'contact.apps.ContactConfig',
 ]
 
 AUTH_USER_MODEL = "accounts.User"
