@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'issue.apps.IssueConfig',
     'task.apps.TaskConfig',
     'contact.apps.ContactConfig',
+    'event.apps.EventConfig',
 ]
 
 AUTH_USER_MODEL = "accounts.User"

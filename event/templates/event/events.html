@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Events | Property Operations Manager{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/event.css' %}">{% endblock %}
+{% block body_class %}bg-body-tertiary event-command-page{% endblock %}
+{% block main_class %}event-command-main flex-grow-1 py-3{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="container-xl h-100">
+    <section class="event-command-centre card border-0 shadow-sm h-100" aria-label="Events command centre">
+        {% include "includes/my_work_nav.html" with active_section="events" task_count=task_count issue_count=issue_count event_count=event_count %}
+
+        {% if event_count == 0 %}
+            <div class="event-first-empty flex-grow-1 d-flex align-items-center justify-content-center p-4 p-md-5 text-center">
+                <div class="event-first-empty-content">
+                    <div class="event-first-empty-mark mx-auto mb-4" aria-hidden="true">□</div>
+                    <h1 class="h3 mb-3">No events yet</h1>
+                    <p class="text-body-secondary mb-4">Add an event to keep dates, appointments, and important property activity in one place.</p>
+                    <button class="btn theme-action px-4" type="button" data-bs-toggle="modal" data-bs-target="#addEventModal"{% if not add_event_form %} disabled{% endif %}>Add your first event</button>
+                </div>
+            </div>
+        {% else %}
+            <div class="event-workspace row g-0{% if selected_event and active_tab == 'details' %} show-detail{% endif %}" id="eventWorkspace">
+                <aside class="event-list-column col-lg-4 border-end" aria-label="Event results">
+                    <div class="event-pane">
+                        <form class="event-list-controls border-bottom p-3" method="get" autocomplete="off">
+                            <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                                <h1 class="h5 mb-0">Events</h1>
+                                <button class="btn btn-sm theme-action px-3" type="button" data-bs-toggle="modal" data-bs-target="#addEventModal"{% if not add_event_form %} disabled{% endif %}>+ Add event</button>
+                            </div>
+                            <div class="event-control-row">
+                                <label class="visually-hidden" for="eventSearch">Search events</label>
+                                <input class="form-control form-control-sm" id="eventSearch" name="search" type="search" value="{{ search }}" placeholder="Search events">
+                                <button class="btn btn-sm theme-action" type="submit">Apply</button>
+                            </div>
+                            <div class="event-control-row mt-2">
+                                <label class="visually-hidden" for="eventSort">Sort events</label>
+                                <select class="form-select form-select-sm" id="eventSort" name="sort">
+                                    <option value="scheduled_date"{% if sort == "scheduled_date" %} selected{% endif %}>Date: soonest</option>
+                                    <option value="-scheduled_date"{% if sort == "-scheduled_date" %} selected{% endif %}>Date: latest</option>
+                                    <option value="title"{% if sort == "title" %} selected{% endif %}>Title: A–Z</option>
+                                    <option value="-title"{% if sort == "-title" %} selected{% endif %}>Title: Z–A</option>
+                                    <option value="-created_at"{% if sort == "-created_at" %} selected{% endif %}>Newest first</option>
+                                </select>
+                                <button class="btn btn-sm btn-outline-dark" type="button" data-bs-toggle="collapse" data-bs-target="#eventFilters" aria-expanded="{% if has_filters %}true{% else %}false{% endif %}" aria-controls="eventFilters">
+                                    Filters{% if filter_count %} <span class="badge text-bg-secondary">{{ filter_count }}</span>{% endif %}
+                                </button>
+                            </div>
+                            <div class="collapse{% if has_filters %} show{% endif %}" id="eventFilters">
+                                <div class="row g-2 pt-3">
+                                    <div class="col-12">
+                                        <label class="visually-hidden" for="eventState">State</label>
+                                        <select class="form-select form-select-sm" id="eventState" name="state">
+                                            <option value="">All states</option>
+                                            {% for value, label in event_state_choices %}<option value="{{ value }}"{% if state == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="visually-hidden" for="eventProperty">Property</label>
+                                        <select class="form-select form-select-sm" id="eventProperty" name="property">
+                                            <option value="">All properties</option>
+                                            {% for property in properties %}<option value="{{ property.pk }}"{% if property_id == property.pk %} selected{% endif %}>{{ property.name }}</option>{% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="small text-body-secondary" for="eventParticipation">Participation</label>
+                                        <select class="form-select form-select-sm" id="eventParticipation" name="participation">
+                                            <option value="">Any</option>
+                                            <option value="required"{% if participation == "required" %} selected{% endif %}>Required</option>
+                                            <option value="not_required"{% if participation == "not_required" %} selected{% endif %}>Not required</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="small text-body-secondary" for="eventPresence">Presence</label>
+                                        <select class="form-select form-select-sm" id="eventPresence" name="presence">
+                                            <option value="">Any</option>
+                                            <option value="required"{% if presence == "required" %} selected{% endif %}>Required</option>
+                                            <option value="not_required"{% if presence == "not_required" %} selected{% endif %}>Not required</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="small text-body-secondary mt-2" id="eventFilterCompatibility" aria-live="polite"></div>
+                            </div>
+                            {% if has_filters %}
+                                <div class="d-flex flex-wrap align-items-center gap-1 mt-2">
+                                    {% if state %}<span class="event-filter-chip">{{ state|title }}</span>{% endif %}
+                                    {% if property_id %}{% for property in properties %}{% if property.pk == property_id %}<span class="event-filter-chip">{{ property.name }}</span>{% endif %}{% endfor %}{% endif %}
+                                    {% if participation != "any" %}<span class="event-filter-chip">Participation: {% if participation == "required" %}required{% else %}not required{% endif %}</span>{% endif %}
+                                    {% if presence != "any" %}<span class="event-filter-chip">Presence: {% if presence == "required" %}required{% else %}not required{% endif %}</span>{% endif %}
+                                    <a class="command-filter-clear ms-1" href="{% url 'event:events' %}">Clear all</a>
+                                </div>
+                            {% endif %}
+                        </form>
+
+                        <div class="event-command-list list-group list-group-flush">
+                            {% for event in page_obj %}
+                                <a class="event-command-row list-group-item list-group-item-action{% if selected_event.pk == event.pk %} active{% endif %}{% if event.state != 'scheduled' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ event.pk }}&amp;tab=details">
+                                    <div class="d-flex justify-content-between gap-3">
+                                        <span class="event-command-title">{{ event.title }}</span>
+                                        <span class="event-state-badge event-state-{{ event.state }}">{{ event.get_state_display }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-end gap-3 mt-2">
+                                        <span class="event-command-context">{% if event.property %}{{ event.property.name }}{% else %}No property{% endif %}</span>
+                                        <span class="event-command-time text-end">{{ event.scheduled_date|date:"j M Y" }}<br>{% if event.all_day %}All day{% else %}{{ event.start_time|time:"H:i" }}{% if event.end_time %}–{{ event.end_time|time:"H:i" }}{% endif %}{% endif %}</span>
+                                    </div>
+                                </a>
+                            {% empty %}
+                                <div class="p-4 text-center text-body-secondary">No events match these filters.</div>
+                            {% endfor %}
+                        </div>
+
+                        {% if page_obj.paginator.num_pages > 1 %}
+                            <nav class="event-pagination border-top bg-body p-3 d-flex justify-content-center" aria-label="Event pages">
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">{% if page_obj.has_previous %}<a class="page-link px-3" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">← Previous</a>{% else %}<span class="page-link px-3">← Previous</span>{% endif %}</li>
+                                    {% for number in page_obj.paginator.page_range %}<li class="page-item{% if page_obj.number == number %} active{% endif %}"><a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ number }}">{{ number }}</a></li>{% endfor %}
+                                    <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">{% if page_obj.has_next %}<a class="page-link px-3" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span class="page-link px-3">Next →</span>{% endif %}</li>
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    </div>
+                </aside>
+
+                <section class="event-right-column col-lg-8" aria-label="Calendar and selected event">
+                    <div class="event-pane">
+                        <nav class="event-right-tabs border-bottom px-3" aria-label="Event workspace views">
+                            <ul class="nav h-100" role="tablist">
+                                <li class="nav-item"><button class="nav-link px-4{% if active_tab != 'details' %} active{% endif %}" data-bs-toggle="tab" data-bs-target="#eventCalendarPanel" type="button" role="tab">Calendar</button></li>
+                                <li class="nav-item"><button class="nav-link px-4{% if active_tab == 'details' %} active{% endif %}" data-bs-toggle="tab" data-bs-target="#eventDetailsPanel" type="button" role="tab">Event details</button></li>
+                            </ul>
+                        </nav>
+                        <div class="event-right-body tab-content">
+                            <section class="tab-pane fade h-100{% if active_tab != 'details' %} show active{% endif %}" id="eventCalendarPanel" role="tabpanel">
+                                <div class="event-calendar-pane p-3 p-xl-4">
+                                    <div class="event-calendar-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                        <a class="btn btn-sm btn-outline-secondary" href="?{{ today_query }}">Today</a>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a class="btn btn-sm btn-outline-secondary" href="?{{ previous_year_query }}" aria-label="Previous year">«</a>
+                                            <a class="btn btn-sm btn-outline-secondary" href="?{{ previous_month_query }}" aria-label="Previous month">‹</a>
+                                            <h2 class="event-calendar-title h5 mb-0">{{ calendar_month_label|default:"Calendar" }}</h2>
+                                            <a class="btn btn-sm btn-outline-secondary" href="?{{ next_month_query }}" aria-label="Next month">›</a>
+                                            <a class="btn btn-sm btn-outline-secondary" href="?{{ next_year_query }}" aria-label="Next year">»</a>
+                                        </div>
+                                        <span class="small text-body-secondary">{% if calendar_event_count is not None %}{{ calendar_event_count }} event{{ calendar_event_count|pluralize }}{% endif %}</span>
+                                    </div>
+                                    {% if calendar_weeks %}
+                                        <div class="event-calendar-grid" aria-label="{{ calendar_month_label }} event calendar">
+                                            {% for weekday in calendar_weekdays %}<div class="event-calendar-weekday">{{ weekday }}</div>{% endfor %}
+                                            {% for week in calendar_weeks %}{% for day in week %}
+                                                <div class="event-calendar-day{% if not day.in_month %} outside{% endif %}{% if day.is_today %} today{% endif %}">
+                                                    <span class="event-calendar-day-number">{{ day.date|date:"j" }}</span>
+                                                    {% for event in day.events %}<a class="event-calendar-item {{ event.state }}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ event.pk }}&amp;tab=details" title="{{ event.title }}">{% if not event.all_day %}{{ event.start_time|time:"H:i" }} {% endif %}{{ event.title }}</a>{% endfor %}
+                                                </div>
+                                            {% endfor %}{% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="event-calendar-empty d-flex align-items-center justify-content-center text-center text-body-secondary border rounded p-5"><p class="mb-0">Calendar data will appear here.</p></div>
+                                    {% endif %}
+                                </div>
+                            </section>
+
+                            <section class="tab-pane fade h-100{% if active_tab == 'details' %} show active{% endif %}" id="eventDetailsPanel" role="tabpanel">
+                                <div class="event-detail-pane">
+                                    {% if selected_event %}
+                                        <header class="event-detail-header p-3 p-md-4">
+                                            <a class="event-mobile-back btn btn-sm btn-link px-0 mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to events</a>
+                                            <div class="event-detail-header-layout">
+                                                <div class="event-detail-heading-copy">
+                                                    <h2 class="event-detail-title h3">{{ selected_event.title }}</h2>
+                                                    <div class="event-detail-meta">
+                                                        <span class="event-state-badge event-state-{{ selected_event.state }}">{{ selected_event.get_state_display }}</span>
+                                                        <span class="small text-body-secondary">{{ selected_event.scheduled_date|date:"j F Y" }}{% if selected_event.property %} · {{ selected_event.property.name }}{% endif %}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="event-detail-actions">
+                                                    {% if selected_event.state == "scheduled" %}
+                                                        <button class="btn theme-action" type="button" data-bs-toggle="modal" data-bs-target="#occurEventModal">Mark occurred</button>
+                                                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editEventModal"{% if not edit_event_form %} disabled{% endif %}>Edit event</button>
+                                                    {% else %}
+                                                        <button class="btn theme-action" type="button" data-bs-toggle="modal" data-bs-target="#reactivateEventModal">Reactivate</button>
+                                                    {% endif %}
+                                                    <div class="dropdown">
+                                                        <button class="btn btn-outline-secondary dropdown-toggle event-menu-button" type="button" data-bs-toggle="dropdown" aria-label="Event actions">⋮</button>
+                                                        <ul class="dropdown-menu dropdown-menu-end">
+                                                            {% if selected_event.state == "scheduled" %}<li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#cancelEventModal">Cancel event</button></li>{% endif %}
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li><button class="dropdown-item text-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteEventModal">Delete event</button></li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </header>
+                                        <div class="event-detail-scroll p-3 p-md-4">
+                                            {% if selected_event.state != "scheduled" %}
+                                                <div class="alert alert-secondary" role="status">This event was {{ selected_event.get_state_display|lower }}{% if selected_event.terminated_at %} on {{ selected_event.terminated_at|date:"j F Y" }}{% endif %}. It is retained as history.</div>
+                                            {% endif %}
+                                            <div class="row g-3 align-items-stretch">
+                                                <div class="col-xl-7"><article class="card h-100"><div class="card-body p-4"><h3 class="h5 mb-3">Description</h3><p class="mb-0">{{ selected_event.description|default:"No description supplied."|linebreaksbr }}</p></div></article></div>
+                                                <div class="col-xl-5"><article class="card h-100"><div class="card-body p-4">
+                                                    <h3 class="h5 mb-3">Schedule and requirements</h3>
+                                                    <dl class="event-detail-list small mb-0">
+                                                        <dt>Date</dt><dd>{{ selected_event.scheduled_date|date:"j F Y" }}</dd>
+                                                        <dt>Time</dt><dd>{% if selected_event.all_day %}All day{% else %}{{ selected_event.start_time|time:"H:i" }}{% if selected_event.end_time %}–{{ selected_event.end_time|time:"H:i" }}{% endif %}{% endif %}</dd>
+                                                        <dt>Property</dt><dd>{{ selected_event.property.name|default:"Not linked" }}</dd>
+                                                        <dt>Participation</dt><dd>{% if selected_event.user_participation_required %}Required{% else %}Not required{% endif %}</dd>
+                                                        <dt>Presence</dt><dd>{% if selected_event.user_presence_required %}Required{% else %}Not required{% endif %}</dd>
+                                                        <dt>State</dt><dd>{{ selected_event.get_state_display }}</dd>
+                                                    </dl>
+                                                </div></article></div>
+                                            </div>
+                                            <article class="card mt-3">
+                                                <div class="card-body p-4">
+                                                    <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                                                        <div>
+                                                            <h3 class="h5 mb-1">Participants</h3>
+                                                            <p class="small text-body-secondary mb-0">{{ participants|length }} contact{{ participants|length|pluralize }} linked to this event.</p>
+                                                        </div>
+                                                        {% if selected_event.state == "scheduled" and add_contacts_form %}
+                                                            <button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#addEventContactsModal">Add participants</button>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="list-group list-group-flush border rounded">
+                                                        {% for event_contact in participants %}
+                                                            <div class="list-group-item d-flex align-items-center justify-content-between gap-3">
+                                                                <div>
+                                                                    <span class="fw-semibold">{{ event_contact.contact }}</span>
+                                                                    {% if event_contact.contact.state != "active" or event_contact.contact.deleted_at %}<span class="badge text-bg-secondary ms-2">Historical contact</span>{% endif %}
+                                                                </div>
+                                                                {% if selected_event.state == "scheduled" %}
+                                                                    <form action="{% url 'event:delete_event_contact_from_event' selected_event.pk event_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">
+                                                                        {% csrf_token %}<button class="btn btn-sm btn-link text-danger text-decoration-none" type="submit">Remove</button>
+                                                                    </form>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% empty %}
+                                                            <div class="list-group-item text-body-secondary">No participants have been added.</div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        </div>
+                                    {% else %}
+                                        <div class="event-no-selection d-flex align-items-center justify-content-center p-5 text-center"><div><h2 class="h4">No event selected</h2><p class="text-body-secondary mb-0">Select an event from the list or calendar.</p></div></div>
+                                    {% endif %}
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        {% endif %}
+    </section>
+</div>
+
+{% if add_event_form %}
+    <div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="addEventModalLabel">Add event</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <form action="{% url 'event:add_event' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off" data-event-form>
+                <div class="modal-body">
+                    {% csrf_token %}{% include "event/includes/event_form_fields.html" with event_form=add_event_form %}
+                    <hr class="my-4">
+                    <h3 class="h6">Initial participants</h3>
+                    <p class="small text-body-secondary">Optional. You can add or remove participants after saving the event.</p>
+                    {% if initial_contacts_form.non_field_errors %}<div class="alert alert-danger py-2">{{ initial_contacts_form.non_field_errors }}</div>{% endif %}
+                    <label class="form-label" for="{{ initial_contacts_form.contacts.id_for_label }}">Contacts</label>
+                    {{ initial_contacts_form.contacts }}
+                    {% for error in initial_contacts_form.contacts.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action px-4" type="submit">Save event</button></div>
+            </form>
+        </div></div>
+    </div>
+{% endif %}
+
+{% if selected_event %}
+    {% if selected_event.state == "scheduled" and add_contacts_form %}
+        <div class="modal fade" id="addEventContactsModal" tabindex="-1" aria-labelledby="addEventContactsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title fs-5" id="addEventContactsModalLabel">Add participants</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <form action="{% url 'event:add_event_contacts_to_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">
+                    <div class="modal-body">
+                        {% csrf_token %}
+                        <p class="small text-body-secondary">Select one or more active contacts to add to {{ selected_event.title }}.</p>
+                        {{ add_contacts_form.contacts.label_tag }}
+                        {{ add_contacts_form.contacts }}
+                        {% for error in add_contacts_form.contacts.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        {% if not add_contacts_form.contacts.field.queryset.exists %}<p class="small text-body-secondary mt-2 mb-0">There are no available contacts to add.</p>{% endif %}
+                    </div>
+                    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Add participants</button></div>
+                </form>
+            </div></div>
+        </div>
+    {% endif %}
+    {% if selected_event.state == "scheduled" and edit_event_form %}
+        <div class="modal fade" id="editEventModal" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title fs-5" id="editEventModalLabel">Edit {{ selected_event.title }}</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <form action="{% url 'event:edit_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off" data-event-form>
+                    <div class="modal-body">{% csrf_token %}{% include "event/includes/event_form_fields.html" with event_form=edit_event_form %}</div>
+                    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action px-4" type="submit">Save changes</button></div>
+                </form>
+            </div></div>
+        </div>
+    {% endif %}
+
+    {% if selected_event.state == "scheduled" %}
+        <div class="modal fade" id="occurEventModal" tabindex="-1" aria-labelledby="occurEventModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title fs-5" id="occurEventModalLabel">Mark {{ selected_event.title }} as occurred?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body"><p class="mb-0">The event will be marked as occurred and retained in your history.</p></div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep scheduled</button><form action="{% url 'event:mark_event_occurred' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn theme-action" type="submit">Mark occurred</button></form></div>
+            </div></div>
+        </div>
+        <div class="modal fade" id="cancelEventModal" tabindex="-1" aria-labelledby="cancelEventModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title fs-5" id="cancelEventModalLabel">Cancel {{ selected_event.title }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body"><p class="mb-0">The event will be marked as cancelled and retained in your history.</p></div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep event</button><form action="{% url 'event:cancel_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Cancel event</button></form></div>
+            </div></div>
+        </div>
+    {% else %}
+        <div class="modal fade" id="reactivateEventModal" tabindex="-1" aria-labelledby="reactivateEventModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title fs-5" id="reactivateEventModalLabel">Reactivate {{ selected_event.title }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body"><p class="mb-0">The event will return to the scheduled state.</p></div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'event:reactivate_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn theme-action" type="submit">Reactivate</button></form></div>
+            </div></div>
+        </div>
+    {% endif %}
+    <div class="modal fade" id="deleteEventModal" tabindex="-1" aria-labelledby="deleteEventModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="deleteEventModalLabel">Delete {{ selected_event.title }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><p class="mb-2">This event will be removed from your workspace.</p><p class="text-body-secondary mb-0">The underlying record is retained as operational history.</p></div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'event:delete_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Delete event</button></form></div>
+        </div></div>
+    </div>
+{% endif %}
+
+{% if open_modal %}<span hidden data-open-event-modal="{{ open_modal }}"></span>{% endif %}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/event-command-centre.js' %}"></script>{% endblock %}

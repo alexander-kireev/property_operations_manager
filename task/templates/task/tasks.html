@@ -122,7 +122,7 @@
                                     {% if priority %}<button class="task-filter-chip" type="button" data-clear-task-filter="priority">{% if priority == 4 %}Urgent{% elif priority == 3 %}High{% elif priority == 2 %}Medium{% else %}Low{% endif %} ×</button>{% endif %}
                                     {% if scheduled_period %}<button class="task-filter-chip" type="button" data-clear-task-filter="scheduled_period">Scheduled: {{ scheduled_period_label }} ×</button>{% endif %}
                                     {% if deadline_period %}<button class="task-filter-chip" type="button" data-clear-task-filter="deadline_period">Deadline: {{ deadline_period_label }} ×</button>{% endif %}
-                                    <a class="small link-secondary ms-1" href="{% url 'task:tasks' %}">Clear all</a>
+                                    <a class="command-filter-clear ms-1" href="{% url 'task:tasks' %}">Clear all</a>
                                 </div>
                             {% endif %}
                         </form>

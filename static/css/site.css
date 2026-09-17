@@ -82,6 +82,10 @@ body {
     border-bottom-color: transparent;
 }
 
+.app-navbar .my-work-menu-toggle {
+    white-space: nowrap;
+}
+
 .app-navbar .navbar-toggler {
     border-color: rgba(255, 255, 255, 0.45);
 }
@@ -178,6 +182,57 @@ body {
     border-color: var(--bs-emphasis-color);
     color: var(--bs-body-bg);
     opacity: 0.82;
+}
+
+.command-filter-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    min-height: 1.7rem;
+    padding: 0.12rem 0.58rem;
+    color: #30343a;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    background: #eceeef;
+    border: var(--bs-border-width) solid var(--pom-border-strong);
+    border-radius: 999px;
+}
+
+.command-filter-clear::before {
+    content: "×";
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.command-filter-clear:hover,
+.command-filter-clear:focus {
+    color: var(--bs-emphasis-color);
+    text-decoration: none;
+    background: #e1e3e6;
+    border-color: #8d9298;
+}
+
+:is(
+    .task-command-centre,
+    .issue-command-centre,
+    .contact-command-centre,
+    .event-command-centre
+) .form-check-input:checked {
+    background-color: var(--bs-emphasis-color);
+    border-color: var(--bs-emphasis-color);
+}
+
+:is(
+    .task-command-centre,
+    .issue-command-centre,
+    .contact-command-centre,
+    .event-command-centre
+) .form-check-input:focus {
+    border-color: #6f7379;
+    box-shadow: 0 0 0 0.18rem rgba(28, 29, 31, 0.14);
 }
 
 .footer-link {

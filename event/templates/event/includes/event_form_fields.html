@@ -1,0 +1,56 @@
+{% for error in event_form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endfor %}
+
+<div class="row g-3">
+    <div class="col-12">
+        <label class="form-label" for="{{ event_form.title.id_for_label }}">{{ event_form.title.label }}</label>
+        {{ event_form.title }}
+        {% for error in event_form.title.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="col-12">
+        <label class="form-label" for="{{ event_form.description.id_for_label }}">{{ event_form.description.label }}</label>
+        {{ event_form.description }}
+        {% for error in event_form.description.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="col-md-6">
+        <label class="form-label" for="{{ event_form.property.id_for_label }}">{{ event_form.property.label }}</label>
+        {{ event_form.property }}
+        {% for error in event_form.property.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="col-md-6">
+        <label class="form-label" for="{{ event_form.scheduled_date.id_for_label }}">{{ event_form.scheduled_date.label }}</label>
+        {{ event_form.scheduled_date }}
+        {% for error in event_form.scheduled_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="col-12">
+        <div class="form-check">
+            {{ event_form.all_day }}
+            <label class="form-check-label" for="{{ event_form.all_day.id_for_label }}">All-day event</label>
+        </div>
+        {% for error in event_form.all_day.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="col-md-6">
+        <label class="form-label" for="{{ event_form.start_time.id_for_label }}">{{ event_form.start_time.label }}</label>
+        {{ event_form.start_time }}
+        {% for error in event_form.start_time.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="col-md-6">
+        <label class="form-label" for="{{ event_form.end_time.id_for_label }}">{{ event_form.end_time.label }} <span class="text-body-secondary fw-normal">(optional)</span></label>
+        {{ event_form.end_time }}
+        {% for error in event_form.end_time.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="col-md-6">
+        <div class="form-check">
+            {{ event_form.user_participation_required }}
+            <label class="form-check-label" for="{{ event_form.user_participation_required.id_for_label }}">My participation is required</label>
+        </div>
+        {% for error in event_form.user_participation_required.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="col-md-6">
+        <div class="form-check">
+            {{ event_form.user_presence_required }}
+            <label class="form-check-label" for="{{ event_form.user_presence_required.id_for_label }}">My physical presence is required</label>
+        </div>
+        {% for error in event_form.user_presence_required.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        <div class="form-text" data-presence-help></div>
+    </div>
+</div>

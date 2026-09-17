@@ -9,6 +9,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
 
 from issue.selectors import issues_for_user
+from event.selectors import events_for_user
 
 from .forms import TaskForm
 from .models import Task
@@ -212,6 +213,7 @@ def _task_list_context(
         ),
         "task_count": tasks_for_user(user=request.user).count(),
         "issue_count": issues_for_user(user=request.user).count(),
+        "event_count": events_for_user(user=request.user).count(),
         "task_workspace_url": (
             _task_workspace_url(request, task_id=selected_task.pk)
             if selected_task

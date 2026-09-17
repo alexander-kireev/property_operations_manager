@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from property.selectors import properties_for_user
+from event.selectors import events_for_user
 from task.forms import TaskForm
 from task.models import Task
 from task.selectors import tasks_for_issue, tasks_for_user
@@ -218,6 +219,7 @@ def _issue_list_context(
         "today": timezone.localdate(),
         "issue_count": issues_for_user(user=request.user).count(),
         "task_count": tasks_for_user(user=request.user).count(),
+        "event_count": events_for_user(user=request.user).count(),
         "task_workspace_url": (
             _issue_workspace_url(
                 request,
