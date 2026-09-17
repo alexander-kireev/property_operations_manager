@@ -1,0 +1,397 @@
+import calendar
+from collections import defaultdict
+from datetime import date
+from urllib.parse import urlencode
+
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST
+
+from property.selectors import properties_for_user
+from issue.selectors import issues_for_user
+from task.selectors import tasks_for_user
+
+from .forms import EventContactForm, EventForm
+from .models import Event, EventContact
+from .selectors import (
+    EVENT_SORT_OPTIONS,
+    USER_PARTICIPATION_REQUIRED_OPTIONS,
+    USER_PRESENCE_REQUIRED_OPTIONS,
+    calendar_events_for_user,
+    event_contacts_for_event,
+    events_for_user,
+    filtered_events_for_user,
+)
+from .services import (
+    add_contacts_to_event,
+    cancel_event,
+    create_event,
+    delete_event,
+    mark_event_occurred,
+    reactivate_event,
+    remove_contact_from_event,
+    update_event,
+)
+
+EVENTS_PER_PAGE = 20
+
+
+def _normalised_list_values(request):
+    search = request.GET.get("search", "").strip()
+    state = request.GET.get("state", "")
+    sort = request.GET.get("sort", "scheduled_date")
+    property_value = request.GET.get("property", "")
+    participation = request.GET.get("participation", "any").lower()
+    presence = request.GET.get("presence", "any").lower()
+
+    if state not in Event.State.values:
+        state = ""
+    if sort not in EVENT_SORT_OPTIONS:
+        sort = "scheduled_date"
+    if participation not in USER_PARTICIPATION_REQUIRED_OPTIONS:
+        participation = "any"
+    if presence not in USER_PRESENCE_REQUIRED_OPTIONS:
+        presence = "any"
+    try:
+        property_id = int(property_value)
+    except (TypeError, ValueError):
+        property_id = ""
+
+    return {
+        "search": search,
+        "state": state,
+        "sort": sort,
+        "property_id": property_id,
+        "participation": participation,
+        "presence": presence,
+    }
+
+
+def _list_query_parameters(values):
+    parameters = {}
+    for name in ("search", "state"):
+        if values[name]:
+            parameters[name] = values[name]
+    for name in ("participation", "presence"):
+        if values[name] != "any":
+            parameters[name] = values[name]
+    if values["property_id"]:
+        parameters["property"] = values["property_id"]
+    if values["sort"] != "scheduled_date":
+        parameters["sort"] = values["sort"]
+    return parameters
+
+
+def _calendar_month(request):
+    today = timezone.localdate()
+    try:
+        return date(int(request.GET.get("year")), int(request.GET.get("month")), 1)
+    except (TypeError, ValueError):
+        return today.replace(day=1)
+
+
+def _shift_month(month, offset):
+    month_index = month.year * 12 + month.month - 1 + offset
+    year, zero_based_month = divmod(month_index, 12)
+    if year < 1 or year > 9999:
+        return month
+    return date(year, zero_based_month + 1, 1)
+
+
+def _calendar_query(values, month):
+    parameters = _list_query_parameters(values)
+    parameters.update({"month": month.month, "year": month.year, "tab": "calendar"})
+    return urlencode(parameters)
+
+
+def _event_workspace_url(request, *, event_id=None, tab="details"):
+    parameters = _list_query_parameters(_normalised_list_values(request))
+    try:
+        page = int(request.GET.get("page", ""))
+    except (TypeError, ValueError):
+        page = None
+    if page is not None and page > 1:
+        parameters["page"] = page
+    if request.GET.get("month") and request.GET.get("year"):
+        displayed_month = _calendar_month(request)
+        parameters["month"] = displayed_month.month
+        parameters["year"] = displayed_month.year
+    if event_id is not None:
+        parameters["selected"] = event_id
+    if tab == "calendar":
+        parameters["tab"] = "calendar"
+    url = reverse("event:events")
+    return f"{url}?{urlencode(parameters)}" if parameters else url
+
+
+def _event_list_context(
+    request,
+    *,
+    selected_event=None,
+    add_event_form=None,
+    initial_contacts_form=None,
+    edit_event_form=None,
+    add_contacts_form=None,
+    active_tab=None,
+    open_modal=None,
+):
+    values = _normalised_list_values(request)
+    events = filtered_events_for_user(user=request.user, **values)
+    paginator = Paginator(events, EVENTS_PER_PAGE)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    if selected_event is None:
+        try:
+            selected_id = int(request.GET.get("selected", ""))
+        except (TypeError, ValueError):
+            selected_id = None
+        if selected_id is not None:
+            selected_event = events.filter(pk=selected_id).first()
+        if selected_event is None and page_obj.object_list:
+            selected_event = page_obj.object_list[0]
+
+    requested_tab = active_tab or request.GET.get("tab")
+    if requested_tab not in ("details", "calendar"):
+        requested_tab = "details" if request.GET.get("selected") else "calendar"
+
+    list_parameters = _list_query_parameters(values)
+    navigation_parameters = dict(list_parameters)
+    if page_obj.number > 1:
+        navigation_parameters["page"] = page_obj.number
+
+    displayed_month = _calendar_month(request)
+    month_dates = calendar.Calendar(firstweekday=calendar.MONDAY).monthdatescalendar(
+        displayed_month.year,
+        displayed_month.month,
+    )
+    calendar_events = list(calendar_events_for_user(
+        user=request.user,
+        start_date=month_dates[0][0],
+        end_date=month_dates[-1][-1],
+        **values,
+    ))
+    events_by_date = defaultdict(list)
+    for event in calendar_events:
+        events_by_date[event.scheduled_date].append(event)
+
+    today = timezone.localdate()
+    calendar_weeks = [[{
+        "date": day,
+        "in_month": day.month == displayed_month.month,
+        "is_today": day == today,
+        "events": events_by_date[day],
+    } for day in week] for week in month_dates]
+
+    navigation_parameters.update({
+        "month": displayed_month.month,
+        "year": displayed_month.year,
+    })
+    properties = properties_for_user(user=request.user).order_by("name", "pk")
+    selected_event_is_active = (
+        selected_event is not None and selected_event.state == Event.State.SCHEDULED
+    )
+    participants = (
+        event_contacts_for_event(event=selected_event)
+        if selected_event is not None
+        else EventContact.objects.none()
+    )
+
+    return {
+        "page_obj": page_obj,
+        "selected_event": selected_event,
+        "participants": participants,
+        "add_event_form": add_event_form if add_event_form is not None else EventForm(
+            user=request.user, auto_id="add_event_%s"
+        ),
+        "initial_contacts_form": (
+            initial_contacts_form
+            if initial_contacts_form is not None
+            else EventContactForm(user=request.user, auto_id="initial_contacts_%s")
+        ),
+        "edit_event_form": (
+            edit_event_form
+            if edit_event_form is not None
+            else EventForm(
+                user=request.user,
+                instance=selected_event,
+                auto_id="edit_event_%s",
+            ) if selected_event_is_active else None
+        ),
+        "add_contacts_form": (
+            add_contacts_form
+            if add_contacts_form is not None
+            else EventContactForm(
+                user=request.user,
+                event=selected_event,
+                auto_id="event_contacts_%s",
+            ) if selected_event_is_active else None
+        ),
+        "active_tab": requested_tab,
+        "open_modal": open_modal,
+        "search": values["search"],
+        "state": values["state"],
+        "sort": values["sort"],
+        "property_id": values["property_id"],
+        "participation": values["participation"],
+        "presence": values["presence"],
+        "event_state_choices": Event.State.choices,
+        "properties": properties,
+        "list_query": urlencode(list_parameters),
+        "navigation_query": urlencode(navigation_parameters),
+        "calendar_month_label": displayed_month.strftime("%B %Y"),
+        "calendar_weekdays": ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
+        "calendar_weeks": calendar_weeks,
+        "calendar_event_count": len(calendar_events),
+        "previous_month_query": _calendar_query(values, _shift_month(displayed_month, -1)),
+        "next_month_query": _calendar_query(values, _shift_month(displayed_month, 1)),
+        "previous_year_query": _calendar_query(values, _shift_month(displayed_month, -12)),
+        "next_year_query": _calendar_query(values, _shift_month(displayed_month, 12)),
+        "today_query": _calendar_query(values, today.replace(day=1)),
+        "has_filters": any((
+            values["search"],
+            values["state"],
+            values["property_id"],
+            values["participation"] != "any",
+            values["presence"] != "any",
+        )),
+        "filter_count": sum(bool(value) for value in (
+            values["state"],
+            values["property_id"],
+            values["participation"] != "any",
+            values["presence"] != "any",
+        )),
+        "event_count": events_for_user(user=request.user).count(),
+        "issue_count": issues_for_user(user=request.user).count(),
+        "task_count": tasks_for_user(user=request.user).count(),
+    }
+
+
+@login_required
+@require_GET
+def events_view(request):
+    return render(request, "event/events.html", _event_list_context(request))
+
+
+@login_required
+@require_POST
+def add_event_view(request):
+    event_form = EventForm(request.POST, user=request.user, auto_id="add_event_%s")
+    contacts_form = EventContactForm(
+        request.POST,
+        user=request.user,
+        auto_id="initial_contacts_%s",
+    )
+    event_is_valid = event_form.is_valid()
+    contacts_are_valid = contacts_form.is_valid()
+    if event_is_valid and contacts_are_valid:
+        event = create_event(
+            user=request.user,
+            contacts=contacts_form.cleaned_data["contacts"],
+            **event_form.cleaned_data,
+        )
+        return redirect(_event_workspace_url(request, event_id=event.pk))
+    return render(request, "event/events.html", _event_list_context(
+        request,
+        add_event_form=event_form,
+        initial_contacts_form=contacts_form,
+        open_modal="addEventModal",
+    ))
+
+
+@login_required
+@require_POST
+def delete_event_view(request, event_id):
+    event = get_object_or_404(events_for_user(user=request.user), pk=event_id)
+    delete_event(event=event)
+    return redirect(_event_workspace_url(request))
+
+
+@login_required
+@require_POST
+def edit_event_view(request, event_id):
+    event = get_object_or_404(
+        events_for_user(user=request.user),
+        pk=event_id,
+        state=Event.State.SCHEDULED,
+    )
+    form = EventForm(
+        request.POST,
+        user=request.user,
+        instance=event,
+        auto_id="edit_event_%s",
+    )
+    if form.is_valid():
+        update_event(event=event, **form.cleaned_data)
+        return redirect(_event_workspace_url(request, event_id=event.pk))
+    return render(request, "event/events.html", _event_list_context(
+        request,
+        selected_event=event,
+        edit_event_form=form,
+        active_tab="details",
+        open_modal="editEventModal",
+    ))
+
+
+@login_required
+@require_POST
+def mark_event_occurred_view(request, event_id):
+    event = get_object_or_404(
+        events_for_user(user=request.user), pk=event_id, state=Event.State.SCHEDULED
+    )
+    mark_event_occurred(event=event)
+    return redirect(_event_workspace_url(request, event_id=event_id))
+
+
+@login_required
+@require_POST
+def cancel_event_view(request, event_id):
+    event = get_object_or_404(
+        events_for_user(user=request.user), pk=event_id, state=Event.State.SCHEDULED
+    )
+    cancel_event(event=event)
+    return redirect(_event_workspace_url(request, event_id=event_id))
+
+
+@login_required
+@require_POST
+def reactivate_event_view(request, event_id):
+    event = get_object_or_404(events_for_user(user=request.user), pk=event_id)
+    reactivate_event(event=event)
+    return redirect(_event_workspace_url(request, event_id=event_id))
+
+
+@login_required
+@require_POST
+def add_event_contacts_to_event_view(request, event_id):
+    event = get_object_or_404(
+        events_for_user(user=request.user), pk=event_id, state=Event.State.SCHEDULED
+    )
+    form = EventContactForm(request.POST, user=request.user, event=event)
+    if form.is_valid():
+        add_contacts_to_event(event=event, contacts=form.cleaned_data["contacts"])
+        return redirect(_event_workspace_url(request, event_id=event.pk))
+    return render(request, "event/events.html", _event_list_context(
+        request,
+        selected_event=event,
+        add_contacts_form=form,
+        active_tab="details",
+        open_modal="addEventContactsModal",
+    ))
+
+
+@login_required
+@require_POST
+def delete_event_contact_from_event_view(request, event_id, event_contact_id):
+    event = get_object_or_404(
+        events_for_user(user=request.user), pk=event_id, state=Event.State.SCHEDULED
+    )
+    event_contact = get_object_or_404(
+        EventContact.objects.select_related("event"),
+        pk=event_contact_id,
+        event=event,
+    )
+    remove_contact_from_event(event_contact=event_contact)
+    return redirect(_event_workspace_url(request, event_id=event.pk))

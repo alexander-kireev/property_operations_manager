@@ -16,6 +16,13 @@
             Issues
             {% if issue_count is not None %}<span class="badge rounded-pill {% if active_section == 'issues' %}text-bg-dark{% else %}text-bg-secondary{% endif %}">{{ issue_count }}</span>{% endif %}
         </a>
-        <span class="nav-link disabled px-4 py-3" aria-disabled="true">Events</span>
+        <a
+            class="nav-link px-4 py-3 d-flex align-items-center gap-2{% if active_section == 'events' %} active{% endif %}"
+            href="{% url 'event:events' %}"
+            {% if active_section == "events" %}aria-current="page"{% endif %}
+        >
+            Events
+            {% if event_count is not None %}<span class="badge rounded-pill {% if active_section == 'events' %}text-bg-dark{% else %}text-bg-secondary{% endif %}">{{ event_count }}</span>{% endif %}
+        </a>
     </div>
 </nav>

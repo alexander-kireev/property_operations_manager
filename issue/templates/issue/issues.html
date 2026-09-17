@@ -17,9 +17,6 @@
                     <div class="issue-first-empty-mark mx-auto mb-4" aria-hidden="true">!</div>
                     <h1 class="h3 mb-3">No issues yet</h1>
                     <p class="text-body-secondary mb-2">
-                        Issues help you track significant problems and coordinate the work needed to resolve them.
-                    </p>
-                    <p class="small text-body-secondary mb-4">
                         Add an issue when a problem needs investigation, multiple tasks, or a resolution deadline.
                     </p>
                     <button class="btn theme-action px-4" type="button" data-bs-toggle="modal" data-bs-target="#addIssueModal">
@@ -99,7 +96,7 @@
                                 {% if priority %}<span class="badge rounded-pill text-bg-light border">Priority {{ priority }}</span>{% endif %}
                                 {% if property_id %}{% for property in properties %}{% if property.pk == property_id %}<span class="badge rounded-pill text-bg-light border">{{ property.name }}</span>{% endif %}{% endfor %}{% endif %}
                                 {% if deadline_period %}<span class="badge rounded-pill text-bg-light border">{{ deadline_period_label }}</span>{% endif %}
-                                <a class="small ms-1" href="{% url 'issue:issues' %}">Clear</a>
+                                <a class="command-filter-clear ms-1" href="{% url 'issue:issues' %}">Clear all</a>
                             </div>
                         {% endif %}
                     </form>
