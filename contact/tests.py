@@ -389,6 +389,22 @@ class ContactViewTests(ContactTestMixin, TestCase):
         self.assertEqual(response.context["sort"], "name")
         self.assertEqual(response.context["list_query"], "search=Alice")
 
+    def test_contacts_view_normalises_workspace_tab(self):
+        contact = self.create_contact(self.user)
+
+        notes_response = self.client.get(
+            reverse("contact:contacts"),
+            {"selected": contact.pk, "tab": "notes"},
+        )
+        invalid_response = self.client.get(
+            reverse("contact:contacts"),
+            {"selected": contact.pk, "tab": "invalid"},
+        )
+
+        self.assertEqual(notes_response.context["active_tab"], "notes")
+        self.assertContains(notes_response, 'class="notes-board-shell"')
+        self.assertEqual(invalid_response.context["active_tab"], "details")
+
     def test_add_contact_creates_contact_and_initial_methods(self):
         response = self.client.post(
             reverse("contact:add_contact"),

@@ -1273,12 +1273,105 @@ body {
     white-space: nowrap;
 }
 
+.contact-detail-tabs {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 0.25rem;
+    padding: 0 1.5rem;
+    border-bottom: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.contact-detail-tab {
+    position: relative;
+    padding: 0.9rem 1rem;
+    color: var(--bs-secondary-color);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.contact-detail-tab:hover,
+.contact-detail-tab:focus-visible {
+    color: var(--bs-emphasis-color);
+}
+
+.contact-detail-tab.active {
+    color: var(--bs-emphasis-color);
+}
+
+.contact-detail-tab.active::after {
+    position: absolute;
+    right: 0.75rem;
+    bottom: -1px;
+    left: 0.75rem;
+    height: 0.2rem;
+    background: var(--bs-emphasis-color);
+    border-radius: 0.2rem 0.2rem 0 0;
+    content: "";
+}
+
+.contact-detail-body {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+}
+
 .contact-detail-scroll {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
+}
+
+.contact-notes-pane {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+}
+
+.notes-board-shell {
+    width: min(100%, 44rem);
+    min-height: 22rem;
+    max-height: 34rem;
+    margin: auto;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    overflow: hidden;
+    background: var(--bs-body-bg);
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+}
+
+.notes-board-shell__list {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.notes-board-shell__empty {
+    min-height: 100%;
+    padding: 2rem;
+    display: grid;
+    place-items: center;
+}
+
+.notes-board-shell__composer {
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: end;
+    background: var(--bs-tertiary-bg);
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.notes-board-shell__composer textarea {
+    min-height: 2.65rem;
+    max-height: 7rem;
+    resize: vertical;
 }
 
 .contact-menu-button::after {
