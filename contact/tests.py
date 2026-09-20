@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
+from note.models import Note
 
 from .forms import ContactCreateForm, ContactForm, ContactMethodForm
 from .models import Contact, ContactMethod
@@ -56,6 +57,17 @@ class ContactTestMixin:
             value=value,
         )
 
+    def create_note(
+            self,
+            user,
+            contact,
+            content="a note",
+    ):
+        return Note.objects.create(
+            user=user,
+            contact=contact,
+            content=content,
+        )
 
 class ContactModelTests(ContactTestMixin, TestCase):
     def setUp(self):
@@ -517,20 +529,18 @@ class ContactViewTests(ContactTestMixin, TestCase):
     def test_cross_user_contact_and_method_mutations_return_404(self):
         contact = self.create_contact(self.other_user, "Bob")
         method = self.create_method(contact, value="bob@example.com")
+        note = self.create_note(self.other_user, contact)
         contact_urls = (
             reverse("contact:edit_contact", args=[contact.pk]),
             reverse("contact:deactivate_contact", args=[contact.pk]),
             reverse("contact:reactivate_contact", args=[contact.pk]),
             reverse("contact:delete_contact", args=[contact.pk]),
             reverse("contact:add_contact_method", args=[contact.pk]),
-            reverse(
-                "contact:edit_contact_method",
-                args=[contact.pk, method.pk],
-            ),
-            reverse(
-                "contact:delete_contact_method",
-                args=[contact.pk, method.pk],
-            ),
+            reverse("contact:edit_contact_method", args=[contact.pk, method.pk]),
+            reverse("contact:delete_contact_method", args=[contact.pk, method.pk]),
+            reverse("contact:add_contact_note", args=[contact.pk]),
+            reverse("contact:edit_contact_note", args=[contact.pk, note.pk]),
+            reverse("contact:delete_contact_note", args=[contact.pk, note.pk]),
         )
 
         for url in contact_urls:
@@ -570,6 +580,12 @@ class ContactViewTests(ContactTestMixin, TestCase):
             ).status_code,
             404,
         )
+        self.assertEqual(
+            self.client.post(
+                reverse("contact:add_contact_note", args=[contact.pk]),
+            ).status_code,
+            404,
+        )
 
     def test_soft_deleted_contact_is_not_selectable_or_mutable(self):
         contact = self.create_contact(
@@ -592,6 +608,7 @@ class ContactViewTests(ContactTestMixin, TestCase):
     def test_mutation_views_reject_get_requests(self):
         contact = self.create_contact(self.user)
         method = self.create_method(contact)
+        note = self.create_note(self.user, contact)
         urls = (
             reverse("contact:add_contact"),
             reverse("contact:edit_contact", args=[contact.pk]),
@@ -601,8 +618,123 @@ class ContactViewTests(ContactTestMixin, TestCase):
             reverse("contact:add_contact_method", args=[contact.pk]),
             reverse("contact:edit_contact_method", args=[contact.pk, method.pk]),
             reverse("contact:delete_contact_method", args=[contact.pk, method.pk]),
+            reverse("contact:add_contact_note", args=[contact.pk]),
+            reverse("contact:edit_contact_note", args=[contact.pk, note.pk]),
+            reverse("contact:delete_contact_note", args=[contact.pk, note.pk]),
         )
 
         for url in urls:
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 405)
+
+    def test_add_edit_and_delete_contact_note_works_and_redirects_back_to_selected_contacts_notes_tab(self):
+        contact = self.create_contact(self.user)
+
+        expected_url = (
+            f"{reverse('contact:contacts')}"
+            f"?selected={contact.pk}&tab=notes"
+        )
+
+        add_response = self.client.post(
+            reverse("contact:add_contact_note", args=[contact.pk]), {"content": "note"})
+        note = contact.notes.get()
+        self.assertRedirects(add_response, expected_url)
+
+        edit_content = "edit"
+        edit_response = self.client.post(
+            reverse(
+                "contact:edit_contact_note",
+                args=[contact.pk, note.pk]),
+                {"content": edit_content},)
+        note.refresh_from_db()
+        self.assertRedirects(edit_response, expected_url)
+        self.assertEqual(note.content, edit_content)
+
+        delete_response = self.client.post(
+            reverse(
+                "contact:delete_contact_note",
+                args=[contact.pk, note.pk],
+            )
+        )
+        self.assertRedirects(delete_response, expected_url)
+        self.assertFalse(Note.objects.filter(pk=note.pk).exists())
+
+    def test_note_from_different_owned_contact_cannot_be_mutated(self):
+        contact = self.create_contact(self.user)
+        other_contact = self.create_contact(self.user, "Other")
+        note = self.create_note(self.user, other_contact)
+
+        for route in ("edit_contact_note", "delete_contact_note"):
+            with self.subTest(route=route):
+                response = self.client.post(
+                    reverse(f"contact:{route}", args=[contact.pk, note.pk])
+                )
+                self.assertEqual(response.status_code, 404)
+
+    def test_invalid_add_note_form_returns_errors(self):
+        contact = self.create_contact(self.user)
+
+        response = self.client.post(
+            reverse("contact:add_contact_note", args=[contact.pk]),
+            {"content": ""},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["active_tab"], "notes")
+        self.assertEqual(response.context["selected_contact"], contact)
+        form = response.context["add_contact_note_form"]
+        self.assertEqual(form["content"].value(), "")
+        self.assertIn(
+            "content",
+            response.context["add_contact_note_form"].errors,
+        )
+        self.assertEqual(Note.objects.filter(user=self.user).count(), 0)
+
+    def test_invalid_edit_note_form_returns_errors(self):
+        contact = self.create_contact(self.user)
+        note = self.create_note(self.user, contact)
+        original_content = note.content
+
+        response = self.client.post(
+            reverse("contact:edit_contact_note", args=[contact.pk, note.pk]),
+            {"content": ""},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["active_tab"], "notes")
+        self.assertEqual(response.context["selected_contact"], contact)
+        form = response.context["edit_contact_note_form"]
+        note.refresh_from_db()
+
+        self.assertEqual(note.content, original_content)
+        self.assertEqual(form["content"].value(), "")
+        self.assertIn(
+            "content",
+            response.context["edit_contact_note_form"].errors,
+        )
+
+    def test_contacts_notes_tab_renders_owned_notes_in_correct_order(self):
+        contact = self.create_contact(self.user)
+        data = [["newest", 0], ["middle", 1], ["oldest", 2]]
+
+        for content, days in data:
+            note = self.create_note(self.user, contact, content)
+            note.created_at = timezone.now() - timedelta(days=days)
+            note.save(update_fields=["created_at"])
+
+        response = self.client.get(reverse("contact:contacts"), {"tab": "notes"})
+        self.assertEqual(response.status_code, 200)
+        notes = response.context["notes"]
+
+        for i, note in enumerate(notes):
+            self.assertEqual(note.content, data[i][0])
+
+    def test_contacts_notes_tab_is_contact_and_user_scoped(self):
+        contact1 = self.create_contact(self.user)
+        contact2 = self.create_contact(self.user)
+        note1 = self.create_note(self.user, contact1)
+        self.create_note(self.user, contact2)
+        self.create_note(self.other_user, self.create_contact(self.other_user))
+
+        response = self.client.get(reverse("contact:contacts"), {"tab": "notes", "selected": contact1.pk})
+        self.assertEqual(list(response.context["notes"]), [note1])

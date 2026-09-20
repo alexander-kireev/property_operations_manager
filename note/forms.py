@@ -13,6 +13,7 @@ class NoteForm(forms.ModelForm):
             "content": forms.Textarea(attrs={
                 "rows": 2,
                 "class": "form-control",
+                "placeholder": "New note...",
                 }
             )
         }

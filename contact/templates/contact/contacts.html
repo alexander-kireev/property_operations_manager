@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Contacts | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary contact-command-page{% endblock %}
@@ -180,7 +181,7 @@
                                         </section>
                                     </div>
                                 {% else %}
-                                    <div class="contact-notes-pane p-3 p-md-4">
+                                    <div class="contact-notes-pane">
                                         {% if selected_contact.state != "active" %}<div class="alert alert-secondary" role="status">This contact is read-only and retained as history. Reactivate it to make changes.</div>{% endif %}
                                         {% include "note/includes/notes_board_shell.html" %}
                                     </div>
@@ -261,6 +262,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{% static 'js/note-board.js' %}"></script>
     {% if open_modal %}
         <script>
             document.addEventListener("DOMContentLoaded", () => {

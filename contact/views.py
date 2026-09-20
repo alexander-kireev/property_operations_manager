@@ -91,6 +91,8 @@ def _contact_list_context(
     active_tab=None,
     open_modal=None,
     add_contact_note_form=None,
+    edit_contact_note=None,
+    edit_contact_note_form=None,
 ):
     values = _normalised_list_values(request)
     contacts = filtered_contacts_for_user(user=request.user, **values)
@@ -117,6 +119,11 @@ def _contact_list_context(
     contact_methods = []
     notes = []
 
+    selected_contact_is_active = (
+        selected_contact is not None
+        and selected_contact.state == Contact.State.ACTIVE
+    )
+
     if selected_contact is not None:
 
         if requested_tab == "details":
@@ -139,14 +146,12 @@ def _contact_list_context(
                     edit_method_id = int(request.GET.get("edit_method", ""))
                 except (TypeError, ValueError):
                     edit_method_id = None
-                edit_contact_method = next(
-                    (
-                        method
-                        for method in contact_methods
-                        if method.pk == edit_method_id
-                    ),
-                    None,
-                )
+
+                for method in contact_methods:
+                    if method.pk == edit_method_id:
+                        edit_contact_method = method
+                        break
+
                 if edit_contact_method is not None and open_modal is None:
                     open_modal = "editContactMethodModal"
 
@@ -160,11 +165,6 @@ def _contact_list_context(
     navigation_parameters = dict(list_parameters)
     if page_obj.number > 1:
         navigation_parameters["page"] = page_obj.number
-
-    selected_contact_is_active = (
-        selected_contact is not None
-        and selected_contact.state == Contact.State.ACTIVE
-    )
 
     if add_contact_form is None:
         add_contact_form = ContactCreateForm(auto_id="add_contact_%s")
@@ -183,6 +183,8 @@ def _contact_list_context(
         "edit_contact_method": edit_contact_method,
         "edit_contact_method_form": edit_contact_method_form,
         "add_contact_note_form": add_contact_note_form,
+        "edit_contact_note": edit_contact_note,
+        "edit_contact_note_form": edit_contact_note_form,
         "active_tab": requested_tab,
         "open_modal": open_modal,
         "search": values["search"],
@@ -402,3 +404,56 @@ def add_contact_note_view(request, contact_id):
             active_tab="notes"
         ),
     )
+
+@login_required
+@require_POST
+def edit_contact_note_view(request, contact_id, note_id):
+    contact = get_object_or_404(
+        contacts_for_user(user=request.user),
+        pk=contact_id,
+        state=Contact.State.ACTIVE,
+    )
+
+    note = get_object_or_404(
+        notes_for_contact(user=request.user,
+                          contact=contact).filter(pk=note_id))
+
+    form = NoteForm(
+        request.POST,
+        instance=note,
+        auto_id="edit_contact_note_%s",
+    )
+    if form.is_valid():
+        update_note(
+            note=note,
+            **form.cleaned_data,
+        )
+        return redirect(_contact_workspace_url(request, contact_id=contact.pk, tab="notes"))
+
+    return render(
+        request,
+        "contact/contacts.html",
+        _contact_list_context(
+            request,
+            selected_contact=contact,
+            edit_contact_note=note,
+            edit_contact_note_form=form,
+            active_tab="notes",
+        ),
+    )
+
+
+@login_required
+@require_POST
+def delete_contact_note_view(request, contact_id, note_id):
+    contact = get_object_or_404(
+        contacts_for_user(user=request.user),
+        pk=contact_id,
+        state=Contact.State.ACTIVE,
+    )
+    note = get_object_or_404(
+        notes_for_contact(user=request.user, contact=contact),
+        pk=note_id,
+    )
+    delete_note(note=note)
+    return redirect(_contact_workspace_url(request, contact_id=contact.pk, tab="notes"))
