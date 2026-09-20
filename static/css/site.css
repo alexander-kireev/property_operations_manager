@@ -1273,12 +1273,217 @@ body {
     white-space: nowrap;
 }
 
+.contact-detail-tabs {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 0.25rem;
+    padding: 0 1.5rem;
+    border-bottom: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.contact-detail-tab {
+    position: relative;
+    padding: 0.9rem 1rem;
+    color: var(--bs-secondary-color);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.contact-detail-tab:hover,
+.contact-detail-tab:focus-visible {
+    color: var(--bs-emphasis-color);
+}
+
+.contact-detail-tab.active {
+    color: var(--bs-emphasis-color);
+}
+
+.contact-detail-tab.active::after {
+    position: absolute;
+    right: 0.75rem;
+    bottom: -1px;
+    left: 0.75rem;
+    height: 0.2rem;
+    background: var(--bs-emphasis-color);
+    border-radius: 0.2rem 0.2rem 0 0;
+    content: "";
+}
+
+.contact-detail-body {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+}
+
 .contact-detail-scroll {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
+}
+
+.contact-notes-pane {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+}
+
+.notes-board-shell {
+    width: 100%;
+    min-height: 0;
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-rows: minmax(0, 1fr) auto;
+    overflow: hidden;
+    background: var(--bs-body-bg);
+}
+
+.notes-board-shell__list {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.notes-board-shell__notes {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 1rem;
+    list-style: none;
+}
+
+.notes-board-shell__note {
+    position: relative;
+    display: flex;
+    min-height: 5.5rem;
+    flex-direction: column;
+    padding: 0.9rem 1rem;
+    overflow-wrap: anywhere;
+    background: var(--bs-tertiary-bg);
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+}
+
+.notes-board-shell__note-display {
+    display: flex;
+    min-height: 100%;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+.notes-board-shell__note-display[hidden] {
+    display: none;
+}
+
+.notes-board-shell__content {
+    padding-right: 4.5rem;
+}
+
+.notes-board-shell__actions {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    display: flex;
+    gap: 0.2rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease-in-out;
+}
+
+.notes-board-shell__note:hover .notes-board-shell__actions,
+.notes-board-shell__note:focus-within .notes-board-shell__actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.notes-board-shell__action {
+    width: 2rem;
+    height: 2rem;
+    padding: 0.4rem;
+    display: grid;
+    place-items: center;
+    color: var(--bs-secondary-color);
+    background: transparent;
+    border: 0;
+    border-radius: var(--bs-border-radius-sm);
+}
+
+.notes-board-shell__action-form {
+    margin: 0;
+}
+
+.notes-board-shell__action:hover,
+.notes-board-shell__action:focus-visible {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-secondary-bg);
+}
+
+.notes-board-shell__action--delete:hover,
+.notes-board-shell__action--delete:focus-visible {
+    color: var(--bs-danger);
+}
+
+.notes-board-shell__action svg {
+    width: 1rem;
+    height: 1rem;
+    fill: currentColor;
+}
+
+.notes-board-shell__edit {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.notes-board-shell__edit[hidden] {
+    display: none;
+}
+
+.notes-board-shell__edit textarea {
+    min-height: 6rem;
+    resize: vertical;
+}
+
+.notes-board-shell__timestamp {
+    margin-top: auto;
+    text-align: right;
+}
+
+@media (hover: none) {
+    .notes-board-shell__actions {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+.notes-board-shell__empty {
+    min-height: 100%;
+    padding: 2rem;
+    display: grid;
+    place-items: center;
+}
+
+.notes-board-shell__composer {
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: end;
+    background: var(--bs-tertiary-bg);
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.notes-board-shell__composer textarea {
+    min-height: 2.65rem;
+    max-height: 7rem;
+    resize: vertical;
+}
+
+.notes-board-shell__field {
+    min-width: 0;
 }
 
 .contact-menu-button::after {

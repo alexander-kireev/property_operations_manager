@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Contacts | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary contact-command-page{% endblock %}
@@ -134,35 +135,57 @@
                                 </div>
                             </header>
 
-                            <div class="contact-detail-scroll p-4">
-                                {% if selected_contact.state != "active" %}<div class="alert alert-secondary" role="status">This contact is read-only and retained as history. Reactivate it to make changes.</div>{% endif %}
+                            <nav class="contact-detail-tabs" aria-label="Contact sections">
+                                <a
+                                    class="contact-detail-tab{% if active_tab == 'details' %} active{% endif %}"
+                                    href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ selected_contact.pk }}"
+                                    {% if active_tab == "details" %}aria-current="page"{% endif %}
+                                >Details</a>
+                                <a
+                                    class="contact-detail-tab{% if active_tab == 'notes' %} active{% endif %}"
+                                    href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ selected_contact.pk }}&amp;tab=notes"
+                                    {% if active_tab == "notes" %}aria-current="page"{% endif %}
+                                >Notes</a>
+                            </nav>
 
-                                <section class="card" aria-labelledby="contact-methods-heading">
-                                    <div class="card-header bg-body d-flex align-items-center justify-content-between gap-3 p-3 p-md-4">
-                                        <div><h3 class="h5 mb-1" id="contact-methods-heading">Contact details</h3><p class="small text-body-secondary mb-0">Email addresses and international telephone numbers.</p></div>
-                                        {% if selected_contact.state == "active" %}<button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#addContactMethodModal">+ Add detail</button>{% endif %}
-                                    </div>
-                                    {% if contact_methods %}
-                                        <div class="list-group list-group-flush">
-                                            {% for method in contact_methods %}
-                                                <div class="list-group-item d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 px-3 px-md-4 py-3">
-                                                    <div>
-                                                        <div class="small text-body-secondary">{{ method.get_type_display }}</div>
-                                                        {% if method.type == "email" %}<a class="link-body-emphasis" href="mailto:{{ method.value }}">{{ method.value }}</a>{% else %}<a class="link-body-emphasis" href="tel:{{ method.value }}">{{ method.value }}</a>{% endif %}
-                                                    </div>
-                                                    {% if selected_contact.state == "active" %}
-                                                        <div class="d-flex gap-2">
-                                                            <a class="btn btn-sm btn-outline-secondary" href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ selected_contact.pk }}&amp;edit_method={{ method.pk }}">Edit</a>
-                                                            <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteContactMethodModal{{ method.pk }}">Delete</button>
+                            <div class="contact-detail-body">
+                                {% if active_tab == "details" %}
+                                    <div class="contact-detail-scroll p-4">
+                                        {% if selected_contact.state != "active" %}<div class="alert alert-secondary" role="status">This contact is read-only and retained as history. Reactivate it to make changes.</div>{% endif %}
+
+                                        <section class="card" aria-labelledby="contact-methods-heading">
+                                            <div class="card-header bg-body d-flex align-items-center justify-content-between gap-3 p-3 p-md-4">
+                                                <div><h3 class="h5 mb-1" id="contact-methods-heading">Contact details</h3><p class="small text-body-secondary mb-0">Email addresses and international telephone numbers.</p></div>
+                                                {% if selected_contact.state == "active" %}<button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#addContactMethodModal">+ Add detail</button>{% endif %}
+                                            </div>
+                                            {% if contact_methods %}
+                                                <div class="list-group list-group-flush">
+                                                    {% for method in contact_methods %}
+                                                        <div class="list-group-item d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 px-3 px-md-4 py-3">
+                                                            <div>
+                                                                <div class="small text-body-secondary">{{ method.get_type_display }}</div>
+                                                                {% if method.type == "email" %}<a class="link-body-emphasis" href="mailto:{{ method.value }}">{{ method.value }}</a>{% else %}<a class="link-body-emphasis" href="tel:{{ method.value }}">{{ method.value }}</a>{% endif %}
+                                                            </div>
+                                                            {% if selected_contact.state == "active" %}
+                                                                <div class="d-flex gap-2">
+                                                                    <a class="btn btn-sm btn-outline-secondary" href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ selected_contact.pk }}&amp;edit_method={{ method.pk }}">Edit</a>
+                                                                    <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteContactMethodModal{{ method.pk }}">Delete</button>
+                                                                </div>
+                                                            {% endif %}
                                                         </div>
-                                                    {% endif %}
+                                                    {% endfor %}
                                                 </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% else %}
-                                        <div class="card-body p-4 text-center text-body-secondary">No contact details have been added.</div>
-                                    {% endif %}
-                                </section>
+                                            {% else %}
+                                                <div class="card-body p-4 text-center text-body-secondary">No contact details have been added.</div>
+                                            {% endif %}
+                                        </section>
+                                    </div>
+                                {% else %}
+                                    <div class="contact-notes-pane">
+                                        {% if selected_contact.state != "active" %}<div class="alert alert-secondary" role="status">This contact is read-only and retained as history. Reactivate it to make changes.</div>{% endif %}
+                                        {% include "note/includes/notes_board_shell.html" %}
+                                    </div>
+                                {% endif %}
                             </div>
                         {% else %}
                             <div class="flex-grow-1 d-flex align-items-center justify-content-center p-5 text-center"><div><h2 class="h4">No contact selected</h2><p class="text-body-secondary mb-0">Select a contact from the list.</p></div></div>
@@ -239,6 +262,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{% static 'js/note-board.js' %}"></script>
     {% if open_modal %}
         <script>
             document.addEventListener("DOMContentLoaded", () => {

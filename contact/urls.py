@@ -37,4 +37,19 @@ urlpatterns = [
         views.delete_contact_method_view,
         name="delete_contact_method",
     ),
+    path(
+        "<int:contact_id>/add_note/",
+        views.add_contact_note_view,
+        name="add_contact_note",
+    ),
+    path(
+        "<int:contact_id>/notes/<int:note_id>/edit/",
+        views.edit_contact_note_view,
+        name="edit_contact_note",
+    ),
+    path(
+        "<int:contact_id>/notes/<int:note_id>/delete/",
+        views.delete_contact_note_view,
+        name="delete_contact_note",
+    ),
 ]
