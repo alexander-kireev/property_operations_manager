@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 
 {% block title %}Properties | Property Operations Manager{% endblock %}
+{% block body_class %}bg-body-tertiary property-list-page{% endblock %}
+{% block main_class %}property-list-main flex-grow-1 py-4{% endblock %}
 
 {% block content %}
-    <div class="container">
+    <div class="container property-list-layout">
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
             <div>
                 <h1 class="h2 mb-2">Your properties</h1>
@@ -22,7 +24,7 @@
             </button>
         </div>
 
-        <section class="card border-0 shadow-sm" aria-labelledby="property-list-title">
+        <section class="property-list-card card border-0 shadow-sm" aria-labelledby="property-list-title">
             <h2 class="visually-hidden" id="property-list-title">Property list</h2>
 
             <form class="card-body border-bottom p-3 p-md-4" method="get" role="search" autocomplete="off">
@@ -244,23 +246,25 @@
                     </div>
                 </div>
             {% else %}
-                <div class="card-body py-5 text-center">
-                    {% if has_filters %}
-                        <h3 class="h5">No matching properties</h3>
-                        <p class="text-body-secondary">Try changing or clearing your search and filters.</p>
-                        <a class="btn btn-outline-secondary" href="{% url 'property:properties' %}">Clear filters</a>
-                    {% else %}
-                        <h3 class="h5">No properties yet</h3>
-                        <p class="text-body-secondary">Add your first property to begin managing its work.</p>
-                        <button
-                            class="btn theme-action"
-                            type="button"
-                            data-bs-toggle="modal"
-                            data-bs-target="#addPropertyModal"
-                        >
-                            Add your first property
-                        </button>
-                    {% endif %}
+                <div class="property-list-empty card-body d-flex align-items-center justify-content-center py-5 text-center">
+                    <div>
+                        {% if has_filters %}
+                            <h3 class="h5">No matching properties</h3>
+                            <p class="text-body-secondary">Try changing or clearing your search and filters.</p>
+                            <a class="btn btn-outline-secondary" href="{% url 'property:properties' %}">Clear filters</a>
+                        {% else %}
+                            <h3 class="h5">No properties yet</h3>
+                            <p class="text-body-secondary">Add your first property to begin managing its work.</p>
+                            <button
+                                class="btn theme-action"
+                                type="button"
+                                data-bs-toggle="modal"
+                                data-bs-target="#addPropertyModal"
+                            >
+                                Add your first property
+                            </button>
+                        {% endif %}
+                    </div>
                 </div>
             {% endif %}
         </section>
@@ -269,6 +273,7 @@
     <div
         class="modal fade"
         id="addPropertyModal"
+        data-modal-clear-query="form_state"
         tabindex="-1"
         aria-labelledby="addPropertyModalLabel"
         aria-hidden="true"
@@ -331,11 +336,6 @@
 
 {% block extra_js %}
     {% if add_property_form.errors %}
-        <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                const modalElement = document.getElementById("addPropertyModal");
-                bootstrap.Modal.getOrCreateInstance(modalElement).show();
-            });
-        </script>
+        <span hidden data-modal-auto-open="addPropertyModal"></span>
     {% endif %}
 {% endblock %}

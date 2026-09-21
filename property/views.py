@@ -3,7 +3,15 @@ from urllib.parse import urlencode
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
+
+from config.form_state import (
+    deserialise_form_data,
+    pop_form_state,
+    serialise_form_data,
+    store_form_state,
+)
 
 from .forms import PropertyForm
 from .models import Property
@@ -24,7 +32,7 @@ from .services import (
 PROPERTIES_PER_PAGE = 20
 
 
-def _property_list_context(request, *, add_property_form=None):
+def _normalised_list_values(request):
     search = request.GET.get("search", "").strip()
     state = request.GET.get("state", "")
     sort = request.GET.get("sort", "name")
@@ -35,26 +43,86 @@ def _property_list_context(request, *, add_property_form=None):
     if sort not in PROPERTY_SORT_OPTIONS:
         sort = "name"
 
+    return {"search": search, "state": state, "sort": sort}
+
+
+def _list_query_parameters(values):
+    parameters = {}
+    for name in ("search", "state"):
+        if values[name]:
+            parameters[name] = values[name]
+    if values["sort"] != "name":
+        parameters["sort"] = values["sort"]
+    return parameters
+
+
+def _property_list_url(request, *, form_state=None):
+    parameters = _list_query_parameters(_normalised_list_values(request))
+    page = request.GET.get("page", "")
+    if page.isdigit() and int(page) > 1:
+        parameters["page"] = page
+    if form_state is not None:
+        parameters["form_state"] = form_state
+
+    url = reverse("property:properties")
+    return f"{url}?{urlencode(parameters)}" if parameters else url
+
+
+def _property_detail_url(property_record, *, form_state=None):
+    url = reverse(
+        "property:property_detail",
+        kwargs={"property_id": property_record.pk},
+    )
+    return f"{url}?{urlencode({'form_state': form_state})}" if form_state else url
+
+
+def _redirect_with_property_form_state(
+    request,
+    *,
+    action,
+    property_record=None,
+):
+    token = store_form_state(request, {
+        "action": action,
+        "property_id": property_record.pk if property_record else None,
+        "data": serialise_form_data(request.POST),
+    })
+    if property_record is not None:
+        return redirect(_property_detail_url(property_record, form_state=token))
+    return redirect(_property_list_url(request, form_state=token))
+
+
+def _restore_add_property_form(request, state):
+    return PropertyForm(
+        deserialise_form_data(state.get("data", {})),
+        user=request.user,
+    )
+
+
+def _restore_edit_property_form(request, state, property_record):
+    if (
+        state.get("property_id") != property_record.pk
+        or property_record.state != Property.State.ACTIVE
+    ):
+        return None
+    return PropertyForm(
+        deserialise_form_data(state.get("data", {})),
+        user=request.user,
+        instance=property_record,
+    )
+
+
+def _property_list_context(request, *, add_property_form=None):
+    values = _normalised_list_values(request)
     properties = filtered_properties_for_user(
         user=request.user,
-        search=search,
-        state=state,
-        sort=sort,
+        **values,
     )
 
     paginator = Paginator(properties, PROPERTIES_PER_PAGE)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    query_parameters = {}
-
-    if search:
-        query_parameters["search"] = search
-
-    if state:
-        query_parameters["state"] = state
-
-    if sort != "name":
-        query_parameters["sort"] = sort
+    query_parameters = _list_query_parameters(values)
 
     return {
         "add_property_form": (
@@ -63,11 +131,11 @@ def _property_list_context(request, *, add_property_form=None):
             else PropertyForm(user=request.user)
         ),
         "page_obj": page_obj,
-        "search": search,
-        "state": state,
-        "sort": sort,
+        "search": values["search"],
+        "state": values["state"],
+        "sort": values["sort"],
         "list_query": urlencode(query_parameters),
-        "has_filters": bool(search or state),
+        "has_filters": bool(values["search"] or values["state"]),
     }
 
 
@@ -85,10 +153,15 @@ def _property_detail_context(request, property_record, *, edit_property_form=Non
 @login_required
 @require_GET
 def properties_view(request):
+    add_property_form = None
+    state = pop_form_state(request)
+    if isinstance(state, dict) and state.get("action") == "add_property":
+        add_property_form = _restore_add_property_form(request, state)
+
     return render(
         request,
         "property/properties.html",
-        _property_list_context(request),
+        _property_list_context(request, add_property_form=add_property_form),
     )
 
 
@@ -105,10 +178,9 @@ def add_property_view(request):
 
         return redirect("property:property_detail", property_id=property_record.pk)
 
-    return render(
+    return _redirect_with_property_form_state(
         request,
-        "property/properties.html",
-        _property_list_context(request, add_property_form=form),
+        action="add_property",
     )
 
 
@@ -120,10 +192,23 @@ def property_detail_view(request, property_id):
         pk=property_id,
     )
 
+    edit_property_form = None
+    state = pop_form_state(request)
+    if isinstance(state, dict) and state.get("action") == "edit_property":
+        edit_property_form = _restore_edit_property_form(
+            request,
+            state,
+            property_record,
+        )
+
     return render(
         request,
         "property/property_detail.html",
-        _property_detail_context(request, property_record),
+        _property_detail_context(
+            request,
+            property_record,
+            edit_property_form=edit_property_form,
+        ),
     )
 
 
@@ -149,14 +234,10 @@ def edit_property_view(request, property_id):
 
         return redirect("property:property_detail", property_id=property_record.pk)
 
-    return render(
+    return _redirect_with_property_form_state(
         request,
-        "property/property_detail.html",
-        _property_detail_context(
-            request,
-            property_record,
-            edit_property_form=form,
-        ),
+        action="edit_property",
+        property_record=property_record,
     )
 
 

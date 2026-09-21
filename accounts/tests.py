@@ -206,10 +206,17 @@ class RegistrationViewTests(TestCase):
         data = self.VALID_DATA.copy()
         data["password_2"] = "DifferentPassword12!"
 
-        response = self.client.post(reverse("accounts:register"), data=data)
+        post_response = self.client.post(reverse("accounts:register"), data=data)
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("password_2", response.context["form"].errors)
+        self.assertIsNone(response.context["form"]["password_1"].value())
+        self.assertIsNone(response.context["form"]["password_2"].value())
         self.assertEqual(PendingRegistration.objects.count(), 0)
 
     def test_valid_post_creates_pending_registration(self):
@@ -351,7 +358,7 @@ class UserAuthenticationTests(TestCase):
     def test_invalid_details_do_not_log_user_in(self):
         invalid_password = f"{self.VALID_CLEANED_DATA['password_1']}_invalid"
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("accounts:login"),
             {
                 "username": self.VALID_CLEANED_DATA["email"],
@@ -359,12 +366,18 @@ class UserAuthenticationTests(TestCase):
             }
         )
 
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
         user = auth.get_user(self.client)
         self.assertFalse(user.is_authenticated)
 
         form = response.context["form"]
         self.assertTrue(form.non_field_errors())
+        self.assertIsNone(form["password"].value())
 
 
     def test_post_request_logs_user_out(self):
@@ -508,7 +521,7 @@ class UserAccountManagementTests(TestCase):
         user_2 = self.create_user(self.USER_2)
         self.client.force_login(user)
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("accounts:change_email"),
             {
                 "new_email": user_2.email,
@@ -517,8 +530,14 @@ class UserAccountManagementTests(TestCase):
             },
         )
 
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].errors)
+        self.assertIsNone(response.context["form"]["current_password"].value())
 
         user.refresh_from_db()
         self.assertEqual(user.email, self.USER_1["email"])
@@ -529,7 +548,7 @@ class UserAccountManagementTests(TestCase):
 
         new_email = "alice.new@example.com"
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("accounts:change_email"),
             {
                 "new_email": new_email,
@@ -538,8 +557,14 @@ class UserAccountManagementTests(TestCase):
             },
         )
 
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].errors)
+        self.assertIsNone(response.context["form"]["current_password"].value())
 
         user.refresh_from_db()
         self.assertEqual(user.email, self.USER_1["email"])
@@ -548,7 +573,7 @@ class UserAccountManagementTests(TestCase):
         user = self.create_user(self.USER_1)
         self.client.force_login(user)
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("accounts:change_email"),
             {
                 "new_email": "alice.new@example.com",
@@ -556,6 +581,11 @@ class UserAccountManagementTests(TestCase):
                 "current_password": self.USER_1["password"],
             },
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].errors)
@@ -587,13 +617,18 @@ class UserAccountManagementTests(TestCase):
         user = self.create_user(self.USER_1)
         self.client.force_login(user)
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("accounts:profile_page"),
             {
                 "first_name": "",
                 "last_name": self.USER_1["last_name"],
             },
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["profile_form"].errors)
@@ -626,13 +661,18 @@ class UserAccountManagementTests(TestCase):
         user = self.create_user(self.USER_1)
         self.client.force_login(user)
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("accounts:profile_page"),
             {
                 "first_name": self.USER_1["first_name"],
                 "last_name": "",
             },
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["profile_form"].errors)
@@ -713,7 +753,7 @@ class UserAccountManagementTests(TestCase):
         user = self.create_user(self.USER_1)
         password_reset_form_url = self.open_password_reset_form(user)
 
-        response = self.client.post(
+        post_response = self.client.post(
             password_reset_form_url,
             {
                 "new_password1": "password",
@@ -721,8 +761,15 @@ class UserAccountManagementTests(TestCase):
             },
         )
 
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].errors)
+        self.assertIsNone(response.context["form"]["new_password1"].value())
+        self.assertIsNone(response.context["form"]["new_password2"].value())
 
         user.refresh_from_db()
         self.assertTrue(user.check_password(self.USER_1["password"]))
@@ -732,7 +779,7 @@ class UserAccountManagementTests(TestCase):
         user = self.create_user(self.USER_1)
         self.client.force_login(user)
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("accounts:change_password"),
             {
                 "old_password": self.USER_1["password"],
@@ -741,8 +788,15 @@ class UserAccountManagementTests(TestCase):
             },
         )
 
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].errors)
+        self.assertIsNone(response.context["form"]["old_password"].value())
+        self.assertIsNone(response.context["form"]["new_password1"].value())
 
         user.refresh_from_db()
         self.assertTrue(user.check_password(self.USER_1["password"]))
@@ -772,7 +826,7 @@ class UserAccountManagementTests(TestCase):
         user = self.create_user(self.USER_1)
         self.client.force_login(user)
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("accounts:change_password"),
             {
                 "old_password": f"{self.USER_1['password']}_invalid",
@@ -781,8 +835,15 @@ class UserAccountManagementTests(TestCase):
             },
         )
 
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].errors)
+        self.assertIsNone(response.context["form"]["old_password"].value())
+        self.assertIsNone(response.context["form"]["new_password1"].value())
 
         user.refresh_from_db()
         self.assertTrue(user.check_password(self.USER_1["password"]))

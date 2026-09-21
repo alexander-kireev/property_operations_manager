@@ -1413,10 +1413,16 @@ class TaskViewTests(TestCase):
         data["priority"] = Task.Priority.URGENT
         self.client.force_login(self.user)
 
-        response = self.client.post(
+        post_response = self.client.post(
             self.task_url("edit_task", task),
             data=data,
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(f"selected={task.pk}", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
         task.refresh_from_db()
         form = response.context["edit_task_form"]
 
@@ -1642,7 +1648,14 @@ class TaskViewTests(TestCase):
 
         url = f"{reverse('task:add_task')}?search=call_plumber&sort=-created_at"
 
-        response = self.client.post(url, data=data)
+        post_response = self.client.post(url, data=data)
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("search=call_plumber", post_response.url)
+        self.assertIn("sort=-created_at", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("title", response.context["add_task_form"].errors)

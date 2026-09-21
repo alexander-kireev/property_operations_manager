@@ -244,6 +244,27 @@ body {
     text-decoration: underline;
 }
 
+/* Property list workspace */
+.property-list-page,
+.property-list-page .page-shell {
+    min-height: 100vh;
+}
+
+.property-list-main,
+.property-list-layout,
+.property-list-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.property-list-layout,
+.property-list-card,
+.property-list-empty,
+.property-list-card #propertyList {
+    flex: 1 1 auto;
+}
+
 .property-row + .property-row,
 .task-row + .task-row {
     border-top: var(--bs-border-width) solid var(--bs-border-color);

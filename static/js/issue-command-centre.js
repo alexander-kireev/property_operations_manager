@@ -26,11 +26,4 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    const modalTrigger = document.querySelector("[data-open-issue-modal]");
-    if (modalTrigger) {
-        const modal = document.getElementById(modalTrigger.dataset.openIssueModal);
-        if (modal) {
-            bootstrap.Modal.getOrCreateInstance(modal).show();
-        }
-    }
 });

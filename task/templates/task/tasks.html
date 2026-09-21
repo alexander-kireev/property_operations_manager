@@ -4,14 +4,13 @@
 {% block title %}Tasks | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary task-command-page{% endblock %}
 {% block main_class %}task-command-main flex-grow-1 py-3{% endblock %}
-{% block footer %}{% endblock %}
 
 {% block content %}
 <div class="container-xl h-100">
     <section
         class="task-command-centre card border-0 shadow-sm h-100"
         aria-label="Tasks command centre"
-        data-open-modal="{{ open_modal|default:'' }}"
+        {% if open_modal %}data-modal-auto-open="{{ open_modal }}"{% endif %}
     >
         {% include "includes/my_work_nav.html" with active_section="tasks" task_count=task_count issue_count=issue_count %}
 
@@ -287,7 +286,7 @@
     </section>
 </div>
 
-<div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+<div class="modal fade" id="addTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
     <div class="task-form-dialog modal-dialog modal-dialog-centered"><div class="modal-content">
         <div class="modal-header"><h2 class="modal-title fs-5" id="addTaskModalLabel">Add task</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
         <form action="{% url 'task:add_task' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off" data-task-form>
@@ -299,7 +298,7 @@
 
 {% if selected_task %}
     {% if selected_task.state == "active" %}
-        <div class="modal fade" id="editTaskModal" tabindex="-1" aria-labelledby="editTaskModalLabel" aria-hidden="true">
+        <div class="modal fade" id="editTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editTaskModalLabel" aria-hidden="true">
             <div class="task-form-dialog modal-dialog modal-dialog-centered"><div class="modal-content">
                 <div class="modal-header"><h2 class="modal-title fs-5" id="editTaskModalLabel">Edit {{ selected_task.title }}</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'task:edit_task' selected_task.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off" data-task-form>

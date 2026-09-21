@@ -297,13 +297,23 @@ class PropertyViewTests(TestCase):
         data = self.VALID_DATA.copy()
         data["name"] = "HILL HOUSE"
 
-        response = self.client.post(url, data=data)
+        post_response = self.client.post(url, data=data)
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("search=Hill", post_response.url)
+        self.assertIn("sort=-name", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("name", response.context["add_property_form"].errors)
         self.assertEqual(response.context["search"], "Hill")
         self.assertEqual(response.context["sort"], "-name")
-        self.assertContains(response, "bootstrap.Modal.getOrCreateInstance")
+        self.assertContains(
+            response,
+            'data-modal-auto-open="addPropertyModal"',
+        )
         self.assertEqual(Property.objects.count(), 1)
 
     def test_property_detail_only_allows_owning_user(self):
@@ -330,6 +340,26 @@ class PropertyViewTests(TestCase):
         self.assertEqual(own_response.status_code, 200)
         self.assertTemplateUsed(own_response, "property/property_detail.html")
         self.assertEqual(other_response.status_code, 404)
+
+    def test_property_detail_query_actions_mark_the_correct_modal_to_open(self):
+        property_record = self.create_property()
+        self.client.force_login(self.user)
+        url = reverse(
+            "property:property_detail",
+            kwargs={"property_id": property_record.pk},
+        )
+
+        for parameter, modal_id in (
+            ("edit", "editPropertyModal"),
+            ("deactivate", "deactivatePropertyModal"),
+            ("confirm_delete", "deletePropertyModal"),
+        ):
+            with self.subTest(parameter=parameter):
+                response = self.client.get(url, {parameter: "1"})
+                self.assertContains(
+                    response,
+                    f'data-modal-auto-open="{modal_id}"',
+                )
 
     def test_deleted_property_detail_returns_404(self):
         property_record = self.create_property()
@@ -382,18 +412,26 @@ class PropertyViewTests(TestCase):
         data = self.VALID_DATA.copy()
         data["name"] = "RIVER COTTAGE"
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse(
                 "property:edit_property",
                 kwargs={"property_id": property_record.pk},
             ),
             data=data,
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
         property_record.refresh_from_db()
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("name", response.context["edit_property_form"].errors)
-        self.assertContains(response, "bootstrap.Modal.getOrCreateInstance")
+        self.assertContains(
+            response,
+            'data-modal-auto-open="editPropertyModal"',
+        )
         self.assertEqual(property_record.name, "Hill House")
 
     def test_user_cannot_edit_another_users_property(self):

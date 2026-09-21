@@ -68,9 +68,4 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    const modalTrigger = document.querySelector("[data-open-event-modal]");
-    if (modalTrigger) {
-        const modal = document.getElementById(modalTrigger.dataset.openEventModal);
-        if (modal) bootstrap.Modal.getOrCreateInstance(modal).show();
-    }
 });

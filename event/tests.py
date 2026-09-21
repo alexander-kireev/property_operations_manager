@@ -528,24 +528,58 @@ class EventViewTests(EventTestMixin, TestCase):
         )
 
     def test_invalid_create_rerenders_open_add_modal(self):
-        response = self.client.post(reverse("event:add_event"), self.valid_form_data(
+        post_response = self.client.post(reverse("event:add_event"), self.valid_form_data(
             title=""
         ))
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["open_modal"], "addEventModal")
+        self.assertIn("title", response.context["add_event_form"].errors)
         self.assertFalse(Event.objects.exists())
 
     def test_invalid_initial_contact_creates_no_event(self):
         other_contact = self.create_contact(
             self.create_user("bob@example.com"), "Other"
         )
-        response = self.client.post(reverse("event:add_event"), self.valid_form_data(
+        post_response = self.client.post(reverse("event:add_event"), self.valid_form_data(
             contacts=[other_contact.pk]
         ))
 
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["open_modal"], "addEventModal")
+        self.assertIn("contacts", response.context["initial_contacts_form"].errors)
         self.assertFalse(Event.objects.exists())
+
+    def test_invalid_edit_redirects_and_restores_bound_form(self):
+        event = self.create_event(self.user)
+
+        post_response = self.client.post(
+            reverse("event:edit_event", args=[event.pk]),
+            self.valid_form_data(title=""),
+        )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(f"selected={event.pk}", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+        event.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_event"], event)
+        self.assertEqual(response.context["open_modal"], "editEventModal")
+        self.assertIn("title", response.context["edit_event_form"].errors)
+        self.assertEqual(event.title, "Inspection")
 
     def test_edit_and_lifecycle_views_are_owner_scoped(self):
         event = self.create_event(self.user)
@@ -613,11 +647,20 @@ class EventViewTests(EventTestMixin, TestCase):
         other_contact = self.create_contact(
             self.create_user("bob@example.com"), "Other"
         )
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("event:add_event_contacts_to_event", args=[event.pk]),
             {"contacts": [other_contact.pk]},
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(f"selected={event.pk}", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["open_modal"], "addEventContactsModal")
+        self.assertIn("contacts", response.context["add_contacts_form"].errors)
         self.assertFalse(EventContact.objects.filter(event=event).exists())
 
         event.state = Event.State.OCCURRED

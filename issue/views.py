@@ -7,6 +7,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from config.form_state import (
+    deserialise_form_data,
+    pop_form_state,
+    serialise_form_data,
+    store_form_state,
+)
+
 from property.selectors import properties_for_user
 from event.selectors import events_for_user
 from task.forms import TaskForm
@@ -84,7 +91,13 @@ def _list_query_parameters(values):
     return parameters
 
 
-def _issue_workspace_url(request, *, issue_id=None, tab="details"):
+def _issue_workspace_url(
+    request,
+    *,
+    issue_id=None,
+    tab="details",
+    form_state=None,
+):
     parameters = _list_query_parameters(_normalised_list_values(request))
     page = request.GET.get("page", "")
     if page.isdigit() and int(page) > 1:
@@ -93,9 +106,128 @@ def _issue_workspace_url(request, *, issue_id=None, tab="details"):
         parameters["selected"] = issue_id
     if tab == "tasks":
         parameters["tab"] = "tasks"
+    if form_state is not None:
+        parameters["form_state"] = form_state
 
     url = reverse("issue:issues")
     return f"{url}?{urlencode(parameters)}" if parameters else url
+
+
+def _active_issue_from_form_state(request, state):
+    return issues_for_user(user=request.user).filter(
+        pk=state.get("issue_id"),
+        state=Issue.State.ACTIVE,
+    ).first()
+
+
+def _restore_add_issue_form(request, state):
+    return {
+        "add_issue_form": IssueForm(
+            deserialise_form_data(state.get("data", {})),
+            user=request.user,
+            auto_id="add_issue_%s",
+        ),
+        "open_modal": "addIssueModal",
+    }
+
+
+def _restore_edit_issue_form(request, state):
+    issue = _active_issue_from_form_state(request, state)
+    if issue is None:
+        return {}
+    return {
+        "selected_issue": issue,
+        "edit_issue_form": IssueForm(
+            deserialise_form_data(state.get("data", {})),
+            user=request.user,
+            instance=issue,
+            auto_id="edit_issue_%s",
+        ),
+        "active_tab": "details",
+        "open_modal": "editIssueModal",
+    }
+
+
+def _restore_add_issue_task_form(request, state):
+    issue = _active_issue_from_form_state(request, state)
+    if issue is None:
+        return {}
+    return {
+        "selected_issue": issue,
+        "add_task_form": TaskForm(
+            deserialise_form_data(state.get("data", {})),
+            user=request.user,
+            parent_issue=issue,
+            auto_id="add_issue_task_%s",
+        ),
+        "active_tab": "tasks",
+        "open_modal": "addIssueTaskModal",
+    }
+
+
+def _restore_edit_issue_task_form(request, state):
+    issue = _active_issue_from_form_state(request, state)
+    if issue is None:
+        return {}
+    task = tasks_for_issue(user=request.user, issue=issue).filter(
+        pk=state.get("object_id"),
+        state=Task.State.ACTIVE,
+    ).first()
+    if task is None:
+        return {}
+    return {
+        "selected_issue": issue,
+        "edit_task_form": TaskForm(
+            deserialise_form_data(state.get("data", {})),
+            user=request.user,
+            parent_issue=issue,
+            instance=task,
+            auto_id="edit_issue_task_%s",
+        ),
+        "edit_task": task,
+        "active_tab": "tasks",
+        "open_modal": "editIssueTaskModal",
+    }
+
+
+ISSUE_FORM_STATE_RESTORERS = {
+    "add_issue": _restore_add_issue_form,
+    "edit_issue": _restore_edit_issue_form,
+    "add_issue_task": _restore_add_issue_task_form,
+    "edit_issue_task": _restore_edit_issue_task_form,
+}
+
+
+def _restore_issue_form_context(request):
+    state = pop_form_state(request)
+    if not isinstance(state, dict):
+        return {}
+    restorer = ISSUE_FORM_STATE_RESTORERS.get(state.get("action"))
+    return restorer(request, state) if restorer is not None else {}
+
+
+def _redirect_with_issue_form_state(
+    request,
+    *,
+    action,
+    issue_id=None,
+    object_id=None,
+    tab="details",
+):
+    token = store_form_state(request, {
+        "action": action,
+        "issue_id": issue_id,
+        "object_id": object_id,
+        "data": serialise_form_data(request.POST),
+    })
+    return redirect(
+        _issue_workspace_url(
+            request,
+            issue_id=issue_id,
+            tab=tab,
+            form_state=token,
+        )
+    )
 
 
 def _issue_list_context(
@@ -235,7 +367,11 @@ def _issue_list_context(
 @login_required
 @require_GET
 def issues_view(request):
-    return render(request, "issue/issues.html", _issue_list_context(request))
+    return render(
+        request,
+        "issue/issues.html",
+        _issue_list_context(request, **_restore_issue_form_context(request)),
+    )
 
 
 @login_required
@@ -249,10 +385,9 @@ def add_issue_view(request):
     if form.is_valid():
         issue = create_issue(user=request.user, **form.cleaned_data)
         return redirect(_issue_workspace_url(request, issue_id=issue.pk))
-    return render(
+    return _redirect_with_issue_form_state(
         request,
-        "issue/issues.html",
-        _issue_list_context(request, add_issue_form=form, open_modal="addIssueModal"),
+        action="add_issue",
     )
 
 
@@ -271,15 +406,10 @@ def edit_issue_view(request, issue_id):
     if form.is_valid():
         update_issue(issue=issue, **form.cleaned_data)
         return redirect(_issue_workspace_url(request, issue_id=issue.pk))
-    return render(
+    return _redirect_with_issue_form_state(
         request,
-        "issue/issues.html",
-        _issue_list_context(
-            request,
-            selected_issue=issue,
-            edit_issue_form=form,
-            open_modal="editIssueModal",
-        ),
+        action="edit_issue",
+        issue_id=issue.pk,
     )
 
 
@@ -352,16 +482,11 @@ def add_issue_task_view(request, issue_id):
             **form.cleaned_data,
         )
         return redirect(_issue_workspace_url(request, issue_id=issue.pk, tab="tasks"))
-    return render(
+    return _redirect_with_issue_form_state(
         request,
-        "issue/issues.html",
-        _issue_list_context(
-            request,
-            selected_issue=issue,
-            add_task_form=form,
-            active_tab="tasks",
-            open_modal="addIssueTaskModal",
-        ),
+        action="add_issue_task",
+        issue_id=issue.pk,
+        tab="tasks",
     )
 
 
@@ -391,15 +516,10 @@ def edit_issue_task_view(request, issue_id, task_id):
             **form.cleaned_data,
         )
         return redirect(_issue_workspace_url(request, issue_id=issue.pk, tab="tasks"))
-    return render(
+    return _redirect_with_issue_form_state(
         request,
-        "issue/issues.html",
-        _issue_list_context(
-            request,
-            selected_issue=issue,
-            edit_task_form=form,
-            edit_task=task,
-            active_tab="tasks",
-            open_modal="editIssueTaskModal",
-        ),
+        action="edit_issue_task",
+        issue_id=issue.pk,
+        object_id=task.pk,
+        tab="tasks",
     )

@@ -384,9 +384,15 @@ class IssueViewTests(IssueTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn(f"selected={created.pk}", response.url)
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("issue:add_issue"), self.issue_data(title="")
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["add_issue_form"].is_bound)
         self.assertEqual(response.context["open_modal"], "addIssueModal")
@@ -400,6 +406,27 @@ class IssueViewTests(IssueTestMixin, TestCase):
         self.issue.refresh_from_db()
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.issue.title, "Updated issue")
+
+    def test_invalid_edit_issue_redirects_and_restores_bound_form(self):
+        original_title = self.issue.title
+
+        post_response = self.client.post(
+            reverse("issue:edit_issue", args=[self.issue.pk]),
+            self.issue_data(title=""),
+        )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(f"selected={self.issue.pk}", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+        self.issue.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_issue"], self.issue)
+        self.assertEqual(response.context["open_modal"], "editIssueModal")
+        self.assertIn("title", response.context["edit_issue_form"].errors)
+        self.assertEqual(self.issue.title, original_title)
 
     def test_lifecycle_view_applies_explicit_cascade_choice(self):
         task = self.create_task(self.user, self.issue)
@@ -441,10 +468,17 @@ class IssueViewTests(IssueTestMixin, TestCase):
         self.assertIn("tab=tasks", response.url)
 
     def test_invalid_issue_task_returns_bound_form_to_tasks_tab(self):
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("issue:add_issue_task", args=[self.issue.pk]),
             self.task_data(title=""),
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(f"selected={self.issue.pk}", post_response.url)
+        self.assertIn("tab=tasks", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["add_task_form"].is_bound)
@@ -533,10 +567,17 @@ class IssueViewTests(IssueTestMixin, TestCase):
     def test_invalid_issue_task_edit_returns_bound_form(self):
         task = self.create_task(self.user, self.issue)
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("issue:edit_issue_task", args=[self.issue.pk, task.pk]),
             self.task_data(title=""),
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(f"selected={self.issue.pk}", post_response.url)
+        self.assertIn("tab=tasks", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["edit_task_form"].is_bound)
