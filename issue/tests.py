@@ -362,10 +362,16 @@ class IssueViewTests(IssueTestMixin, TestCase):
         for number in range(45):
             self.create_issue(self.user, f"Issue {number:02}")
 
-        response = self.client.get(reverse("issue:issues"), {"page": 2})
+        response = self.client.get(
+            reverse("issue:issues"),
+            {"search": "Issue", "page": 2},
+        )
 
         self.assertEqual(len(response.context["page_obj"]), 20)
         self.assertEqual(response.context["page_obj"].paginator.num_pages, 3)
+        self.assertContains(response, "Page 2 of 3")
+        self.assertContains(response, "?search=Issue&amp;page=1")
+        self.assertContains(response, "?search=Issue&amp;page=3")
 
     def test_issues_view_normalises_query_parameters(self):
         response = self.client.get(

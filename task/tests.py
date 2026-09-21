@@ -1208,6 +1208,12 @@ class TaskViewTests(TestCase):
                     response.context["page_obj"].paginator.count,
                     51,
                 )
+                self.assertContains(response, f"Page {page_number} of 3")
+
+        first_page = self.client.get(reverse("task:tasks"))
+        last_page = self.client.get(reverse("task:tasks"), {"page": 3})
+        self.assertContains(first_page, 'aria-disabled="true">← Previous</span>')
+        self.assertContains(last_page, 'aria-disabled="true">Next →</span>')
 
     def test_tasks_view_supplies_clean_unbound_add_form(self):
         self.client.force_login(self.user)
@@ -1294,6 +1300,7 @@ class TaskViewTests(TestCase):
 
         self.assertEqual(response.context["selected_task"], selected_task)
         self.assertContains(response, 'aria-current="true"')
+        self.assertContains(response, "task-command-row list-group-item list-group-item-action is-selected")
 
     def test_tasks_view_rejects_inaccessible_selected_task(self):
         visible_task = self.create_task(title="Visible task")

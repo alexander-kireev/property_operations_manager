@@ -215,6 +215,51 @@ body {
     border-color: #8d9298;
 }
 
+.command-pagination {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    width: 100%;
+    gap: 0.5rem;
+}
+
+.command-pagination-link {
+    justify-self: start;
+    padding: 0.35rem 0.55rem;
+    color: var(--bs-emphasis-color);
+    font-size: 0.8rem;
+    line-height: 1.25;
+    text-decoration: none;
+    white-space: nowrap;
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-sm);
+    background: var(--bs-body-bg);
+}
+
+.command-pagination-link:last-child {
+    justify-self: end;
+}
+
+.command-pagination-link:hover,
+.command-pagination-link:focus-visible {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-tertiary-bg);
+}
+
+.command-pagination-link.is-disabled {
+    color: var(--bs-secondary-color);
+    background: var(--bs-tertiary-bg);
+    opacity: 0.65;
+}
+
+.command-pagination-status {
+    color: var(--bs-secondary-color);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+}
+
 :is(
     .task-command-centre,
     .issue-command-centre,
@@ -479,6 +524,7 @@ body {
 .issue-list {
     flex: 1 1 auto;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -495,11 +541,11 @@ body {
 }
 
 .issue-list-row:hover,
-.issue-list-row.active {
+.issue-list-row.is-selected {
     background: var(--bs-tertiary-bg) !important;
 }
 
-.issue-list-row.active::before {
+.issue-list-row.is-selected::before {
     position: absolute;
     inset: 0 auto 0 0;
     width: 0.25rem;
@@ -509,6 +555,31 @@ body {
 
 .issue-list-row.terminated {
     color: var(--bs-secondary-color) !important;
+}
+
+.issue-list-primary,
+.issue-list-meta,
+.issue-list-title,
+.issue-list-context {
+    min-width: 0;
+}
+
+.issue-list-title {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.issue-list-context {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.issue-list-primary > .badge,
+.issue-list-status {
+    flex: 0 0 auto;
 }
 
 .issue-pagination .page-link {
@@ -630,6 +701,19 @@ body {
     align-items: center;
 }
 
+.issue-task-copy,
+.issue-task-title {
+    min-width: 0;
+}
+
+.issue-task-title {
+    display: -webkit-box;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
 .issue-task-heading {
     color: var(--bs-secondary-color);
     font-size: 0.8rem;
@@ -659,6 +743,12 @@ body {
 
 .issue-task-details {
     background: var(--bs-tertiary-bg);
+}
+
+.issue-detail-scroll p,
+.issue-detail-scroll dd,
+.issue-task-details p {
+    overflow-wrap: anywhere;
 }
 
 .issue-form-field-compact {
@@ -866,6 +956,7 @@ body {
 .task-command-list {
     flex: 1 1 auto;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -882,11 +973,11 @@ body {
 }
 
 .task-command-row:hover,
-.task-command-row.active {
+.task-command-row.is-selected {
     background: var(--bs-tertiary-bg) !important;
 }
 
-.task-command-row.active::before {
+.task-command-row.is-selected::before {
     position: absolute;
     inset: 0 auto 0 0;
     width: 0.25rem;
@@ -904,16 +995,26 @@ body {
 }
 
 .task-command-title {
+    display: -webkit-box;
     overflow: hidden;
     font-weight: 600;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.task-command-context {
+    display: block;
+    min-height: 1.25rem;
+    overflow: hidden;
+    color: var(--bs-secondary-color);
+    font-size: 0.875rem;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.task-command-context {
-    min-height: 1.25rem;
-    color: var(--bs-secondary-color);
-    font-size: 0.875rem;
+.task-command-meta {
+    flex: 0 0 auto;
 }
 
 .task-command-deadline {
@@ -999,6 +1100,10 @@ body {
     scrollbar-width: thin;
 }
 
+.task-detail-scroll p {
+    overflow-wrap: anywhere;
+}
+
 .task-planning-list {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
@@ -1038,7 +1143,15 @@ body {
     background: var(--bs-tertiary-bg);
     border: var(--bs-border-width) solid var(--bs-border-color);
     border-radius: var(--bs-border-radius);
+}
+
+.task-related-copy {
+    display: -webkit-box;
+    min-width: 0;
+    overflow: hidden;
     overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .task-related-link:hover {
@@ -1192,6 +1305,7 @@ body {
 .contact-command-list {
     flex: 1 1 auto;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -1208,11 +1322,11 @@ body {
 }
 
 .contact-command-row:hover,
-.contact-command-row.active {
+.contact-command-row.is-selected {
     background: var(--bs-tertiary-bg) !important;
 }
 
-.contact-command-row.active::before {
+.contact-command-row.is-selected::before {
     position: absolute;
     inset: 0 auto 0 0;
     width: 0.25rem;
@@ -1225,6 +1339,7 @@ body {
 }
 
 .contact-command-title {
+    min-width: 0;
     overflow: hidden;
     font-weight: 600;
     text-overflow: ellipsis;
@@ -1232,11 +1347,17 @@ body {
 }
 
 .contact-command-methods {
+    min-width: 0;
     overflow: hidden;
     color: var(--bs-secondary-color);
     font-size: 0.875rem;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.contact-detail-scroll a,
+.contact-detail-scroll p {
+    overflow-wrap: anywhere;
 }
 
 .contact-pagination .page-link {

@@ -97,6 +97,7 @@
 .event-command-list {
     flex: 1 1 auto;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     scrollbar-width: thin;
 }
@@ -112,11 +113,11 @@
 }
 
 .event-command-row:hover,
-.event-command-row.active {
+.event-command-row.is-selected {
     background: var(--bs-tertiary-bg) !important;
 }
 
-.event-command-row.active::before {
+.event-command-row.is-selected::before {
     position: absolute;
     inset: 0 auto 0 0;
     width: 0.25rem;
@@ -140,6 +141,18 @@
 .event-command-time {
     color: var(--bs-secondary-color);
     font-size: 0.85rem;
+}
+
+.event-command-row > .d-flex,
+.event-command-context,
+.event-detail-heading-copy {
+    min-width: 0;
+}
+
+.event-command-context {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .event-command-time,
@@ -215,9 +228,28 @@
 }
 
 .event-calendar-pane,
-.event-detail-pane,
 .event-detail-scroll {
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.event-detail-pane {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.event-detail-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.event-detail-scroll p,
+.event-detail-scroll dd,
+.event-detail-scroll .fw-semibold {
+    overflow-wrap: anywhere;
 }
 
 .event-calendar-title {
@@ -358,13 +390,19 @@
 }
 
 @media (min-width: 992px) {
-    .event-command-page,
-    .event-command-page .page-shell {
-        height: 100vh;
+    .event-command-page {
+        height: 100dvh;
     }
 
-    .event-command-page {
+    .event-command-page .page-shell {
+        height: 100dvh;
+        min-height: 100dvh;
         overflow: hidden;
+    }
+
+    .event-command-main {
+        flex: 1 1 auto;
+        min-height: 0;
     }
 
     .event-command-centre {
@@ -373,10 +411,32 @@
 }
 
 @media (max-width: 991.98px) {
+    .event-command-page,
+    .event-command-page .page-shell {
+        height: auto;
+        overflow: visible;
+    }
+
     .event-command-main,
     .event-command-centre,
     .event-workspace {
         min-height: calc(100vh - 4.9rem);
+    }
+
+    .event-command-centre,
+    .event-workspace,
+    .event-pane,
+    .event-right-body,
+    .event-right-body > .tab-pane,
+    .event-calendar-pane,
+    .event-detail-pane,
+    .event-detail-scroll {
+        height: auto;
+        overflow: visible;
+    }
+
+    .event-command-list {
+        overflow-y: visible;
     }
 
     .event-list-column,

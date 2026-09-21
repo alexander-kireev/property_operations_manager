@@ -60,11 +60,11 @@
                             <div class="contact-command-list list-group list-group-flush" aria-label="Contacts">
                                 {% for contact in page_obj %}
                                     <a
-                                        class="contact-command-row list-group-item list-group-item-action{% if contact == selected_contact %} active{% endif %}{% if contact.state != 'active' %} terminated{% endif %}"
+                                        class="contact-command-row list-group-item list-group-item-action{% if contact == selected_contact %} is-selected{% endif %}{% if contact.state != 'active' %} terminated{% endif %}"
                                         href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ contact.pk }}"
                                         {% if contact == selected_contact %}aria-current="true"{% endif %}
                                     >
-                                        <span class="contact-command-title d-block">{{ contact }}</span>
+                                        <span class="contact-command-title d-block" title="{{ contact }}">{{ contact }}</span>
                                         <span class="contact-command-methods d-block mt-2">
                                             {% for method in contact.contact_methods.all %}
                                                 {% if not forloop.first %} · {% endif %}{{ method.value }}
@@ -79,20 +79,10 @@
 
                             <div class="contact-pagination d-flex justify-content-center border-top px-3 py-2">
                                 {% if page_obj.paginator.num_pages > 1 %}
-                                    <nav aria-label="Contact pagination">
-                                        <ul class="pagination pagination-sm mb-0">
-                                            <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
-                                                {% if page_obj.has_previous %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Previous page">‹</a>{% else %}<span class="page-link" aria-disabled="true">‹</span>{% endif %}
-                                            </li>
-                                            {% for page_number in page_obj.paginator.page_range %}
-                                                <li class="page-item{% if page_number == page_obj.number %} active{% endif %}">
-                                                    {% if page_number == page_obj.number %}<span class="page-link" aria-current="page">{{ page_number }}</span>{% else %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_number }}">{{ page_number }}</a>{% endif %}
-                                                </li>
-                                            {% endfor %}
-                                            <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
-                                                {% if page_obj.has_next %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}" aria-label="Next page">›</a>{% else %}<span class="page-link" aria-disabled="true">›</span>{% endif %}
-                                            </li>
-                                        </ul>
+                                    <nav class="command-pagination" aria-label="Contact pagination">
+                                        {% if page_obj.has_previous %}<a class="command-pagination-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">← Previous</a>{% else %}<span class="command-pagination-link is-disabled" aria-disabled="true">← Previous</span>{% endif %}
+                                        <span class="command-pagination-status" aria-current="page">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                                        {% if page_obj.has_next %}<a class="command-pagination-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span class="command-pagination-link is-disabled" aria-disabled="true">Next →</span>{% endif %}
                                     </nav>
                                 {% endif %}
                             </div>

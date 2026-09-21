@@ -130,18 +130,18 @@
                             <div class="task-command-list list-group list-group-flush" aria-label="Tasks">
                                 {% for task in page_obj %}
                                     <a
-                                        class="task-command-row list-group-item list-group-item-action{% if task == selected_task %} active{% endif %}{% if task.state != 'active' %} terminated{% endif %}"
+                                        class="task-command-row list-group-item list-group-item-action{% if task == selected_task %} is-selected{% endif %}{% if task.state != 'active' %} terminated{% endif %}"
                                         href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ task.pk }}"
                                         {% if task == selected_task %}aria-current="true"{% endif %}
                                     >
                                         <span class="d-flex justify-content-between align-items-start gap-3">
                                             <span class="task-command-copy flex-grow-1">
-                                                <span class="task-command-title d-block">{{ task.title }}</span>
-                                                <span class="task-command-context d-block mt-2">
+                                                <span class="task-command-title" title="{{ task.title }}">{{ task.title }}</span>
+                                                <span class="task-command-context mt-2"{% if task.property %} title="{{ task.property.name }}"{% elif task.issue %} title="{{ task.issue.title }}"{% endif %}>
                                                     {% if task.property %}{{ task.property.name }}{% elif task.issue %}{{ task.issue.title }}{% endif %}
                                                 </span>
                                             </span>
-                                            <span class="d-flex flex-column align-items-end gap-2">
+                                            <span class="task-command-meta d-flex flex-column align-items-end gap-2">
                                                 {% include "task/includes/priority_badge.html" with task=task %}
                                                 <span class="task-command-deadline{% if task.state == 'active' and task.completion_deadline and task.completion_deadline < today %} text-danger{% endif %}">
                                                     {{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}
@@ -155,20 +155,10 @@
 
                             <div class="task-pagination d-flex justify-content-center border-top px-3 py-2">
                                 {% if page_obj.paginator.num_pages > 1 %}
-                                    <nav aria-label="Task pagination">
-                                        <ul class="pagination pagination-sm mb-0">
-                                            <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
-                                                {% if page_obj.has_previous %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Previous page">‹</a>{% else %}<span class="page-link" aria-disabled="true">‹</span>{% endif %}
-                                            </li>
-                                            {% for page_number in page_obj.paginator.page_range %}
-                                                <li class="page-item{% if page_number == page_obj.number %} active{% endif %}">
-                                                    {% if page_number == page_obj.number %}<span class="page-link" aria-current="page">{{ page_number }}</span>{% else %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_number }}">{{ page_number }}</a>{% endif %}
-                                                </li>
-                                            {% endfor %}
-                                            <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
-                                                {% if page_obj.has_next %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}" aria-label="Next page">›</a>{% else %}<span class="page-link" aria-disabled="true">›</span>{% endif %}
-                                            </li>
-                                        </ul>
+                                    <nav class="command-pagination" aria-label="Task pagination">
+                                        {% if page_obj.has_previous %}<a class="command-pagination-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">← Previous</a>{% else %}<span class="command-pagination-link is-disabled" aria-disabled="true">← Previous</span>{% endif %}
+                                        <span class="command-pagination-status" aria-current="page">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                                        {% if page_obj.has_next %}<a class="command-pagination-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span class="command-pagination-link is-disabled" aria-disabled="true">Next →</span>{% endif %}
                                     </nav>
                                 {% endif %}
                             </div>
@@ -251,16 +241,16 @@
                                                     {% if selected_task.property %}
                                                         <dt class="task-related-label fw-normal text-body-secondary">Related property</dt>
                                                         <dd class="task-related-value">
-                                                            <a class="task-related-link" href="{% url 'property:property_detail' selected_task.property.pk %}">
-                                                                <span>{{ selected_task.property.name }}</span>
+                                                            <a class="task-related-link" href="{% url 'property:property_detail' selected_task.property.pk %}" title="{{ selected_task.property.name }}">
+                                                                <span class="task-related-copy">{{ selected_task.property.name }}</span>
                                                                 <span class="task-related-arrow" aria-hidden="true">→</span>
                                                             </a>
                                                         </dd>
                                                     {% elif selected_task.issue %}
                                                         <dt class="task-related-label fw-normal text-body-secondary">Related issue</dt>
                                                         <dd class="task-related-value">
-                                                            <a class="task-related-link" href="{% url 'issue:issues' %}?selected={{ selected_task.issue.pk }}">
-                                                                <span>{{ selected_task.issue.title }}</span>
+                                                            <a class="task-related-link" href="{% url 'issue:issues' %}?selected={{ selected_task.issue.pk }}" title="{{ selected_task.issue.title }}">
+                                                                <span class="task-related-copy">{{ selected_task.issue.title }}</span>
                                                                 <span class="task-related-arrow" aria-hidden="true">→</span>
                                                             </a>
                                                         </dd>
