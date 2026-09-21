@@ -50,7 +50,7 @@ def _normalised_list_values(request):
     property_value = request.GET.get("property", "")
     deadline_period = request.GET.get("deadline_period", "")
 
-    if state not in Issue.State.values:
+    if state not in (*Issue.State.values, "all"):
         state = ""
     if sort not in ISSUE_SORT_OPTIONS:
         sort = "resolution_deadline"
@@ -243,7 +243,10 @@ def _issue_list_context(
     open_modal=None,
 ):
     values = _normalised_list_values(request)
-    issues = filtered_issues_for_user(user=request.user, **values)
+    issues = filtered_issues_for_user(
+        user=request.user,
+        **{**values, "state": values["state"] or Issue.State.ACTIVE},
+    )
     paginator = Paginator(issues, ISSUES_PER_PAGE)
     page_obj = paginator.get_page(request.GET.get("page"))
 

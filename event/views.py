@@ -44,18 +44,19 @@ from .services import (
 )
 
 EVENTS_PER_PAGE = 20
+DEFAULT_EVENT_STATE = Event.State.SCHEDULED
 
 
 def _normalised_list_values(request):
     search = request.GET.get("search", "").strip()
-    state = request.GET.get("state", "")
+    state = request.GET.get("state", DEFAULT_EVENT_STATE)
     sort = request.GET.get("sort", "scheduled_date")
     property_value = request.GET.get("property", "")
     participation = request.GET.get("participation", "any").lower()
     presence = request.GET.get("presence", "any").lower()
 
-    if state not in Event.State.values:
-        state = ""
+    if state not in (*Event.State.values, "all"):
+        state = DEFAULT_EVENT_STATE
     if sort not in EVENT_SORT_OPTIONS:
         sort = "scheduled_date"
     if participation not in USER_PARTICIPATION_REQUIRED_OPTIONS:
@@ -79,9 +80,10 @@ def _normalised_list_values(request):
 
 def _list_query_parameters(values):
     parameters = {}
-    for name in ("search", "state"):
-        if values[name]:
-            parameters[name] = values[name]
+    if values["search"]:
+        parameters["search"] = values["search"]
+    if values["state"] != DEFAULT_EVENT_STATE:
+        parameters["state"] = values["state"]
     for name in ("participation", "presence"):
         if values[name] != "any":
             parameters[name] = values[name]
@@ -120,8 +122,14 @@ def _event_workspace_url(
     event_id=None,
     tab="details",
     form_state=None,
+    state=None,
 ):
     parameters = _list_query_parameters(_normalised_list_values(request))
+    if state is not None:
+        if state == DEFAULT_EVENT_STATE:
+            parameters.pop("state", None)
+        else:
+            parameters["state"] = state
     try:
         page = int(request.GET.get("page", ""))
     except (TypeError, ValueError):
@@ -360,13 +368,13 @@ def _event_list_context(
         "today_query": _calendar_query(values, today.replace(day=1)),
         "has_filters": any((
             values["search"],
-            values["state"],
+            values["state"] != DEFAULT_EVENT_STATE,
             values["property_id"],
             values["participation"] != "any",
             values["presence"] != "any",
         )),
         "filter_count": sum(bool(value) for value in (
-            values["state"],
+            values["state"] != DEFAULT_EVENT_STATE,
             values["property_id"],
             values["participation"] != "any",
             values["presence"] != "any",
@@ -450,7 +458,9 @@ def mark_event_occurred_view(request, event_id):
         events_for_user(user=request.user), pk=event_id, state=Event.State.SCHEDULED
     )
     mark_event_occurred(event=event)
-    return redirect(_event_workspace_url(request, event_id=event_id))
+    return redirect(
+        _event_workspace_url(request, event_id=event_id, state="all")
+    )
 
 
 @login_required
@@ -460,7 +470,9 @@ def cancel_event_view(request, event_id):
         events_for_user(user=request.user), pk=event_id, state=Event.State.SCHEDULED
     )
     cancel_event(event=event)
-    return redirect(_event_workspace_url(request, event_id=event_id))
+    return redirect(
+        _event_workspace_url(request, event_id=event_id, state="all")
+    )
 
 
 @login_required

@@ -52,7 +52,7 @@
                                     <div class="col-12">
                                         <label class="visually-hidden" for="eventState">State</label>
                                         <select class="form-select form-select-sm" id="eventState" name="state">
-                                            <option value="">All states</option>
+                                            <option value="all"{% if state == "all" %} selected{% endif %}>All states</option>
                                             {% for value, label in event_state_choices %}<option value="{{ value }}"{% if state == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
                                         </select>
                                     </div>
@@ -165,7 +165,7 @@
                                             <a class="event-mobile-back btn btn-sm btn-link px-0 mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to events</a>
                                             <div class="event-detail-header-layout">
                                                 <div class="event-detail-heading-copy">
-                                                    <h2 class="event-detail-title h3">{{ selected_event.title }}</h2>
+                                                    <h2 class="event-detail-title h3" title="{{ selected_event.title }}">{{ selected_event.title }}</h2>
                                                     <div class="event-detail-meta">
                                                         <span class="event-state-badge event-state-{{ selected_event.state }}">{{ selected_event.get_state_display }}</span>
                                                         <span class="small text-body-secondary">{{ selected_event.scheduled_date|date:"j F Y" }}{% if selected_event.property %} · {{ selected_event.property.name }}{% endif %}</span>
@@ -207,9 +207,9 @@
                                                     </dl>
                                                 </div></article></div>
                                             </div>
-                                            <article class="card mt-3">
-                                                <div class="card-body p-4">
-                                                    <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                                            <article class="event-participants-card card mt-3">
+                                                <div class="event-participants-header card-header bg-body p-3 p-md-4">
+                                                    <div class="d-flex align-items-center justify-content-between gap-3">
                                                         <div>
                                                             <h3 class="h5 mb-1">Participants</h3>
                                                             <p class="small text-body-secondary mb-0">{{ participants|length }} contact{{ participants|length|pluralize }} linked to this event.</p>
@@ -218,23 +218,28 @@
                                                             <button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#addEventContactsModal">Add participants</button>
                                                         {% endif %}
                                                     </div>
-                                                    <div class="list-group list-group-flush border rounded">
-                                                        {% for event_contact in participants %}
-                                                            <div class="list-group-item d-flex align-items-center justify-content-between gap-3">
-                                                                <div>
-                                                                    <span class="fw-semibold">{{ event_contact.contact }}</span>
-                                                                    {% if event_contact.contact.state != "active" or event_contact.contact.deleted_at %}<span class="badge text-bg-secondary ms-2">Historical contact</span>{% endif %}
+                                                </div>
+                                                <div class="event-participant-list">
+                                                    {% for event_contact in participants %}
+                                                        <div class="event-participant-row">
+                                                            <div class="event-participant-copy">
+                                                                <div class="d-flex align-items-center flex-wrap gap-2">
+                                                                    <span class="event-participant-name fw-semibold" title="{{ event_contact.contact }}">{{ event_contact.contact }}</span>
+                                                                    {% if event_contact.contact.state != "active" or event_contact.contact.deleted_at %}<span class="badge text-bg-secondary">Historical contact</span>{% endif %}
                                                                 </div>
-                                                                {% if selected_event.state == "scheduled" %}
-                                                                    <form action="{% url 'event:delete_event_contact_from_event' selected_event.pk event_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">
-                                                                        {% csrf_token %}<button class="btn btn-sm btn-link text-danger text-decoration-none" type="submit">Remove</button>
-                                                                    </form>
-                                                                {% endif %}
+                                                                <div class="event-participant-methods small text-body-secondary">
+                                                                    {% if event_contact.contact_email %}<span title="{{ event_contact.contact_email }}">{{ event_contact.contact_email }}</span>{% endif %}{% if event_contact.contact_email and event_contact.contact_telephone %}<span aria-hidden="true"> · </span>{% endif %}{% if event_contact.contact_telephone %}<span title="{{ event_contact.contact_telephone }}">{{ event_contact.contact_telephone }}</span>{% endif %}{% if not event_contact.contact_email and not event_contact.contact_telephone %}No contact details{% endif %}
+                                                                </div>
                                                             </div>
-                                                        {% empty %}
-                                                            <div class="list-group-item text-body-secondary">No participants have been added.</div>
-                                                        {% endfor %}
-                                                    </div>
+                                                            {% if selected_event.state == "scheduled" %}
+                                                                <form class="event-participant-action" action="{% url 'event:delete_event_contact_from_event' selected_event.pk event_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">
+                                                                    {% csrf_token %}<button class="btn btn-sm btn-link text-danger text-decoration-none" type="submit">Remove</button>
+                                                                </form>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% empty %}
+                                                        <div class="event-participant-empty text-body-secondary">No participants have been added.</div>
+                                                    {% endfor %}
                                                 </div>
                                             </article>
                                         </div>

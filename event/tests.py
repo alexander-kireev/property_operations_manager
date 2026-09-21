@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
-from contact.models import Contact
+from contact.models import Contact, ContactMethod
 from property.models import Property
 
 from .forms import EventContactForm, EventForm
@@ -280,10 +280,29 @@ class EventSelectorTests(EventTestMixin, TestCase):
         amy = self.create_contact(self.user, "Amy", state=Contact.State.DEACTIVATED)
         zed_link = EventContact.objects.create(event=event, contact=zed)
         amy_link = EventContact.objects.create(event=event, contact=amy)
+        first_email = ContactMethod.objects.create(
+            contact=amy,
+            type=ContactMethod.Type.EMAIL,
+            value="first@example.com",
+        )
+        ContactMethod.objects.create(
+            contact=amy,
+            type=ContactMethod.Type.EMAIL,
+            value="second@example.com",
+        )
+        first_telephone = ContactMethod.objects.create(
+            contact=amy,
+            type=ContactMethod.Type.TELEPHONE,
+            value="+447700900123",
+        )
 
+        participants = list(event_contacts_for_event(event=event))
+
+        self.assertEqual(participants, [amy_link, zed_link])
+        self.assertEqual(participants[0].contact_email, first_email.value)
         self.assertEqual(
-            list(event_contacts_for_event(event=event)),
-            [amy_link, zed_link],
+            participants[0].contact_telephone,
+            first_telephone.value,
         )
 
 
@@ -425,6 +444,31 @@ class EventViewTests(EventTestMixin, TestCase):
         self.assertEqual(response.context["calendar_month_label"], "September 2026")
         self.assertEqual(response.context["calendar_event_count"], 1)
         self.assertContains(response, event.title)
+
+    def test_workspace_defaults_to_scheduled_events_and_can_show_all_states(self):
+        scheduled = self.create_event(self.user, "Scheduled visit")
+        occurred = self.create_event(
+            self.user,
+            "Past visit",
+            state=Event.State.OCCURRED,
+        )
+
+        default_response = self.client.get(reverse("event:events"))
+        all_response = self.client.get(
+            reverse("event:events"),
+            {"state": "all"},
+        )
+
+        self.assertEqual(default_response.context["state"], Event.State.SCHEDULED)
+        self.assertEqual(
+            list(default_response.context["page_obj"].object_list),
+            [scheduled],
+        )
+        self.assertNotContains(default_response, occurred.title)
+        self.assertCountEqual(
+            all_response.context["page_obj"].object_list,
+            [scheduled, occurred],
+        )
 
     def test_invalid_calendar_parameters_fall_back_safely(self):
         response = self.client.get(reverse("event:events"), {
@@ -596,6 +640,22 @@ class EventViewTests(EventTestMixin, TestCase):
         response = self.client.post(reverse("event:cancel_event", args=[other.pk]))
         self.assertEqual(response.status_code, 404)
 
+    def test_terminating_event_keeps_it_visible_in_all_states_view(self):
+        event = self.create_event(self.user)
+
+        post_response = self.client.post(
+            reverse("event:mark_event_occurred", args=[event.pk])
+        )
+
+        self.assertIn("state=all", post_response.url)
+        self.assertIn(f"selected={event.pk}", post_response.url)
+
+        response = self.client.get(post_response.url)
+        event.refresh_from_db()
+
+        self.assertEqual(event.state, Event.State.OCCURRED)
+        self.assertEqual(response.context["selected_event"], event)
+
     def test_add_and_remove_participants(self):
         event = self.create_event(self.user)
         contact = self.create_contact(self.user)
@@ -628,14 +688,34 @@ class EventViewTests(EventTestMixin, TestCase):
     def test_terminal_event_hides_participant_mutations(self):
         event = self.create_event(self.user, state=Event.State.CANCELLED)
         contact = self.create_contact(self.user)
+        method = ContactMethod.objects.create(
+            contact=contact,
+            type=ContactMethod.Type.EMAIL,
+            value="alex@example.com",
+        )
+        hidden_method = ContactMethod.objects.create(
+            contact=contact,
+            type=ContactMethod.Type.EMAIL,
+            value="other@example.com",
+        )
+        telephone = ContactMethod.objects.create(
+            contact=contact,
+            type=ContactMethod.Type.TELEPHONE,
+            value="+447700900321",
+        )
         EventContact.objects.create(event=event, contact=contact)
 
         response = self.client.get(reverse("event:events"), {
+            "state": "all",
             "selected": event.pk,
             "tab": "details",
         })
 
         self.assertContains(response, contact.first_name)
+        self.assertContains(response, method.value)
+        self.assertContains(response, telephone.value)
+        self.assertNotContains(response, hidden_method.value)
+        self.assertContains(response, 'class="event-participant-row"')
         self.assertNotContains(response, "Add participants")
         self.assertNotContains(
             response,

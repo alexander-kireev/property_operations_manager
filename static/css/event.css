@@ -16,7 +16,7 @@
     margin-bottom: 0 !important;
     border-radius: 0;
     box-shadow: none !important;
-    border-bottom: var(--bs-border-width) solid var(--bs-border-color) !important;
+    border-bottom: 0 !important;
 }
 
 .event-command-centre > .my-work-section-nav .nav-link {
@@ -58,6 +58,10 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow: hidden;
+}
+
+.event-workspace {
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
 }
 
 .event-list-column,
@@ -244,12 +248,71 @@
 .event-detail-scroll {
     flex: 1 1 auto;
     min-height: 0;
+    padding-bottom: 2rem !important;
+    scroll-padding-block: 1.5rem;
 }
 
 .event-detail-scroll p,
 .event-detail-scroll dd,
 .event-detail-scroll .fw-semibold {
     overflow-wrap: anywhere;
+}
+
+.event-detail-scroll .card,
+.event-detail-scroll .card-body,
+.event-detail-list,
+.event-detail-list dd {
+    min-width: 0;
+}
+
+.event-detail-scroll .card,
+.event-participants-card {
+    overflow: hidden;
+}
+
+.event-participants-header {
+    border-bottom: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.event-participant-list {
+    min-width: 0;
+}
+
+.event-participant-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    padding: 0.85rem 1.25rem;
+    align-items: center;
+}
+
+.event-participant-row + .event-participant-row {
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.event-participant-copy,
+.event-participant-name,
+.event-participant-methods {
+    min-width: 0;
+}
+
+.event-participant-name {
+    overflow-wrap: anywhere;
+}
+
+.event-participant-methods {
+    margin-top: 0.3rem;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    text-overflow: ellipsis;
+}
+
+.event-participant-action {
+    margin: 0;
+}
+
+.event-participant-empty {
+    padding: 1.25rem;
 }
 
 .event-calendar-title {
@@ -345,8 +408,13 @@
 }
 
 .event-detail-title {
+    display: -webkit-box;
     margin: 0;
+    overflow: hidden;
     overflow-wrap: anywhere;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
 }
 
 .event-detail-meta,
@@ -361,8 +429,21 @@
     margin-top: 0.75rem;
 }
 
+.event-detail-meta .text-body-secondary {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .event-detail-actions {
     align-items: flex-start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+.event-detail-actions .btn {
+    max-width: 100%;
+    white-space: nowrap;
 }
 
 .event-menu-button::after {
@@ -382,6 +463,8 @@
 
 .event-detail-list dd {
     margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
     text-align: right;
 }
 
@@ -389,7 +472,7 @@
     display: none;
 }
 
-@media (min-width: 992px) {
+@media (min-width: 768px) {
     .event-command-page {
         height: 100dvh;
     }
@@ -410,7 +493,27 @@
     }
 }
 
-@media (max-width: 991.98px) {
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .event-detail-header-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .event-detail-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .event-list-column {
+        width: 40%;
+    }
+
+    .event-right-column {
+        width: 60%;
+    }
+}
+
+@media (max-width: 767.98px) {
     .event-command-page,
     .event-command-page .page-shell {
         height: auto;
@@ -437,6 +540,7 @@
 
     .event-command-list {
         overflow-y: visible;
+        overscroll-behavior: auto;
     }
 
     .event-list-column,
@@ -462,6 +566,15 @@
     }
 
     .event-detail-actions {
-        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .event-participant-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.5rem;
+    }
+
+    .event-participant-action {
+        justify-self: start;
     }
 }

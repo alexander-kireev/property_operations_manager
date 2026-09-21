@@ -58,8 +58,8 @@
                                 <div class="col-6">
                                     <label class="visually-hidden" for="issueState">State</label>
                                     <select class="form-select form-select-sm" id="issueState" name="state">
-                                        <option value="">All states</option>
-                                        {% for value, label in issue_state_choices %}<option value="{{ value }}" {% if state == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                                        <option value="all" {% if state == "all" %}selected{% endif %}>All states</option>
+                                        {% for value, label in issue_state_choices %}<option value="{{ value }}" {% if state == value or not state and value == "active" %}selected{% endif %}>{{ label }}</option>{% endfor %}
                                     </select>
                                 </div>
                                 <div class="col-6">
@@ -116,7 +116,7 @@
                                 </div>
                             </a>
                         {% empty %}
-                            <div class="p-4 text-center text-body-secondary">No issues match these filters.</div>
+                            <div class="p-4 text-center text-body-secondary">{% if has_filters %}No issues match these filters.{% else %}No active issues. <a href="{% url 'issue:issues' %}?state=all">Show all states</a>.{% endif %}</div>
                         {% endfor %}
                     </div>
 
@@ -137,7 +137,7 @@
                             <a class="issue-mobile-back btn btn-sm btn-link px-0 mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to issues</a>
                             <div class="issue-detail-header-layout">
                                 <div class="issue-detail-heading-copy">
-                                    <h2 class="issue-detail-title h3">{{ selected_issue.title }}</h2>
+                                    <h2 class="issue-detail-title h3" title="{{ selected_issue.title }}">{{ selected_issue.title }}</h2>
                                     <div class="issue-detail-meta">
                                         <span class="badge {% if selected_issue.state == 'active' %}bg-success-subtle border border-success-subtle text-success-emphasis{% else %}text-bg-light border{% endif %}">{{ selected_issue.get_state_display }}</span>
                                         {% include "issue/includes/priority_badge.html" with issue=selected_issue %}
@@ -219,8 +219,8 @@
                                     <p>Try adjusting your search or clearing the active filters.</p>
                                     <a class="btn btn-outline-secondary" href="{% url 'issue:issues' %}">Clear filters</a>
                                 {% else %}
-                                    <h2 class="h4 text-body">No issue selected</h2>
-                                    <p class="mb-0">Select an issue from the list to see its details.</p>
+                                    <h2 class="h4 text-body">No active issues</h2>
+                                    <p class="mb-0">Resolved and dismissed issues are hidden from this view.</p>
                                 {% endif %}
                             </div>
                         </div>

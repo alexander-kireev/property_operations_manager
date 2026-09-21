@@ -1,17 +1,22 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator, RegexValidator
 from django.db import models
+from django.db.models.functions import Lower
 from django.conf import settings
 
 
 email_validator = EmailValidator()
 
+
+def normalise_contact_method_value(method_type, value):
+    value = value.strip()
+    if method_type == ContactMethod.Type.EMAIL:
+        return value.lower()
+    return value
+
 e164_validator = RegexValidator(
     regex=r"^\+[1-9][0-9]{1,14}\Z",
-    message=(
-        "Enter an international telephone number beginning with +, "
-        "followed by 2–15 digits."
-    ),
+    message="Enter an international number, for example +447700900123.",
 )
 
 
@@ -44,6 +49,15 @@ class Contact(models.Model):
 
 class ContactMethod(models.Model):
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                models.F("contact"),
+                Lower("value"),
+                name="unique_contact_method_value",
+            ),
+        ]
+
     class Type(models.TextChoices):
         EMAIL = "email", "Email"
         TELEPHONE = "telephone", "Telephone"
@@ -65,6 +79,12 @@ class ContactMethod(models.Model):
     def clean(self):
         super().clean()
 
+        self.value = normalise_contact_method_value(self.type, self.value)
+
+        # A form field may already have rejected the value; let that error stand.
+        if not self.value:
+            return
+
         try:
             if self.type == self.Type.EMAIL:
                 email_validator(self.value)
@@ -72,6 +92,10 @@ class ContactMethod(models.Model):
                 e164_validator(self.value)
         except ValidationError as error:
             raise ValidationError({"value": error.messages}) from error
+
+    def save(self, *args, **kwargs):
+        self.value = normalise_contact_method_value(self.type, self.value)
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.get_type_display()}: {self.value}"
