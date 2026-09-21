@@ -52,7 +52,7 @@
                                     <div class="col-12">
                                         <label class="visually-hidden" for="eventState">State</label>
                                         <select class="form-select form-select-sm" id="eventState" name="state">
-                                            <option value="">All states</option>
+                                            <option value="all"{% if state == "all" %} selected{% endif %}>All states</option>
                                             {% for value, label in event_state_choices %}<option value="{{ value }}"{% if state == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
                                         </select>
                                     </div>
@@ -165,7 +165,7 @@
                                             <a class="event-mobile-back btn btn-sm btn-link px-0 mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to events</a>
                                             <div class="event-detail-header-layout">
                                                 <div class="event-detail-heading-copy">
-                                                    <h2 class="event-detail-title h3">{{ selected_event.title }}</h2>
+                                                    <h2 class="event-detail-title h3" title="{{ selected_event.title }}">{{ selected_event.title }}</h2>
                                                     <div class="event-detail-meta">
                                                         <span class="event-state-badge event-state-{{ selected_event.state }}">{{ selected_event.get_state_display }}</span>
                                                         <span class="small text-body-secondary">{{ selected_event.scheduled_date|date:"j F Y" }}{% if selected_event.property %} · {{ selected_event.property.name }}{% endif %}</span>

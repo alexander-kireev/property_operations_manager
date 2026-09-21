@@ -142,11 +142,13 @@
                                                 </span>
                                             </span>
                                             <span class="task-command-meta d-flex flex-column align-items-end gap-2">
-                                                {% include "task/includes/priority_badge.html" with task=task %}
+                                                <span class="task-command-badges d-flex align-items-center justify-content-end gap-1">
+                                                    {% include "task/includes/priority_badge.html" with task=task %}
+                                                    {% if task.state != "active" %}<span class="badge bg-secondary-subtle border text-secondary-emphasis">{{ task.get_state_display }}</span>{% endif %}
+                                                </span>
                                                 <span class="task-command-deadline{% if task.state == 'active' and task.completion_deadline and task.completion_deadline < today %} text-danger{% endif %}">
                                                     {{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}
                                                 </span>
-                                                {% if task.state != "active" %}<span class="badge bg-secondary-subtle border text-secondary-emphasis">{{ task.get_state_display }}</span>{% endif %}
                                             </span>
                                         </span>
                                     </a>
@@ -181,7 +183,7 @@
                                 <a class="task-mobile-back btn btn-sm btn-outline-secondary mb-3" href="{{ task_list_url }}">Back to tasks</a>
                                 <div class="task-detail-header-layout">
                                     <div class="task-detail-heading-copy">
-                                        <h2 class="task-detail-title h3">{{ selected_task.title }}</h2>
+                                        <h2 class="task-detail-title h3" title="{{ selected_task.title }}">{{ selected_task.title }}</h2>
                                         <div class="task-detail-meta">
                                             {% if selected_task.state == "active" %}<span class="badge bg-success-subtle border border-success-subtle text-success-emphasis">{{ selected_task.get_state_display }}</span>{% else %}<span class="badge bg-secondary-subtle border text-secondary-emphasis">{{ selected_task.get_state_display }}</span>{% endif %}
                                             {% include "task/includes/priority_badge.html" with task=selected_task %}

@@ -101,7 +101,7 @@
                                 <a class="contact-mobile-back btn btn-sm btn-outline-secondary mb-3" href="{% url 'contact:contacts' %}{% if list_query %}?{{ list_query }}{% endif %}">← Back to contacts</a>
                                 <div class="contact-detail-header-layout">
                                     <div class="contact-detail-heading-copy">
-                                        <h2 class="contact-detail-title h3">{{ selected_contact }}</h2>
+                                        <h2 class="contact-detail-title h3" title="{{ selected_contact }}">{{ selected_contact }}</h2>
                                         <div class="contact-detail-meta">
                                             <span class="badge {% if selected_contact.state == 'active' %}text-bg-success-subtle border border-success-subtle text-success-emphasis{% else %}bg-secondary-subtle border text-secondary-emphasis{% endif %}">{{ selected_contact.get_state_display }}</span>
                                             <span class="small text-body-secondary">Added {{ selected_contact.created_at|date:"j M Y" }}</span>

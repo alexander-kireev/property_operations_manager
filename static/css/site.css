@@ -445,7 +445,7 @@ body {
     margin-bottom: 0 !important;
     border-radius: 0;
     box-shadow: none !important;
-    border-bottom: var(--bs-border-width) solid var(--bs-border-color) !important;
+    border-bottom: 0 !important;
 }
 
 .issue-command-centre > .my-work-section-nav .nav-link {
@@ -469,6 +469,7 @@ body {
     flex: 1 1 auto;
     min-height: 0;
     overflow: hidden;
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
 }
 
 .issue-first-empty {
@@ -617,8 +618,13 @@ body {
 }
 
 .issue-detail-title {
+    display: -webkit-box;
     margin: 0;
+    overflow: hidden;
     overflow-wrap: anywhere;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
 }
 
 .issue-detail-meta {
@@ -630,14 +636,23 @@ body {
     gap: 0.45rem;
 }
 
+.issue-detail-meta .text-body-secondary {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .issue-detail-actions {
     display: flex;
     flex: 0 0 auto;
+    max-width: 100%;
     gap: 0.5rem;
     align-items: flex-start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
 }
 
 .issue-detail-actions .btn {
+    max-width: 100%;
     white-space: nowrap;
 }
 
@@ -755,7 +770,7 @@ body {
     max-width: 18rem;
 }
 
-@media (min-width: 992px) {
+@media (min-width: 768px) {
     .issue-command-page {
         height: 100dvh;
     }
@@ -776,11 +791,53 @@ body {
     }
 }
 
-@media (max-width: 991.98px) {
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .issue-detail-header-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .issue-detail-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .issue-list-column {
+        width: 40%;
+    }
+
+    .issue-detail-column {
+        display: block;
+        width: 60%;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .issue-command-page,
+    .issue-command-page .page-shell {
+        height: auto;
+        overflow: visible;
+    }
+
     .issue-command-main,
     .issue-command-centre,
     .issue-workspace {
         min-height: calc(100vh - 3.5rem);
+    }
+
+    .issue-command-centre,
+    .issue-workspace,
+    .issue-pane,
+    .issue-detail-body,
+    .issue-detail-body > .tab-pane,
+    .issue-detail-scroll {
+        height: auto;
+        overflow: visible;
+    }
+
+    .issue-list {
+        overflow-y: visible;
+        overscroll-behavior: auto;
     }
 
     .issue-list-column,
@@ -809,7 +866,7 @@ body {
     }
 
     .issue-detail-actions {
-        flex-wrap: wrap;
+        justify-content: flex-start;
     }
 }
 
@@ -864,7 +921,7 @@ body {
     margin-bottom: 0 !important;
     border-radius: 0;
     box-shadow: none !important;
-    border-bottom: var(--bs-border-width) solid var(--bs-border-color) !important;
+    border-bottom: 0 !important;
 }
 
 .task-command-centre > .my-work-section-nav .nav-link {
@@ -910,6 +967,7 @@ body {
     flex: 1 1 auto;
     min-height: 0;
     overflow: hidden;
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
 }
 
 .task-list-column,
@@ -1017,6 +1075,10 @@ body {
     flex: 0 0 auto;
 }
 
+.task-command-badges {
+    flex-wrap: wrap;
+}
+
 .task-command-deadline {
     font-size: 0.85rem;
     font-weight: 500;
@@ -1055,8 +1117,13 @@ body {
 }
 
 .task-detail-title {
+    display: -webkit-box;
     margin: 0;
+    overflow: hidden;
     overflow-wrap: anywhere;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
 }
 
 .task-detail-meta {
@@ -1068,6 +1135,11 @@ body {
     gap: 0.45rem;
 }
 
+.task-detail-meta .text-body-secondary {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .task-detail-created {
     margin-left: 0.25rem;
 }
@@ -1075,11 +1147,15 @@ body {
 .task-detail-actions {
     display: flex;
     flex: 0 0 auto;
+    max-width: 100%;
     gap: 0.5rem;
     align-items: flex-start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
 }
 
 .task-detail-actions .btn {
+    max-width: 100%;
     white-space: nowrap;
 }
 
@@ -1174,7 +1250,7 @@ body {
     display: none;
 }
 
-@media (min-width: 992px) {
+@media (min-width: 768px) {
     .task-command-page {
         height: 100dvh;
     }
@@ -1195,11 +1271,51 @@ body {
     }
 }
 
-@media (max-width: 991.98px) {
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .task-detail-header-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .task-detail-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .task-list-column {
+        width: 40%;
+    }
+
+    .task-detail-column {
+        display: block;
+        width: 60%;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .task-command-page,
+    .task-command-page .page-shell {
+        height: auto;
+        overflow: visible;
+    }
+
     .task-command-main,
     .task-command-centre,
     .task-workspace {
         min-height: calc(100vh - 4.9rem);
+    }
+
+    .task-command-centre,
+    .task-workspace,
+    .task-pane,
+    .task-detail-scroll {
+        height: auto;
+        overflow: visible;
+    }
+
+    .task-command-list {
+        overflow-y: visible;
+        overscroll-behavior: auto;
     }
 
     .task-list-column,
@@ -1228,7 +1344,7 @@ body {
     }
 
     .task-detail-actions {
-        flex-wrap: wrap;
+        justify-content: flex-start;
     }
 }
 
@@ -1391,8 +1507,13 @@ body {
 }
 
 .contact-detail-title {
+    display: -webkit-box;
     margin: 0;
+    overflow: hidden;
     overflow-wrap: anywhere;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
 }
 
 .contact-detail-meta {
@@ -1404,14 +1525,23 @@ body {
     gap: 0.6rem;
 }
 
+.contact-detail-meta .text-body-secondary {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .contact-detail-actions {
     display: flex;
     flex: 0 0 auto;
+    max-width: 100%;
     gap: 0.5rem;
     align-items: flex-start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
 }
 
 .contact-detail-actions .btn {
+    max-width: 100%;
     white-space: nowrap;
 }
 
@@ -1657,6 +1787,16 @@ body {
     }
 }
 
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .contact-detail-header-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .contact-detail-actions {
+        justify-content: flex-start;
+    }
+}
+
 @media (max-width: 991.98px) {
     .contact-command-main,
     .contact-command-centre,
@@ -1690,6 +1830,6 @@ body {
     }
 
     .contact-detail-actions {
-        flex-wrap: wrap;
+        justify-content: flex-start;
     }
 }

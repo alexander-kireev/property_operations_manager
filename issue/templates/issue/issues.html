@@ -137,7 +137,7 @@
                             <a class="issue-mobile-back btn btn-sm btn-link px-0 mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to issues</a>
                             <div class="issue-detail-header-layout">
                                 <div class="issue-detail-heading-copy">
-                                    <h2 class="issue-detail-title h3">{{ selected_issue.title }}</h2>
+                                    <h2 class="issue-detail-title h3" title="{{ selected_issue.title }}">{{ selected_issue.title }}</h2>
                                     <div class="issue-detail-meta">
                                         <span class="badge {% if selected_issue.state == 'active' %}bg-success-subtle border border-success-subtle text-success-emphasis{% else %}text-bg-light border{% endif %}">{{ selected_issue.get_state_display }}</span>
                                         {% include "issue/includes/priority_badge.html" with issue=selected_issue %}
