@@ -514,6 +514,9 @@ class EventViewTests(EventTestMixin, TestCase):
         response = self.client.get(reverse("event:events"))
         self.assertEqual(len(response.context["page_obj"]), 20)
         self.assertEqual(response.context["page_obj"].paginator.num_pages, 2)
+        self.assertContains(response, "Page 1 of 2")
+        self.assertContains(response, 'aria-disabled="true">← Previous</span>')
+        self.assertContains(response, "?page=2")
 
     def test_create_event_with_initial_contacts(self):
         contact = self.create_contact(self.user)

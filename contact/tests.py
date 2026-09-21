@@ -400,6 +400,9 @@ class ContactViewTests(ContactTestMixin, TestCase):
 
         self.assertEqual(len(first_page.context["page_obj"]), 20)
         self.assertEqual(len(second_page.context["page_obj"]), 1)
+        self.assertContains(first_page, "Page 1 of 2")
+        self.assertContains(second_page, "Page 2 of 2")
+        self.assertContains(second_page, 'aria-disabled="true">Next →</span>')
 
     def test_contacts_view_normalises_list_parameters(self):
         self.create_contact(self.user)

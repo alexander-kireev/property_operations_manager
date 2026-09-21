@@ -130,7 +130,7 @@
                             <div class="task-command-list list-group list-group-flush" aria-label="Tasks">
                                 {% for task in page_obj %}
                                     <a
-                                        class="task-command-row list-group-item list-group-item-action{% if task == selected_task %} active{% endif %}{% if task.state != 'active' %} terminated{% endif %}"
+                                        class="task-command-row list-group-item list-group-item-action{% if task == selected_task %} is-selected{% endif %}{% if task.state != 'active' %} terminated{% endif %}"
                                         href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ task.pk }}"
                                         {% if task == selected_task %}aria-current="true"{% endif %}
                                     >
@@ -155,20 +155,10 @@
 
                             <div class="task-pagination d-flex justify-content-center border-top px-3 py-2">
                                 {% if page_obj.paginator.num_pages > 1 %}
-                                    <nav aria-label="Task pagination">
-                                        <ul class="pagination pagination-sm mb-0">
-                                            <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
-                                                {% if page_obj.has_previous %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Previous page">‹</a>{% else %}<span class="page-link" aria-disabled="true">‹</span>{% endif %}
-                                            </li>
-                                            {% for page_number in page_obj.paginator.page_range %}
-                                                <li class="page-item{% if page_number == page_obj.number %} active{% endif %}">
-                                                    {% if page_number == page_obj.number %}<span class="page-link" aria-current="page">{{ page_number }}</span>{% else %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_number }}">{{ page_number }}</a>{% endif %}
-                                                </li>
-                                            {% endfor %}
-                                            <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
-                                                {% if page_obj.has_next %}<a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}" aria-label="Next page">›</a>{% else %}<span class="page-link" aria-disabled="true">›</span>{% endif %}
-                                            </li>
-                                        </ul>
+                                    <nav class="command-pagination" aria-label="Task pagination">
+                                        {% if page_obj.has_previous %}<a class="command-pagination-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">← Previous</a>{% else %}<span class="command-pagination-link is-disabled" aria-disabled="true">← Previous</span>{% endif %}
+                                        <span class="command-pagination-status" aria-current="page">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                                        {% if page_obj.has_next %}<a class="command-pagination-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span class="command-pagination-link is-disabled" aria-disabled="true">Next →</span>{% endif %}
                                     </nav>
                                 {% endif %}
                             </div>

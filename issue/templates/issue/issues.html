@@ -102,7 +102,7 @@
 
                     <div class="issue-list list-group list-group-flush">
                         {% for issue in page_obj %}
-                            <a class="issue-list-row list-group-item list-group-item-action{% if selected_issue.pk == issue.pk %} active{% endif %}{% if issue.state != 'active' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ issue.pk }}">
+                            <a class="issue-list-row list-group-item list-group-item-action{% if selected_issue.pk == issue.pk %} is-selected{% endif %}{% if issue.state != 'active' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ issue.pk }}"{% if selected_issue.pk == issue.pk %} aria-current="true"{% endif %}>
                                 <div class="issue-list-primary d-flex justify-content-between align-items-start gap-3">
                                     <strong class="issue-list-title" title="{{ issue.title }}">{{ issue.title }}</strong>
                                     {% include "issue/includes/priority_badge.html" with issue=issue %}
@@ -121,12 +121,10 @@
                     </div>
 
                     {% if page_obj.paginator.num_pages > 1 %}
-                        <nav class="issue-pagination border-top bg-body p-3 d-flex justify-content-center" aria-label="Issue pages">
-                            <ul class="pagination pagination-sm mb-0">
-                                <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">{% if page_obj.has_previous %}<a class="page-link px-3" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">← Previous</a>{% else %}<span class="page-link px-3">← Previous</span>{% endif %}</li>
-                                {% for number in page_obj.paginator.page_range %}<li class="page-item{% if page_obj.number == number %} active{% endif %}"><a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ number }}">{{ number }}</a></li>{% endfor %}
-                                <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">{% if page_obj.has_next %}<a class="page-link px-3" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span class="page-link px-3">Next →</span>{% endif %}</li>
-                            </ul>
+                        <nav class="issue-pagination command-pagination border-top bg-body p-3" aria-label="Issue pagination">
+                            {% if page_obj.has_previous %}<a class="command-pagination-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">← Previous</a>{% else %}<span class="command-pagination-link is-disabled" aria-disabled="true">← Previous</span>{% endif %}
+                            <span class="command-pagination-status" aria-current="page">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                            {% if page_obj.has_next %}<a class="command-pagination-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span class="command-pagination-link is-disabled" aria-disabled="true">Next →</span>{% endif %}
                         </nav>
                     {% endif %}
                 </div>

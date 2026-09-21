@@ -113,11 +113,11 @@
 }
 
 .event-command-row:hover,
-.event-command-row.active {
+.event-command-row.is-selected {
     background: var(--bs-tertiary-bg) !important;
 }
 
-.event-command-row.active::before {
+.event-command-row.is-selected::before {
     position: absolute;
     inset: 0 auto 0 0;
     width: 0.25rem;

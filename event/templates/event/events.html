@@ -95,7 +95,7 @@
 
                         <div class="event-command-list list-group list-group-flush">
                             {% for event in page_obj %}
-                                <a class="event-command-row list-group-item list-group-item-action{% if selected_event.pk == event.pk %} active{% endif %}{% if event.state != 'scheduled' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ event.pk }}&amp;tab=details">
+                                <a class="event-command-row list-group-item list-group-item-action{% if selected_event.pk == event.pk %} is-selected{% endif %}{% if event.state != 'scheduled' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ event.pk }}&amp;tab=details"{% if selected_event.pk == event.pk %} aria-current="true"{% endif %}>
                                     <div class="d-flex justify-content-between gap-3">
                                         <span class="event-command-title" title="{{ event.title }}">{{ event.title }}</span>
                                         <span class="event-state-badge event-state-{{ event.state }}">{{ event.get_state_display }}</span>
@@ -111,12 +111,10 @@
                         </div>
 
                         {% if page_obj.paginator.num_pages > 1 %}
-                            <nav class="event-pagination border-top bg-body p-3 d-flex justify-content-center" aria-label="Event pages">
-                                <ul class="pagination pagination-sm mb-0">
-                                    <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">{% if page_obj.has_previous %}<a class="page-link px-3" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">← Previous</a>{% else %}<span class="page-link px-3">← Previous</span>{% endif %}</li>
-                                    {% for number in page_obj.paginator.page_range %}<li class="page-item{% if page_obj.number == number %} active{% endif %}"><a class="page-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ number }}">{{ number }}</a></li>{% endfor %}
-                                    <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">{% if page_obj.has_next %}<a class="page-link px-3" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span class="page-link px-3">Next →</span>{% endif %}</li>
-                                </ul>
+                            <nav class="event-pagination command-pagination border-top bg-body p-3" aria-label="Event pagination">
+                                {% if page_obj.has_previous %}<a class="command-pagination-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">← Previous</a>{% else %}<span class="command-pagination-link is-disabled" aria-disabled="true">← Previous</span>{% endif %}
+                                <span class="command-pagination-status" aria-current="page">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                                {% if page_obj.has_next %}<a class="command-pagination-link" href="?{% if list_query %}{{ list_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span class="command-pagination-link is-disabled" aria-disabled="true">Next →</span>{% endif %}
                             </nav>
                         {% endif %}
                     </div>

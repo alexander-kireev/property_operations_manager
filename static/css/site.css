@@ -215,6 +215,51 @@ body {
     border-color: #8d9298;
 }
 
+.command-pagination {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    width: 100%;
+    gap: 0.5rem;
+}
+
+.command-pagination-link {
+    justify-self: start;
+    padding: 0.35rem 0.55rem;
+    color: var(--bs-emphasis-color);
+    font-size: 0.8rem;
+    line-height: 1.25;
+    text-decoration: none;
+    white-space: nowrap;
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-sm);
+    background: var(--bs-body-bg);
+}
+
+.command-pagination-link:last-child {
+    justify-self: end;
+}
+
+.command-pagination-link:hover,
+.command-pagination-link:focus-visible {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-tertiary-bg);
+}
+
+.command-pagination-link.is-disabled {
+    color: var(--bs-secondary-color);
+    background: var(--bs-tertiary-bg);
+    opacity: 0.65;
+}
+
+.command-pagination-status {
+    color: var(--bs-secondary-color);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+}
+
 :is(
     .task-command-centre,
     .issue-command-centre,
@@ -496,11 +541,11 @@ body {
 }
 
 .issue-list-row:hover,
-.issue-list-row.active {
+.issue-list-row.is-selected {
     background: var(--bs-tertiary-bg) !important;
 }
 
-.issue-list-row.active::before {
+.issue-list-row.is-selected::before {
     position: absolute;
     inset: 0 auto 0 0;
     width: 0.25rem;
@@ -928,11 +973,11 @@ body {
 }
 
 .task-command-row:hover,
-.task-command-row.active {
+.task-command-row.is-selected {
     background: var(--bs-tertiary-bg) !important;
 }
 
-.task-command-row.active::before {
+.task-command-row.is-selected::before {
     position: absolute;
     inset: 0 auto 0 0;
     width: 0.25rem;
@@ -1277,11 +1322,11 @@ body {
 }
 
 .contact-command-row:hover,
-.contact-command-row.active {
+.contact-command-row.is-selected {
     background: var(--bs-tertiary-bg) !important;
 }
 
-.contact-command-row.active::before {
+.contact-command-row.is-selected::before {
     position: absolute;
     inset: 0 auto 0 0;
     width: 0.25rem;
