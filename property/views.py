@@ -37,7 +37,7 @@ def _normalised_list_values(request):
     state = request.GET.get("state", "")
     sort = request.GET.get("sort", "name")
 
-    if state not in Property.State.values:
+    if state not in (*Property.State.values, "all"):
         state = ""
 
     if sort not in PROPERTY_SORT_OPTIONS:
@@ -116,7 +116,7 @@ def _property_list_context(request, *, add_property_form=None):
     values = _normalised_list_values(request)
     properties = filtered_properties_for_user(
         user=request.user,
-        **values,
+        **{**values, "state": values["state"] or Property.State.ACTIVE},
     )
 
     paginator = Paginator(properties, PROPERTIES_PER_PAGE)
@@ -136,6 +136,7 @@ def _property_list_context(request, *, add_property_form=None):
         "sort": values["sort"],
         "list_query": urlencode(query_parameters),
         "has_filters": bool(values["search"] or values["state"]),
+        "property_count": properties_for_user(user=request.user).count(),
     }
 
 

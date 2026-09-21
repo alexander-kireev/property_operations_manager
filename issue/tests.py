@@ -299,6 +299,29 @@ class IssueViewTests(IssueTestMixin, TestCase):
             self.user, property=self.property, priority=Issue.Priority.URGENT
         )
 
+    def test_issue_list_defaults_to_active_and_can_show_terminal_states(self):
+        resolved = self.create_issue(self.user, "Resolved issue", state=Issue.State.RESOLVED)
+        dismissed = self.create_issue(self.user, "Dismissed issue", state=Issue.State.DISMISSED)
+
+        for query, expected in (
+            ({}, [self.issue]),
+            ({"state": Issue.State.RESOLVED}, [resolved]),
+            ({"state": Issue.State.DISMISSED}, [dismissed]),
+            ({"state": "all"}, [self.issue, resolved, dismissed]),
+        ):
+            with self.subTest(query=query):
+                response = self.client.get(reverse("issue:issues"), query)
+                self.assertCountEqual(response.context["page_obj"].object_list, expected)
+
+    def test_terminal_only_issue_list_offers_all_states(self):
+        self.issue.state = Issue.State.RESOLVED
+        self.issue.save(update_fields=["state"])
+
+        response = self.client.get(reverse("issue:issues"))
+
+        self.assertContains(response, "No active issues")
+        self.assertContains(response, "Show all states")
+
     def issue_data(self, **overrides):
         data = {
             "title": "Boiler losing pressure",

@@ -697,6 +697,8 @@ body {
 
 .issue-detail-scroll {
     height: 100%;
+    padding-bottom: 2rem !important;
+    scroll-padding-block: 1.5rem;
 }
 
 #issueTasksPanel.active {
@@ -764,6 +766,17 @@ body {
 .issue-detail-scroll dd,
 .issue-task-details p {
     overflow-wrap: anywhere;
+}
+
+.issue-detail-scroll .card,
+.issue-detail-scroll .card-body,
+.issue-detail-scroll dl,
+.issue-detail-scroll dd {
+    min-width: 0;
+}
+
+.issue-detail-scroll .card {
+    overflow: hidden;
 }
 
 .issue-form-field-compact {
@@ -836,6 +849,11 @@ body {
     }
 
     .issue-list {
+        overflow-y: visible;
+        overscroll-behavior: auto;
+    }
+
+    .issue-task-list {
         overflow-y: visible;
         overscroll-behavior: auto;
     }
@@ -1173,11 +1191,25 @@ body {
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding-bottom: 2rem !important;
+    scroll-padding-block: 1.5rem;
     scrollbar-width: thin;
 }
 
-.task-detail-scroll p {
+.task-detail-scroll p,
+.task-detail-scroll dd {
     overflow-wrap: anywhere;
+}
+
+.task-detail-scroll .card,
+.task-detail-scroll .card-body,
+.task-detail-scroll dl,
+.task-detail-scroll dd {
+    min-width: 0;
+}
+
+.task-detail-scroll .card {
+    overflow: hidden;
 }
 
 .task-planning-list {
@@ -1193,6 +1225,7 @@ body {
 }
 
 .task-planning-list dd {
+    overflow-wrap: anywhere;
     text-align: right;
 }
 
@@ -1418,6 +1451,10 @@ body {
     gap: 0.5rem;
 }
 
+.contact-local-filter-row {
+    grid-template-columns: minmax(0, 1fr) 8.25rem;
+}
+
 .contact-command-list {
     flex: 1 1 auto;
     min-height: 0;
@@ -1474,6 +1511,152 @@ body {
 .contact-detail-scroll a,
 .contact-detail-scroll p {
     overflow-wrap: anywhere;
+}
+
+.contact-methods-card {
+    container-type: inline-size;
+    overflow: hidden;
+}
+
+.contact-methods-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0;
+}
+
+.contact-method-group {
+    min-width: 0;
+    padding: 1.25rem;
+}
+
+.contact-method-group + .contact-method-group {
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.contact-method-group-title {
+    margin-bottom: 0.65rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.contact-method-group-empty,
+.contact-method-row {
+    display: flex;
+    min-height: 5rem;
+    align-items: center;
+    margin: 0;
+    padding: 0.85rem 0;
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.contact-method-group-empty {
+    color: var(--bs-secondary-color);
+    font-size: 0.875rem;
+}
+
+.contact-method-row {
+    position: relative;
+}
+
+.contact-method-row--editable {
+    padding-right: 4.5rem;
+}
+
+.contact-method-copy {
+    min-width: 0;
+}
+
+.contact-method-actions {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    display: flex;
+    gap: 0.2rem;
+    transform: translateY(-50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease-in-out;
+}
+
+.contact-method-row:hover .contact-method-actions,
+.contact-method-row:focus-within .contact-method-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.contact-method-action {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    padding: 0.4rem;
+    place-items: center;
+    color: var(--bs-secondary-color);
+    background: transparent;
+    border: 0;
+    border-radius: var(--bs-border-radius-sm);
+}
+
+.contact-method-action:hover,
+.contact-method-action:focus-visible {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-secondary-bg);
+}
+
+.contact-method-action--delete:hover,
+.contact-method-action--delete:focus-visible {
+    color: var(--bs-danger);
+}
+
+.contact-method-action svg {
+    width: 1rem;
+    height: 1rem;
+    fill: currentColor;
+}
+
+.contact-method-value {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.contact-method-value--email {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.contact-method-value--telephone {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@container (min-width: 42rem) {
+    .contact-methods-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .contact-method-group + .contact-method-group {
+        border-top: 0;
+        border-left: var(--bs-border-width) solid var(--bs-border-color);
+    }
+
+    .contact-method-list {
+        max-height: 23rem;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 0.35rem;
+        scrollbar-width: thin;
+    }
+}
+
+@media (hover: none) {
+    .contact-method-actions {
+        opacity: 1;
+        pointer-events: auto;
+    }
 }
 
 .contact-pagination .page-link {
@@ -1593,6 +1776,8 @@ body {
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding-bottom: 2rem !important;
+    scroll-padding-block: 1.5rem;
     scrollbar-width: thin;
 }
 
@@ -1766,7 +1951,7 @@ body {
     display: none;
 }
 
-@media (min-width: 992px) {
+@media (min-width: 768px) {
     .contact-command-page {
         height: 100dvh;
     }
@@ -1831,5 +2016,38 @@ body {
 
     .contact-detail-actions {
         justify-content: flex-start;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .contact-command-page,
+    .contact-command-page .page-shell {
+        height: auto;
+        overflow: visible;
+    }
+
+    .contact-command-main,
+    .contact-command-centre,
+    .contact-workspace {
+        min-height: calc(100vh - 4.9rem);
+    }
+
+    .contact-command-centre,
+    .contact-workspace,
+    .contact-pane,
+    .contact-detail-body,
+    .contact-detail-scroll,
+    .contact-notes-pane,
+    .notes-board-shell,
+    .notes-board-shell__list {
+        height: auto;
+        overflow: visible;
+    }
+
+    .contact-command-list,
+    .contact-detail-scroll,
+    .notes-board-shell__list {
+        overflow-y: visible;
+        overscroll-behavior: auto;
     }
 }

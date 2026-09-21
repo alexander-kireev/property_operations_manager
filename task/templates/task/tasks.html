@@ -77,8 +77,8 @@
                                     <div class="col-6">
                                         <label class="visually-hidden" for="taskStateFilter">State</label>
                                         <select class="form-select form-select-sm" id="taskStateFilter" name="state">
-                                            <option value="">All states</option>
-                                            <option value="active" {% if state == "active" %}selected{% endif %}>Active</option>
+                                            <option value="all" {% if state == "all" %}selected{% endif %}>All states</option>
+                                            <option value="active" {% if not state or state == "active" %}selected{% endif %}>Active</option>
                                             <option value="completed" {% if state == "completed" %}selected{% endif %}>Completed</option>
                                             <option value="dismissed" {% if state == "dismissed" %}selected{% endif %}>Dismissed</option>
                                         </select>
@@ -167,9 +167,15 @@
                         {% else %}
                             <div class="task-filter-empty flex-grow-1 d-flex align-items-center justify-content-center p-4 text-center">
                                 <div>
-                                    <h2 class="h5">No matching tasks</h2>
-                                    <p class="text-body-secondary">Change or clear the current filters.</p>
-                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'task:tasks' %}">Clear filters</a>
+                                    {% if has_filters %}
+                                        <h2 class="h5">No matching tasks</h2>
+                                        <p class="text-body-secondary">Change or clear the current filters.</p>
+                                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'task:tasks' %}">Clear filters</a>
+                                    {% else %}
+                                        <h2 class="h5">No active tasks</h2>
+                                        <p class="text-body-secondary">Completed and dismissed tasks are hidden from this view.</p>
+                                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'task:tasks' %}?state=all">Show all states</a>
+                                    {% endif %}
                                 </div>
                             </div>
                         {% endif %}

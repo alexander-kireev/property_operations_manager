@@ -1,7 +1,9 @@
 from .models import Event, EventContact
 
 from django.db.models.functions import Lower
-from django.db.models import Q
+from django.db.models import OuterRef, Q, Subquery
+
+from contact.models import ContactMethod
 
 EVENT_SORT_OPTIONS = {
     "title": (Lower("title"), "pk"),
@@ -72,10 +74,27 @@ def filtered_events_for_user(
     return events.order_by(*ordering)
 
 def event_contacts_for_event(*, event):
-    return EventContact.objects.select_related("contact").filter(event=event).order_by(
-        "contact__first_name",
-        "contact__last_name",
-        "pk",
+    contact_methods = ContactMethod.objects.filter(
+        contact_id=OuterRef("contact_id"),
+    ).order_by("pk")
+    return (
+        EventContact.objects.select_related("contact")
+        .annotate(
+            contact_email=Subquery(
+                contact_methods.filter(type=ContactMethod.Type.EMAIL)
+                .values("value")[:1]
+            ),
+            contact_telephone=Subquery(
+                contact_methods.filter(type=ContactMethod.Type.TELEPHONE)
+                .values("value")[:1]
+            ),
+        )
+        .filter(event=event)
+        .order_by(
+            "contact__first_name",
+            "contact__last_name",
+            "pk",
+        )
     )
 
 

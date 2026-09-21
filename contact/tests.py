@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -110,6 +111,22 @@ class ContactModelTests(ContactTestMixin, TestCase):
                 with self.assertRaises(ValidationError):
                     method.full_clean()
 
+    def test_contact_method_normalises_email_and_rejects_same_contact_duplicate(self):
+        contact = self.create_contact(self.user)
+        other_contact = self.create_contact(self.user, "Bob")
+
+        method = self.create_method(contact, value=" Alice@Example.COM ")
+        same_value_other_contact = self.create_method(
+            other_contact,
+            value="alice@example.com",
+        )
+
+        self.assertEqual(method.value, "alice@example.com")
+        self.assertEqual(same_value_other_contact.value, "alice@example.com")
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.create_method(contact, value="ALICE@example.com")
+
     def test_hard_deleting_contact_cascades_to_methods(self):
         contact = self.create_contact(self.user)
         self.create_method(contact)
@@ -180,6 +197,59 @@ class ContactFormTests(ContactTestMixin, TestCase):
         self.assertIn("value", email_form.errors)
         self.assertTrue(phone_form.is_valid(), phone_form.errors)
 
+    def test_contact_method_form_rejects_duplicate_for_same_contact(self):
+        contact = self.create_contact(self.create_user())
+        self.create_method(contact, value="alice@example.com")
+
+        form = ContactMethodForm(
+            data={
+                "type": ContactMethod.Type.EMAIL,
+                "value": "ALICE@example.com",
+            },
+            contact=contact,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            list(form.errors["value"]),
+            ["This email address is already saved for this contact."],
+        )
+
+    def test_contact_method_form_shows_only_duplicate_telephone_error(self):
+        contact = self.create_contact(self.create_user())
+        self.create_method(
+            contact,
+            type=ContactMethod.Type.TELEPHONE,
+            value="+447700900123",
+        )
+
+        form = ContactMethodForm(
+            data={"type": ContactMethod.Type.TELEPHONE, "value": "+447700900123"},
+            contact=contact,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            list(form.errors["value"]),
+            ["This telephone number is already saved for this contact."],
+        )
+
+    def test_contact_method_form_prioritises_format_over_duplicate(self):
+        contact = self.create_contact(self.create_user())
+        self.create_method(
+            contact,
+            type=ContactMethod.Type.TELEPHONE,
+            value="+447700900123",
+        )
+
+        form = ContactMethodForm(
+            data={"type": ContactMethod.Type.EMAIL, "value": "+447700900123"},
+            contact=contact,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertEqual(list(form.errors["value"]), ["Enter a valid email address."])
+
 
 class ContactSelectorTests(ContactTestMixin, TestCase):
     def setUp(self):
@@ -200,6 +270,26 @@ class ContactSelectorTests(ContactTestMixin, TestCase):
         with self.assertNumQueries(2):
             contacts = list(contacts_for_user(user=self.user))
             self.assertEqual(list(contacts[0].contact_methods.all()), [method])
+
+    def test_contacts_for_user_summarises_first_email_and_telephone(self):
+        contact = self.create_contact(self.user)
+        self.create_method(contact, value="first@example.com")
+        self.create_method(contact, value="second@example.com")
+        self.create_method(
+            contact,
+            type=ContactMethod.Type.TELEPHONE,
+            value="+447700900001",
+        )
+        self.create_method(
+            contact,
+            type=ContactMethod.Type.TELEPHONE,
+            value="+447700900002",
+        )
+
+        summary = contacts_for_user(user=self.user).get(pk=contact.pk)
+
+        self.assertEqual(summary.first_email, "first@example.com")
+        self.assertEqual(summary.first_telephone, "+447700900001")
 
     def test_search_matches_names_and_contact_method_values(self):
         first_name_match = self.create_contact(self.user, "Alex")
@@ -390,6 +480,108 @@ class ContactViewTests(ContactTestMixin, TestCase):
         self.assertContains(response, method.value)
         self.assertNotContains(response, str(other_contact))
         self.assertEqual(response.context["selected_contact"], contact)
+
+    def test_contact_details_group_email_and_telephone_methods(self):
+        contact = self.create_contact(self.user)
+        email = self.create_method(contact, value="alice@example.com")
+        telephone = self.create_method(
+            contact,
+            type=ContactMethod.Type.TELEPHONE,
+            value="+447700900123",
+        )
+
+        response = self.client.get(reverse("contact:contacts"))
+
+        self.assertEqual(response.context["email_methods"], [email])
+        self.assertEqual(response.context["telephone_methods"], [telephone])
+        self.assertContains(response, 'id="contact-emails-heading"')
+        self.assertContains(response, 'id="contact-telephones-heading"')
+        self.assertContains(response, 'class="contact-method-list"', count=2)
+        self.assertContains(response, 'aria-label="Edit email alice@example.com"')
+        self.assertContains(response, 'aria-label="Delete telephone +447700900123"')
+        details_html = response.content.decode().split('id="contact-emails-heading"', 1)[1]
+        email_html, telephone_html = details_html.split('id="contact-telephones-heading"', 1)
+        self.assertIn("alice@example.com", email_html)
+        self.assertNotIn("+447700900123", email_html)
+        self.assertIn("+447700900123", telephone_html)
+
+    def test_long_email_keeps_full_value_in_link_and_label(self):
+        contact = self.create_contact(self.user)
+        email = f"contact72{'2' * 90}@example.com"
+        self.create_method(contact, value=email)
+
+        response = self.client.get(reverse("contact:contacts"))
+
+        self.assertContains(response, 'contact-method-value--email')
+        self.assertContains(response, f'href="mailto:{email}"')
+        self.assertContains(response, f'title="{email}"')
+        self.assertContains(response, f'aria-label="Email {email}"')
+
+    def test_contact_list_shows_first_email_and_telephone_only(self):
+        contact = self.create_contact(self.user)
+        for value in ("first@example.com", "second@example.com"):
+            self.create_method(contact, value=value)
+        for value in ("+447700900001", "+447700900002"):
+            self.create_method(
+                contact,
+                type=ContactMethod.Type.TELEPHONE,
+                value=value,
+            )
+
+        response = self.client.get(reverse("contact:contacts"))
+        list_html = response.content.decode().split('class="contact-command-list', 1)[1]
+        list_html = list_html.split('class="contact-detail-column', 1)[0]
+
+        self.assertIn("first@example.com", list_html)
+        self.assertIn("+447700900001", list_html)
+        self.assertNotIn("second@example.com", list_html)
+        self.assertNotIn("+447700900002", list_html)
+        self.assertContains(response, "second@example.com")
+        self.assertContains(response, "+447700900002")
+
+    def test_deactivated_contact_list_shows_state_instead_of_methods(self):
+        contact = self.create_contact(
+            self.user,
+            state=Contact.State.DEACTIVATED,
+        )
+        self.create_method(contact, value="alice@example.com")
+
+        response = self.client.get(
+            reverse("contact:contacts"),
+            {"state": Contact.State.DEACTIVATED},
+        )
+        list_html = response.content.decode().split('class="contact-command-list', 1)[1]
+        list_html = list_html.split('class="contact-detail-column', 1)[0]
+
+        self.assertIn("Deactivated", list_html)
+        self.assertNotIn("alice@example.com", list_html)
+        self.assertContains(response, "alice@example.com")
+        self.assertNotContains(response, 'class="contact-method-actions"')
+
+    def test_contact_list_defaults_to_active_and_can_show_deactivated(self):
+        active = self.create_contact(self.user, "Active")
+        deactivated = self.create_contact(
+            self.user,
+            "Deactivated",
+            state=Contact.State.DEACTIVATED,
+        )
+
+        for query, expected in (
+            ({}, [active]),
+            ({"state": Contact.State.DEACTIVATED}, [deactivated]),
+            ({"state": "all"}, [active, deactivated]),
+        ):
+            with self.subTest(query=query):
+                response = self.client.get(reverse("contact:contacts"), query)
+                self.assertCountEqual(response.context["page_obj"].object_list, expected)
+
+    def test_deactivated_only_contact_list_offers_all_states(self):
+        self.create_contact(self.user, state=Contact.State.DEACTIVATED)
+
+        response = self.client.get(reverse("contact:contacts"))
+
+        self.assertContains(response, "No active contacts")
+        self.assertContains(response, "Show all states")
 
     def test_contacts_view_paginates_twenty_at_a_time(self):
         for number in range(21):
@@ -584,6 +776,20 @@ class ContactViewTests(ContactTestMixin, TestCase):
         )
         self.assertEqual(delete_response.status_code, 302)
         self.assertFalse(ContactMethod.objects.filter(pk=method.pk).exists())
+
+    def test_duplicate_contact_method_reopens_add_modal(self):
+        contact = self.create_contact(self.user)
+        self.create_method(contact, value="alice@example.com")
+
+        post_response = self.client.post(
+            reverse("contact:add_contact_method", args=[contact.pk]),
+            {"type": ContactMethod.Type.EMAIL, "value": "ALICE@example.com"},
+        )
+        response = self.client.get(post_response.url)
+
+        self.assertEqual(contact.contact_methods.count(), 1)
+        self.assertEqual(response.context["open_modal"], "addContactMethodModal")
+        self.assertIn("value", response.context["add_contact_method_form"].errors)
 
     def test_edit_method_query_opens_modal_with_method_form(self):
         contact = self.create_contact(self.user)

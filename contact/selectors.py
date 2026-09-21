@@ -1,4 +1,4 @@
-from django.db.models import Prefetch, Q
+from django.db.models import OuterRef, Prefetch, Q, Subquery
 from django.db.models.functions import Lower
 
 from .models import Contact, ContactMethod
@@ -16,9 +16,19 @@ CONTACT_SORT_OPTIONS = {
 
 
 def contacts_for_user(*, user):
+    first_method = ContactMethod.objects.filter(
+        contact_id=OuterRef("pk"),
+    ).order_by("pk")
     return Contact.objects.filter(
         user=user,
         deleted_at__isnull=True,
+    ).annotate(
+        first_email=Subquery(
+            first_method.filter(type=ContactMethod.Type.EMAIL).values("value")[:1]
+        ),
+        first_telephone=Subquery(
+            first_method.filter(type=ContactMethod.Type.TELEPHONE).values("value")[:1]
+        ),
     ).prefetch_related(
         Prefetch(
             "contact_methods",

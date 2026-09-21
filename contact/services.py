@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Contact, ContactMethod
+from .models import Contact, ContactMethod, normalise_contact_method_value
 
 
 @transaction.atomic
@@ -23,14 +23,17 @@ def create_contact(
         ContactMethod.objects.create(
             contact=contact,
             type=ContactMethod.Type.EMAIL,
-            value=email,
+            value=normalise_contact_method_value(ContactMethod.Type.EMAIL, email),
         )
 
     if telephone:
         ContactMethod.objects.create(
             contact=contact,
             type=ContactMethod.Type.TELEPHONE,
-            value=telephone,
+            value=normalise_contact_method_value(
+                ContactMethod.Type.TELEPHONE,
+                telephone,
+            ),
         )
 
     return contact
@@ -74,13 +77,13 @@ def create_contact_method(*, contact, type, value):
     return ContactMethod.objects.create(
         contact=contact,
         type=type,
-        value=value,
+        value=normalise_contact_method_value(type, value),
     )
 
 
 def update_contact_method(*, contact_method, type, value):
     contact_method.type = type
-    contact_method.value = value
+    contact_method.value = normalise_contact_method_value(type, value)
     contact_method.save(update_fields=["type", "value"])
     return contact_method
 

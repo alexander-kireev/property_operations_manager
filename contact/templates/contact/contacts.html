@@ -34,7 +34,7 @@
                                 <button class="btn btn-sm theme-action" type="submit">Apply</button>
                             </div>
 
-                            <div class="contact-local-control-row mt-2">
+                            <div class="contact-local-control-row contact-local-filter-row mt-2">
                                 <label class="visually-hidden" for="contactSort">Sort contacts</label>
                                 <select class="form-select form-select-sm" id="contactSort" name="sort">
                                     <option value="name" {% if sort == "name" %}selected{% endif %}>Name: A–Z</option>
@@ -43,8 +43,8 @@
                                     <option value="created_at" {% if sort == "created_at" %}selected{% endif %}>Oldest first</option>
                                 </select>
                                 <select class="form-select form-select-sm" name="state" aria-label="Filter by state">
-                                    <option value="">All states</option>
-                                    <option value="active" {% if state == "active" %}selected{% endif %}>Active</option>
+                                    <option value="all" {% if state == "all" %}selected{% endif %}>All states</option>
+                                    <option value="active" {% if not state or state == "active" %}selected{% endif %}>Active</option>
                                     <option value="deactivated" {% if state == "deactivated" %}selected{% endif %}>Deactivated</option>
                                 </select>
                             </div>
@@ -66,13 +66,8 @@
                                     >
                                         <span class="contact-command-title d-block" title="{{ contact }}">{{ contact }}</span>
                                         <span class="contact-command-methods d-block mt-2">
-                                            {% for method in contact.contact_methods.all %}
-                                                {% if not forloop.first %} · {% endif %}{{ method.value }}
-                                            {% empty %}
-                                                No contact details
-                                            {% endfor %}
+                                            {% if contact.state != "active" %}<span class="badge bg-secondary-subtle border text-secondary-emphasis">{{ contact.get_state_display }}</span>{% else %}{% if contact.first_email %}{{ contact.first_email }}{% endif %}{% if contact.first_email and contact.first_telephone %} · {% endif %}{% if contact.first_telephone %}{{ contact.first_telephone }}{% endif %}{% if not contact.first_email and not contact.first_telephone %}No contact details{% endif %}{% endif %}
                                         </span>
-                                        {% if contact.state != "active" %}<span class="badge bg-secondary-subtle border text-secondary-emphasis mt-2">{{ contact.get_state_display }}</span>{% endif %}
                                     </a>
                                 {% endfor %}
                             </div>
@@ -88,7 +83,10 @@
                             </div>
                         {% else %}
                             <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4 text-center">
-                                <div><h2 class="h5">No matching contacts</h2><p class="small text-body-secondary mb-3">Try changing your search or state filter.</p><a class="btn btn-sm btn-outline-secondary" href="{% url 'contact:contacts' %}">Clear filters</a></div>
+                                <div>
+                                    {% if has_filters %}<h2 class="h5">No matching contacts</h2><p class="small text-body-secondary mb-3">Try changing your search or state filter.</p><a class="btn btn-sm btn-outline-secondary" href="{% url 'contact:contacts' %}">Clear filters</a>
+                                    {% else %}<h2 class="h5">No active contacts</h2><p class="small text-body-secondary mb-3">Deactivated contacts are hidden from this view.</p><a class="btn btn-sm btn-outline-secondary" href="{% url 'contact:contacts' %}?state=all">Show all states</a>{% endif %}
+                                </div>
                             </div>
                         {% endif %}
                     </div>
@@ -142,27 +140,33 @@
                                     <div class="contact-detail-scroll p-4">
                                         {% if selected_contact.state != "active" %}<div class="alert alert-secondary" role="status">This contact is read-only and retained as history. Reactivate it to make changes.</div>{% endif %}
 
-                                        <section class="card" aria-labelledby="contact-methods-heading">
+                                        <section class="contact-methods-card card" aria-labelledby="contact-methods-heading">
                                             <div class="card-header bg-body d-flex align-items-center justify-content-between gap-3 p-3 p-md-4">
                                                 <div><h3 class="h5 mb-1" id="contact-methods-heading">Contact details</h3><p class="small text-body-secondary mb-0">Email addresses and telephone numbers.</p></div>
                                                 {% if selected_contact.state == "active" %}<button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#addContactMethodModal">+ Add detail</button>{% endif %}
                                             </div>
                                             {% if contact_methods %}
-                                                <div class="list-group list-group-flush">
-                                                    {% for method in contact_methods %}
-                                                        <div class="list-group-item d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 px-3 px-md-4 py-3">
-                                                            <div>
-                                                                <div class="small text-body-secondary">{{ method.get_type_display }}</div>
-                                                                {% if method.type == "email" %}<a class="link-body-emphasis" href="mailto:{{ method.value }}">{{ method.value }}</a>{% else %}<a class="link-body-emphasis" href="tel:{{ method.value }}">{{ method.value }}</a>{% endif %}
-                                                            </div>
-                                                            {% if selected_contact.state == "active" %}
-                                                                <div class="d-flex gap-2">
-                                                                    <a class="btn btn-sm btn-outline-secondary" href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ selected_contact.pk }}&amp;edit_method={{ method.pk }}">Edit</a>
-                                                                    <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteContactMethodModal{{ method.pk }}">Delete</button>
-                                                                </div>
-                                                            {% endif %}
+                                                <div class="contact-methods-grid card-body">
+                                                    <section class="contact-method-group" aria-labelledby="contact-emails-heading">
+                                                        <h4 class="contact-method-group-title" id="contact-emails-heading">Email addresses</h4>
+                                                        <div class="contact-method-list">
+                                                            {% for method in email_methods %}
+                                                                {% include "contact/includes/contact_method_row.html" %}
+                                                            {% empty %}
+                                                                <p class="contact-method-group-empty">No email addresses added.</p>
+                                                            {% endfor %}
                                                         </div>
-                                                    {% endfor %}
+                                                    </section>
+                                                    <section class="contact-method-group" aria-labelledby="contact-telephones-heading">
+                                                        <h4 class="contact-method-group-title" id="contact-telephones-heading">Telephone numbers</h4>
+                                                        <div class="contact-method-list">
+                                                            {% for method in telephone_methods %}
+                                                                {% include "contact/includes/contact_method_row.html" %}
+                                                            {% empty %}
+                                                                <p class="contact-method-group-empty">No telephone numbers added.</p>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </section>
                                                 </div>
                                             {% else %}
                                                 <div class="card-body p-4 text-center text-body-secondary">No contact details have been added.</div>

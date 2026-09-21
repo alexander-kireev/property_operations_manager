@@ -92,6 +92,7 @@ def _restore_add_contact_method_form(request, state):
         "selected_contact": contact,
         "add_contact_method_form": ContactMethodForm(
             deserialise_form_data(state.get("data", {})),
+            contact=contact,
             auto_id="add_contact_method_%s",
         ),
         "active_tab": "details",
@@ -116,6 +117,7 @@ def _restore_edit_contact_method_form(request, state):
         "edit_contact_method_form": ContactMethodForm(
             deserialise_form_data(state.get("data", {})),
             instance=contact_method,
+            contact=contact,
             auto_id="edit_contact_method_%s",
         ),
         "active_tab": "details",
@@ -189,7 +191,7 @@ def _normalised_list_values(request):
     state = request.GET.get("state", "")
     sort = request.GET.get("sort", "name")
 
-    if state not in Contact.State.values:
+    if state not in (*Contact.State.values, "all"):
         state = ""
     if sort not in CONTACT_SORT_OPTIONS:
         sort = "name"
@@ -270,7 +272,10 @@ def _contact_list_context(
     edit_contact_note_form=None,
 ):
     values = _normalised_list_values(request)
-    contacts = filtered_contacts_for_user(user=request.user, **values)
+    contacts = filtered_contacts_for_user(
+        user=request.user,
+        **{**values, "state": values["state"] or Contact.State.ACTIVE},
+    )
     paginator = Paginator(contacts, CONTACTS_PER_PAGE)
     page_obj = paginator.get_page(request.GET.get("page"))
 
@@ -292,6 +297,8 @@ def _contact_list_context(
         requested_tab = "details"
 
     contact_methods = []
+    email_methods = []
+    telephone_methods = []
     notes = []
 
     selected_contact_is_active = (
@@ -303,9 +310,20 @@ def _contact_list_context(
 
         if requested_tab == "details":
             contact_methods = list(selected_contact.contact_methods.all())
+            email_methods = [
+                method for method in contact_methods
+                if method.type == method.Type.EMAIL
+            ]
+            telephone_methods = [
+                method for method in contact_methods
+                if method.type == method.Type.TELEPHONE
+            ]
 
             if add_contact_method_form is None and selected_contact_is_active:
-                add_contact_method_form = ContactMethodForm(auto_id="add_contact_method_%s")
+                add_contact_method_form = ContactMethodForm(
+                    contact=selected_contact,
+                    auto_id="add_contact_method_%s",
+                )
 
             if (
                 edit_contact_method is None
@@ -324,6 +342,7 @@ def _contact_list_context(
             if edit_contact_method_form is None and edit_contact_method is not None:
                 edit_contact_method_form = ContactMethodForm(
                     instance=edit_contact_method,
+                    contact=selected_contact,
                     auto_id="edit_contact_method_%s",
                 )
 
@@ -351,6 +370,8 @@ def _contact_list_context(
         "page_obj": page_obj,
         "selected_contact": selected_contact,
         "contact_methods": contact_methods,
+        "email_methods": email_methods,
+        "telephone_methods": telephone_methods,
         "notes": notes,
         "add_contact_form": add_contact_form,
         "edit_contact_form": edit_contact_form,
@@ -472,6 +493,7 @@ def add_contact_method_view(request, contact_id):
     )
     form = ContactMethodForm(
         request.POST,
+        contact=contact,
         auto_id="add_contact_method_%s",
     )
     if form.is_valid():
@@ -500,6 +522,7 @@ def edit_contact_method_view(request, contact_id, method_id):
     form = ContactMethodForm(
         request.POST,
         instance=contact_method,
+        contact=contact,
         auto_id="edit_contact_method_%s",
     )
     if form.is_valid():

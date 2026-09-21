@@ -211,6 +211,32 @@ class PropertyViewTests(TestCase):
             [active_property],
         )
 
+    def test_property_list_defaults_to_active_and_can_show_deactivated(self):
+        active = self.create_property(name="Active House")
+        deactivated = self.create_property(
+            name="Old House",
+            state=Property.State.DEACTIVATED,
+        )
+        self.client.force_login(self.user)
+
+        for query, expected in (
+            ({}, [active]),
+            ({"state": Property.State.DEACTIVATED}, [deactivated]),
+            ({"state": "all"}, [active, deactivated]),
+        ):
+            with self.subTest(query=query):
+                response = self.client.get(reverse("property:properties"), query)
+                self.assertCountEqual(response.context["page_obj"].object_list, expected)
+
+    def test_deactivated_only_property_list_offers_all_states(self):
+        self.create_property(state=Property.State.DEACTIVATED)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:properties"))
+
+        self.assertContains(response, "No active properties")
+        self.assertContains(response, "Show all states")
+
     def test_all_supported_sort_options_return_expected_order(self):
         alpha = self.create_property(name="Alpha House")
         zebra = self.create_property(name="Zebra House")

@@ -40,11 +40,11 @@
                             placeholder="Search by property name or address"
                         >
                     </div>
-                    <div class="col-6 col-lg-2">
+                    <div class="col-12 col-sm-6 col-lg-2">
                         <label class="visually-hidden" for="stateFilter">Filter by state</label>
                         <select class="form-select" id="stateFilter" name="state">
-                            <option value="">All states</option>
-                            <option value="active" {% if state == "active" %}selected{% endif %}>Active</option>
+                            <option value="all" {% if state == "all" %}selected{% endif %}>All states</option>
+                            <option value="active" {% if not state or state == "active" %}selected{% endif %}>Active</option>
                             <option value="deactivated" {% if state == "deactivated" %}selected{% endif %}>Deactivated</option>
                         </select>
                     </div>
@@ -252,6 +252,10 @@
                             <h3 class="h5">No matching properties</h3>
                             <p class="text-body-secondary">Try changing or clearing your search and filters.</p>
                             <a class="btn btn-outline-secondary" href="{% url 'property:properties' %}">Clear filters</a>
+                        {% elif property_count %}
+                            <h3 class="h5">No active properties</h3>
+                            <p class="text-body-secondary">Deactivated properties are hidden from this view.</p>
+                            <a class="btn btn-outline-secondary" href="{% url 'property:properties' %}?state=all">Show all states</a>
                         {% else %}
                             <h3 class="h5">No properties yet</h3>
                             <p class="text-body-secondary">Add your first property to begin managing its work.</p>

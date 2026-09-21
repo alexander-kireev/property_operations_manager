@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
-from contact.models import Contact
+from contact.models import Contact, ContactMethod
 from property.models import Property
 
 from .forms import EventContactForm, EventForm
@@ -280,10 +280,29 @@ class EventSelectorTests(EventTestMixin, TestCase):
         amy = self.create_contact(self.user, "Amy", state=Contact.State.DEACTIVATED)
         zed_link = EventContact.objects.create(event=event, contact=zed)
         amy_link = EventContact.objects.create(event=event, contact=amy)
+        first_email = ContactMethod.objects.create(
+            contact=amy,
+            type=ContactMethod.Type.EMAIL,
+            value="first@example.com",
+        )
+        ContactMethod.objects.create(
+            contact=amy,
+            type=ContactMethod.Type.EMAIL,
+            value="second@example.com",
+        )
+        first_telephone = ContactMethod.objects.create(
+            contact=amy,
+            type=ContactMethod.Type.TELEPHONE,
+            value="+447700900123",
+        )
 
+        participants = list(event_contacts_for_event(event=event))
+
+        self.assertEqual(participants, [amy_link, zed_link])
+        self.assertEqual(participants[0].contact_email, first_email.value)
         self.assertEqual(
-            list(event_contacts_for_event(event=event)),
-            [amy_link, zed_link],
+            participants[0].contact_telephone,
+            first_telephone.value,
         )
 
 
@@ -669,6 +688,21 @@ class EventViewTests(EventTestMixin, TestCase):
     def test_terminal_event_hides_participant_mutations(self):
         event = self.create_event(self.user, state=Event.State.CANCELLED)
         contact = self.create_contact(self.user)
+        method = ContactMethod.objects.create(
+            contact=contact,
+            type=ContactMethod.Type.EMAIL,
+            value="alex@example.com",
+        )
+        hidden_method = ContactMethod.objects.create(
+            contact=contact,
+            type=ContactMethod.Type.EMAIL,
+            value="other@example.com",
+        )
+        telephone = ContactMethod.objects.create(
+            contact=contact,
+            type=ContactMethod.Type.TELEPHONE,
+            value="+447700900321",
+        )
         EventContact.objects.create(event=event, contact=contact)
 
         response = self.client.get(reverse("event:events"), {
@@ -678,6 +712,10 @@ class EventViewTests(EventTestMixin, TestCase):
         })
 
         self.assertContains(response, contact.first_name)
+        self.assertContains(response, method.value)
+        self.assertContains(response, telephone.value)
+        self.assertNotContains(response, hidden_method.value)
+        self.assertContains(response, 'class="event-participant-row"')
         self.assertNotContains(response, "Add participants")
         self.assertNotContains(
             response,

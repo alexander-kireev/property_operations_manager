@@ -48,7 +48,7 @@ def _normalised_list_values(request):
     scheduled_period = request.GET.get("scheduled_period", "")
     deadline_period = request.GET.get("deadline_period", "")
 
-    if state not in Task.State.values:
+    if state not in (*Task.State.values, "all"):
         state = ""
     if sort not in TASK_SORT_OPTIONS:
         sort = "completion_deadline"
@@ -199,7 +199,10 @@ def _task_list_context(
     open_modal=None,
 ):
     values = _normalised_list_values(request)
-    tasks = filtered_tasks_for_user(user=request.user, **values)
+    tasks = filtered_tasks_for_user(
+        user=request.user,
+        **{**values, "state": values["state"] or Task.State.ACTIVE},
+    )
     paginator = Paginator(tasks, TASKS_PER_PAGE)
     page_obj = paginator.get_page(request.GET.get("page"))
 

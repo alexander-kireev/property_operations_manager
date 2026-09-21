@@ -1081,6 +1081,31 @@ class TaskViewTests(TestCase):
             issue=issue,
         )
 
+    def test_task_list_defaults_to_active_and_can_show_terminal_states(self):
+        active = self.create_task(title="Active task")
+        completed = self.create_task(title="Completed task", state=Task.State.COMPLETED)
+        dismissed = self.create_task(title="Dismissed task", state=Task.State.DISMISSED)
+        self.client.force_login(self.user)
+
+        for query, expected in (
+            ({}, [active]),
+            ({"state": Task.State.COMPLETED}, [completed]),
+            ({"state": Task.State.DISMISSED}, [dismissed]),
+            ({"state": "all"}, [active, completed, dismissed]),
+        ):
+            with self.subTest(query=query):
+                response = self.client.get(reverse("task:tasks"), query)
+                self.assertCountEqual(response.context["page_obj"].object_list, expected)
+
+    def test_terminal_only_task_list_offers_all_states(self):
+        self.create_task(state=Task.State.COMPLETED)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("task:tasks"))
+
+        self.assertContains(response, "No active tasks")
+        self.assertContains(response, "Show all states")
+
     def task_url(self, name, task):
         return reverse(f"task:{name}", kwargs={"task_id": task.pk})
 
