@@ -136,12 +136,12 @@
                                     >
                                         <span class="d-flex justify-content-between align-items-start gap-3">
                                             <span class="task-command-copy flex-grow-1">
-                                                <span class="task-command-title d-block">{{ task.title }}</span>
-                                                <span class="task-command-context d-block mt-2">
+                                                <span class="task-command-title" title="{{ task.title }}">{{ task.title }}</span>
+                                                <span class="task-command-context mt-2"{% if task.property %} title="{{ task.property.name }}"{% elif task.issue %} title="{{ task.issue.title }}"{% endif %}>
                                                     {% if task.property %}{{ task.property.name }}{% elif task.issue %}{{ task.issue.title }}{% endif %}
                                                 </span>
                                             </span>
-                                            <span class="d-flex flex-column align-items-end gap-2">
+                                            <span class="task-command-meta d-flex flex-column align-items-end gap-2">
                                                 {% include "task/includes/priority_badge.html" with task=task %}
                                                 <span class="task-command-deadline{% if task.state == 'active' and task.completion_deadline and task.completion_deadline < today %} text-danger{% endif %}">
                                                     {{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}
@@ -251,16 +251,16 @@
                                                     {% if selected_task.property %}
                                                         <dt class="task-related-label fw-normal text-body-secondary">Related property</dt>
                                                         <dd class="task-related-value">
-                                                            <a class="task-related-link" href="{% url 'property:property_detail' selected_task.property.pk %}">
-                                                                <span>{{ selected_task.property.name }}</span>
+                                                            <a class="task-related-link" href="{% url 'property:property_detail' selected_task.property.pk %}" title="{{ selected_task.property.name }}">
+                                                                <span class="task-related-copy">{{ selected_task.property.name }}</span>
                                                                 <span class="task-related-arrow" aria-hidden="true">→</span>
                                                             </a>
                                                         </dd>
                                                     {% elif selected_task.issue %}
                                                         <dt class="task-related-label fw-normal text-body-secondary">Related issue</dt>
                                                         <dd class="task-related-value">
-                                                            <a class="task-related-link" href="{% url 'issue:issues' %}?selected={{ selected_task.issue.pk }}">
-                                                                <span>{{ selected_task.issue.title }}</span>
+                                                            <a class="task-related-link" href="{% url 'issue:issues' %}?selected={{ selected_task.issue.pk }}" title="{{ selected_task.issue.title }}">
+                                                                <span class="task-related-copy">{{ selected_task.issue.title }}</span>
                                                                 <span class="task-related-arrow" aria-hidden="true">→</span>
                                                             </a>
                                                         </dd>

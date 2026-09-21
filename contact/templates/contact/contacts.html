@@ -64,7 +64,7 @@
                                         href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ contact.pk }}"
                                         {% if contact == selected_contact %}aria-current="true"{% endif %}
                                     >
-                                        <span class="contact-command-title d-block">{{ contact }}</span>
+                                        <span class="contact-command-title d-block" title="{{ contact }}">{{ contact }}</span>
                                         <span class="contact-command-methods d-block mt-2">
                                             {% for method in contact.contact_methods.all %}
                                                 {% if not forloop.first %} · {% endif %}{{ method.value }}

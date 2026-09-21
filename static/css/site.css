@@ -479,6 +479,7 @@ body {
 .issue-list {
     flex: 1 1 auto;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -509,6 +510,31 @@ body {
 
 .issue-list-row.terminated {
     color: var(--bs-secondary-color) !important;
+}
+
+.issue-list-primary,
+.issue-list-meta,
+.issue-list-title,
+.issue-list-context {
+    min-width: 0;
+}
+
+.issue-list-title {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.issue-list-context {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.issue-list-primary > .badge,
+.issue-list-status {
+    flex: 0 0 auto;
 }
 
 .issue-pagination .page-link {
@@ -630,6 +656,19 @@ body {
     align-items: center;
 }
 
+.issue-task-copy,
+.issue-task-title {
+    min-width: 0;
+}
+
+.issue-task-title {
+    display: -webkit-box;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
 .issue-task-heading {
     color: var(--bs-secondary-color);
     font-size: 0.8rem;
@@ -659,6 +698,12 @@ body {
 
 .issue-task-details {
     background: var(--bs-tertiary-bg);
+}
+
+.issue-detail-scroll p,
+.issue-detail-scroll dd,
+.issue-task-details p {
+    overflow-wrap: anywhere;
 }
 
 .issue-form-field-compact {
@@ -866,6 +911,7 @@ body {
 .task-command-list {
     flex: 1 1 auto;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -904,16 +950,26 @@ body {
 }
 
 .task-command-title {
+    display: -webkit-box;
     overflow: hidden;
     font-weight: 600;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.task-command-context {
+    display: block;
+    min-height: 1.25rem;
+    overflow: hidden;
+    color: var(--bs-secondary-color);
+    font-size: 0.875rem;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.task-command-context {
-    min-height: 1.25rem;
-    color: var(--bs-secondary-color);
-    font-size: 0.875rem;
+.task-command-meta {
+    flex: 0 0 auto;
 }
 
 .task-command-deadline {
@@ -999,6 +1055,10 @@ body {
     scrollbar-width: thin;
 }
 
+.task-detail-scroll p {
+    overflow-wrap: anywhere;
+}
+
 .task-planning-list {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
@@ -1038,7 +1098,15 @@ body {
     background: var(--bs-tertiary-bg);
     border: var(--bs-border-width) solid var(--bs-border-color);
     border-radius: var(--bs-border-radius);
+}
+
+.task-related-copy {
+    display: -webkit-box;
+    min-width: 0;
+    overflow: hidden;
     overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .task-related-link:hover {
@@ -1192,6 +1260,7 @@ body {
 .contact-command-list {
     flex: 1 1 auto;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -1225,6 +1294,7 @@ body {
 }
 
 .contact-command-title {
+    min-width: 0;
     overflow: hidden;
     font-weight: 600;
     text-overflow: ellipsis;
@@ -1232,11 +1302,17 @@ body {
 }
 
 .contact-command-methods {
+    min-width: 0;
     overflow: hidden;
     color: var(--bs-secondary-color);
     font-size: 0.875rem;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.contact-detail-scroll a,
+.contact-detail-scroll p {
+    overflow-wrap: anywhere;
 }
 
 .contact-pagination .page-link {
