@@ -6,6 +6,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
+from config.form_state import (
+    deserialise_form_data,
+    pop_form_state,
+    serialise_form_data,
+    store_form_state,
+)
+
 from .forms import ContactCreateForm, ContactForm, ContactMethodForm
 from .models import Contact
 from .selectors import (
@@ -42,6 +49,141 @@ CONTACTS_PER_PAGE = 20
 CONTACT_WORKSPACE_TABS = ("details", "notes")
 
 
+def _active_contact_from_form_state(request, state):
+    return contacts_for_user(user=request.user).filter(
+        pk=state.get("contact_id"),
+        state=Contact.State.ACTIVE,
+    ).first()
+
+
+def _restore_add_contact_form(request, state):
+    return {
+        "add_contact_form": ContactCreateForm(
+            deserialise_form_data(state.get("data", {})),
+            auto_id="add_contact_%s",
+        ),
+        "open_modal": "addContactModal",
+    }
+
+
+def _restore_edit_contact_form(request, state):
+    contact = _active_contact_from_form_state(request, state)
+    if contact is None:
+        return {}
+
+    return {
+        "selected_contact": contact,
+        "edit_contact_form": ContactForm(
+            deserialise_form_data(state.get("data", {})),
+            instance=contact,
+            auto_id="edit_contact_%s",
+        ),
+        "active_tab": "details",
+        "open_modal": "editContactModal",
+    }
+
+
+def _restore_add_contact_method_form(request, state):
+    contact = _active_contact_from_form_state(request, state)
+    if contact is None:
+        return {}
+
+    return {
+        "selected_contact": contact,
+        "add_contact_method_form": ContactMethodForm(
+            deserialise_form_data(state.get("data", {})),
+            auto_id="add_contact_method_%s",
+        ),
+        "active_tab": "details",
+        "open_modal": "addContactMethodModal",
+    }
+
+
+def _restore_edit_contact_method_form(request, state):
+    contact = _active_contact_from_form_state(request, state)
+    if contact is None:
+        return {}
+
+    contact_method = contact_methods_for_contact(contact=contact).filter(
+        pk=state.get("object_id"),
+    ).first()
+    if contact_method is None:
+        return {}
+
+    return {
+        "selected_contact": contact,
+        "edit_contact_method": contact_method,
+        "edit_contact_method_form": ContactMethodForm(
+            deserialise_form_data(state.get("data", {})),
+            instance=contact_method,
+            auto_id="edit_contact_method_%s",
+        ),
+        "active_tab": "details",
+        "open_modal": "editContactMethodModal",
+    }
+
+
+def _restore_add_contact_note_form(request, state):
+    contact = _active_contact_from_form_state(request, state)
+    if contact is None:
+        return {}
+
+    return {
+        "selected_contact": contact,
+        "add_contact_note_form": NoteForm(
+            deserialise_form_data(state.get("data", {})),
+            auto_id="add_note_%s",
+        ),
+        "active_tab": "notes",
+    }
+
+
+def _restore_edit_contact_note_form(request, state):
+    contact = _active_contact_from_form_state(request, state)
+    if contact is None:
+        return {}
+
+    note = notes_for_contact(
+        user=request.user,
+        contact=contact,
+    ).filter(pk=state.get("object_id")).first()
+    if note is None:
+        return {}
+
+    return {
+        "selected_contact": contact,
+        "edit_contact_note": note,
+        "edit_contact_note_form": NoteForm(
+            deserialise_form_data(state.get("data", {})),
+            instance=note,
+            auto_id="edit_contact_note_%s",
+        ),
+        "active_tab": "notes",
+    }
+
+
+CONTACT_FORM_STATE_RESTORERS = {
+    "add_contact": _restore_add_contact_form,
+    "edit_contact": _restore_edit_contact_form,
+    "add_contact_method": _restore_add_contact_method_form,
+    "edit_contact_method": _restore_edit_contact_method_form,
+    "add_contact_note": _restore_add_contact_note_form,
+    "edit_contact_note": _restore_edit_contact_note_form,
+}
+
+
+def _restore_contact_form_context(request):
+    state = pop_form_state(request)
+    if not isinstance(state, dict):
+        return {}
+
+    restorer = CONTACT_FORM_STATE_RESTORERS.get(state.get("action"))
+    if restorer is None:
+        return {}
+
+    return restorer(request, state)
+
+
 def _normalised_list_values(request):
     search = request.GET.get("search", "").strip()
     state = request.GET.get("state", "")
@@ -65,7 +207,13 @@ def _list_query_parameters(values):
     return parameters
 
 
-def _contact_workspace_url(request, *, contact_id=None, tab="details"):
+def _contact_workspace_url(
+    request,
+    *,
+    contact_id=None,
+    tab="details",
+    form_state=None,
+):
     parameters = _list_query_parameters(_normalised_list_values(request))
     page = request.GET.get("page", "")
     if page.isdigit() and int(page) > 1:
@@ -74,9 +222,36 @@ def _contact_workspace_url(request, *, contact_id=None, tab="details"):
         parameters["selected"] = contact_id
     if tab == "notes":
         parameters["tab"] = "notes"
+    if form_state is not None:
+        parameters["form_state"] = form_state
 
     url = reverse("contact:contacts")
     return f"{url}?{urlencode(parameters)}" if parameters else url
+
+
+def _redirect_with_contact_form_state(
+    request,
+    *,
+    action,
+    contact_id=None,
+    object_id=None,
+    tab="details",
+):
+    state = {
+        "action": action,
+        "contact_id": contact_id,
+        "object_id": object_id,
+        "data": serialise_form_data(request.POST),
+    }
+    token = store_form_state(request, state)
+    return redirect(
+        _contact_workspace_url(
+            request,
+            contact_id=contact_id,
+            tab=tab,
+            form_state=token,
+        )
+    )
 
 
 def _contact_list_context(
@@ -132,12 +307,6 @@ def _contact_list_context(
             if add_contact_method_form is None and selected_contact_is_active:
                 add_contact_method_form = ContactMethodForm(auto_id="add_contact_method_%s")
 
-            if edit_contact_method_form is None and edit_contact_method is not None:
-                edit_contact_method_form = ContactMethodForm(
-                                                instance=edit_contact_method,
-                                                auto_id="edit_contact_method_%s",
-                                            )
-                
             if (
                 edit_contact_method is None
                 and selected_contact.state == Contact.State.ACTIVE
@@ -152,8 +321,14 @@ def _contact_list_context(
                         edit_contact_method = method
                         break
 
-                if edit_contact_method is not None and open_modal is None:
-                    open_modal = "editContactMethodModal"
+            if edit_contact_method_form is None and edit_contact_method is not None:
+                edit_contact_method_form = ContactMethodForm(
+                    instance=edit_contact_method,
+                    auto_id="edit_contact_method_%s",
+                )
+
+            if edit_contact_method is not None and open_modal is None:
+                open_modal = "editContactMethodModal"
 
         else:
             notes = list(notes_for_contact(user=request.user, contact=selected_contact))
@@ -206,10 +381,11 @@ def _contact_list_context(
 @login_required
 @require_GET
 def contacts_view(request):
+    context_overrides = _restore_contact_form_context(request)
     return render(
         request,
         "contact/contacts.html",
-        _contact_list_context(request),
+        _contact_list_context(request, **context_overrides),
     )
 
 
@@ -221,14 +397,9 @@ def add_contact_view(request):
         contact = create_contact(user=request.user, **form.cleaned_data)
         return redirect(_contact_workspace_url(request, contact_id=contact.pk))
 
-    return render(
+    return _redirect_with_contact_form_state(
         request,
-        "contact/contacts.html",
-        _contact_list_context(
-            request,
-            add_contact_form=form,
-            open_modal="addContactModal",
-        ),
+        action="add_contact",
     )
 
 
@@ -249,15 +420,10 @@ def edit_contact_view(request, contact_id):
         update_contact(contact=contact, **form.cleaned_data)
         return redirect(_contact_workspace_url(request, contact_id=contact.pk))
 
-    return render(
+    return _redirect_with_contact_form_state(
         request,
-        "contact/contacts.html",
-        _contact_list_context(
-            request,
-            selected_contact=contact,
-            edit_contact_form=form,
-            open_modal="editContactModal",
-        ),
+        action="edit_contact",
+        contact_id=contact.pk,
     )
 
 
@@ -312,15 +478,10 @@ def add_contact_method_view(request, contact_id):
         create_contact_method(contact=contact, **form.cleaned_data)
         return redirect(_contact_workspace_url(request, contact_id=contact.pk))
 
-    return render(
+    return _redirect_with_contact_form_state(
         request,
-        "contact/contacts.html",
-        _contact_list_context(
-            request,
-            selected_contact=contact,
-            add_contact_method_form=form,
-            open_modal="addContactMethodModal",
-        ),
+        action="add_contact_method",
+        contact_id=contact.pk,
     )
 
 
@@ -348,16 +509,11 @@ def edit_contact_method_view(request, contact_id, method_id):
         )
         return redirect(_contact_workspace_url(request, contact_id=contact.pk))
 
-    return render(
+    return _redirect_with_contact_form_state(
         request,
-        "contact/contacts.html",
-        _contact_list_context(
-            request,
-            selected_contact=contact,
-            edit_contact_method=contact_method,
-            edit_contact_method_form=form,
-            open_modal="editContactMethodModal",
-        ),
+        action="edit_contact_method",
+        contact_id=contact.pk,
+        object_id=contact_method.pk,
     )
 
 
@@ -394,15 +550,11 @@ def add_contact_note_view(request, contact_id):
         create_note(user=request.user, contact=contact, **form.cleaned_data)
         return redirect(_contact_workspace_url(request, contact_id=contact.pk, tab="notes"))
 
-    return render(
+    return _redirect_with_contact_form_state(
         request,
-        "contact/contacts.html",
-        _contact_list_context(
-            request,
-            selected_contact=contact,
-            add_contact_note_form=form,
-            active_tab="notes"
-        ),
+        action="add_contact_note",
+        contact_id=contact.pk,
+        tab="notes",
     )
 
 @login_required
@@ -430,16 +582,12 @@ def edit_contact_note_view(request, contact_id, note_id):
         )
         return redirect(_contact_workspace_url(request, contact_id=contact.pk, tab="notes"))
 
-    return render(
+    return _redirect_with_contact_form_state(
         request,
-        "contact/contacts.html",
-        _contact_list_context(
-            request,
-            selected_contact=contact,
-            edit_contact_note=note,
-            edit_contact_note_form=form,
-            active_tab="notes",
-        ),
+        action="edit_contact_note",
+        contact_id=contact.pk,
+        object_id=note.pk,
+        tab="notes",
     )
 
 

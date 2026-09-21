@@ -5,7 +5,6 @@
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/event.css' %}">{% endblock %}
 {% block body_class %}bg-body-tertiary event-command-page{% endblock %}
 {% block main_class %}event-command-main flex-grow-1 py-3{% endblock %}
-{% block footer %}{% endblock %}
 
 {% block content %}
 <div class="container-xl h-100">
@@ -255,7 +254,7 @@
 </div>
 
 {% if add_event_form %}
-    <div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
+    <div class="modal fade" id="addEventModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
             <div class="modal-header"><h2 class="modal-title fs-5" id="addEventModalLabel">Add event</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
             <form action="{% url 'event:add_event' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off" data-event-form>
@@ -277,7 +276,7 @@
 
 {% if selected_event %}
     {% if selected_event.state == "scheduled" and add_contacts_form %}
-        <div class="modal fade" id="addEventContactsModal" tabindex="-1" aria-labelledby="addEventContactsModalLabel" aria-hidden="true">
+        <div class="modal fade" id="addEventContactsModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addEventContactsModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
                 <div class="modal-header"><h2 class="modal-title fs-5" id="addEventContactsModalLabel">Add participants</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'event:add_event_contacts_to_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">
@@ -295,7 +294,7 @@
         </div>
     {% endif %}
     {% if selected_event.state == "scheduled" and edit_event_form %}
-        <div class="modal fade" id="editEventModal" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
+        <div class="modal fade" id="editEventModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
                 <div class="modal-header"><h2 class="modal-title fs-5" id="editEventModalLabel">Edit {{ selected_event.title }}</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'event:edit_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off" data-event-form>
@@ -339,7 +338,7 @@
     </div>
 {% endif %}
 
-{% if open_modal %}<span hidden data-open-event-modal="{{ open_modal }}"></span>{% endif %}
+{% if open_modal %}<span hidden data-modal-auto-open="{{ open_modal }}"></span>{% endif %}
 {% endblock %}
 
 {% block extra_js %}<script src="{% static 'js/event-command-centre.js' %}"></script>{% endblock %}

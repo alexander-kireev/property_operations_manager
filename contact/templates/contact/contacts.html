@@ -4,7 +4,6 @@
 {% block title %}Contacts | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary contact-command-page{% endblock %}
 {% block main_class %}contact-command-main flex-grow-1 py-3{% endblock %}
-{% block footer %}{% endblock %}
 
 {% block content %}
 <div class="container-xl h-100">
@@ -155,7 +154,7 @@
 
                                         <section class="card" aria-labelledby="contact-methods-heading">
                                             <div class="card-header bg-body d-flex align-items-center justify-content-between gap-3 p-3 p-md-4">
-                                                <div><h3 class="h5 mb-1" id="contact-methods-heading">Contact details</h3><p class="small text-body-secondary mb-0">Email addresses and international telephone numbers.</p></div>
+                                                <div><h3 class="h5 mb-1" id="contact-methods-heading">Contact details</h3><p class="small text-body-secondary mb-0">Email addresses and telephone numbers.</p></div>
                                                 {% if selected_contact.state == "active" %}<button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#addContactMethodModal">+ Add detail</button>{% endif %}
                                             </div>
                                             {% if contact_methods %}
@@ -197,7 +196,7 @@
     </section>
 </div>
 
-<div class="modal fade" id="addContactModal" tabindex="-1" aria-labelledby="addContactModalLabel" aria-hidden="true">
+<div class="modal fade" id="addContactModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addContactModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
         <div class="modal-header"><h2 class="modal-title fs-5" id="addContactModalLabel">Add contact</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
         <form action="{% url 'contact:add_contact' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
@@ -212,7 +211,7 @@
 
 {% if selected_contact %}
     {% if selected_contact.state == "active" %}
-        <div class="modal fade" id="editContactModal" tabindex="-1" aria-labelledby="editContactModalLabel" aria-hidden="true">
+        <div class="modal fade" id="editContactModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editContactModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
                 <div class="modal-header"><h2 class="modal-title fs-5" id="editContactModalLabel">Edit {{ selected_contact }}</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'contact:edit_contact' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
@@ -222,7 +221,7 @@
             </div></div>
         </div>
 
-        <div class="modal fade" id="addContactMethodModal" tabindex="-1" aria-labelledby="addContactMethodModalLabel" aria-hidden="true">
+        <div class="modal fade" id="addContactMethodModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addContactMethodModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
                 <div class="modal-header"><h2 class="modal-title fs-5" id="addContactMethodModalLabel">Add contact detail</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'contact:add_contact_method' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
@@ -233,7 +232,7 @@
         </div>
 
         {% if edit_contact_method and edit_contact_method_form %}
-            <div class="modal fade" id="editContactMethodModal" tabindex="-1" aria-labelledby="editContactMethodModalLabel" aria-hidden="true">
+            <div class="modal fade" id="editContactMethodModal" data-modal-clear-query="edit_method form_state" tabindex="-1" aria-labelledby="editContactMethodModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
                     <div class="modal-header"><h2 class="modal-title fs-5" id="editContactMethodModalLabel">Edit contact detail</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                     <form action="{% url 'contact:edit_contact_method' selected_contact.pk edit_contact_method.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
@@ -263,12 +262,5 @@
 
 {% block extra_js %}
     <script src="{% static 'js/note-board.js' %}"></script>
-    {% if open_modal %}
-        <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                const modalElement = document.getElementById("{{ open_modal|escapejs }}");
-                if (modalElement) bootstrap.Modal.getOrCreateInstance(modalElement).show();
-            });
-        </script>
-    {% endif %}
+    {% if open_modal %}<span hidden data-modal-auto-open="{{ open_modal }}"></span>{% endif %}
 {% endblock %}

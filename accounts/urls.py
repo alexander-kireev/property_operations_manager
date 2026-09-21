@@ -19,7 +19,7 @@ urlpatterns = [
     path("password/reset/email/", views.reset_password_protected_view, name="reset_password_protected"),
     path(
         "password/reset/<uidb64>/<token>/",
-        auth_views.PasswordResetConfirmView.as_view(
+        views.PasswordResetConfirmPRGView.as_view(
             template_name="accounts/password_reset_confirm.html",
             form_class=PasswordResetConfirmForm,
             success_url=reverse_lazy("accounts:password_reset_complete"),

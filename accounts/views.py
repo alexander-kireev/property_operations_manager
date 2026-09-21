@@ -11,6 +11,7 @@ from .models import PendingRegistration, User
 from django.conf import settings
 from django.core.mail import send_mail
 from django.urls import reverse
+from urllib.parse import urlencode
 
 from django.core import signing
 from django.db import transaction
@@ -18,6 +19,42 @@ from django.db import transaction
 from .tokens import create_confirmation_token, decode_confirmation_token
 
 from django.views.decorators.http import require_POST
+
+from config.form_state import (
+    deserialise_form_data,
+    pop_form_state,
+    restore_form_errors,
+    serialise_form_data,
+    serialise_form_errors,
+    store_form_state,
+)
+
+
+def _redirect_with_account_form_state(
+    request,
+    *,
+    action,
+    form,
+    url,
+    exclude=(),
+):
+    token = store_form_state(request, {
+        "action": action,
+        "data": serialise_form_data(request.POST, exclude=exclude),
+        "errors": serialise_form_errors(form),
+    })
+    return redirect(f"{url}?{urlencode({'form_state': token})}")
+
+
+def _account_form_state(request, action):
+    state = pop_form_state(request)
+    if not isinstance(state, dict) or state.get("action") != action:
+        return None
+    return state
+
+
+def _restore_account_form(state, form):
+    return restore_form_errors(form, state.get("errors", {}))
 
 
 def login_view(request):
@@ -29,8 +66,22 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
             return redirect("pages:dashboard")
+
+        return _redirect_with_account_form_state(
+            request,
+            action="login",
+            form=form,
+            url=reverse("accounts:login"),
+            exclude=("password",),
+        )
     else:
-        form = EmailAuthenticationForm()
+        state = _account_form_state(request, "login")
+        form = EmailAuthenticationForm(
+            request,
+            data=deserialise_form_data(state["data"]) if state else None,
+        )
+        if state:
+            form = _restore_account_form(state, form)
 
     return render(request, "accounts/login.html", {"form": form})
 
@@ -70,8 +121,21 @@ def register_view(request):
 
             return redirect("accounts:registration_pending")
 
+        return _redirect_with_account_form_state(
+            request,
+            action="register",
+            form=form,
+            url=reverse("accounts:register"),
+            exclude=("password_1", "password_2"),
+        )
+
     else:
-        form = PendingRegistrationForm()
+        state = _account_form_state(request, "register")
+        form = PendingRegistrationForm(
+            data=deserialise_form_data(state["data"]) if state else None,
+        )
+        if state:
+            form = _restore_account_form(state, form)
 
     return render(request, "accounts/register.html", {"form": form})
 
@@ -135,8 +199,21 @@ def profile_page_view(request):
             profile_form.save()
             return redirect("accounts:profile_page")
 
+        return _redirect_with_account_form_state(
+            request,
+            action="profile",
+            form=profile_form,
+            url=reverse("accounts:profile_page"),
+        )
+
     else:
-        profile_form = ProfileForm(instance=request.user)
+        state = _account_form_state(request, "profile")
+        profile_form = ProfileForm(
+            data=deserialise_form_data(state["data"]) if state else None,
+            instance=request.user,
+        )
+        if state:
+            profile_form = _restore_account_form(state, profile_form)
     
     return render(request, "accounts/profile_page.html", {"profile_form": profile_form})
 
@@ -152,8 +229,22 @@ def change_password_view(request):
             update_session_auth_hash(request, user)
             return redirect("accounts:change_password")
 
+        return _redirect_with_account_form_state(
+            request,
+            action="change_password",
+            form=form,
+            url=reverse("accounts:change_password"),
+            exclude=("old_password", "new_password1", "new_password2"),
+        )
+
     else:
-        form = AccountPasswordChangeForm(user=request.user)
+        state = _account_form_state(request, "change_password")
+        form = AccountPasswordChangeForm(
+            user=request.user,
+            data=deserialise_form_data(state["data"]) if state else None,
+        )
+        if state:
+            form = _restore_account_form(state, form)
 
     return render(request, "accounts/change_password.html", {"form": form })
 
@@ -178,8 +269,21 @@ def change_email_view(request):
                 request.user.save(update_fields=["email"])
 
                 return redirect("accounts:change_email")
+
+        return _redirect_with_account_form_state(
+            request,
+            action="change_email",
+            form=form,
+            url=reverse("accounts:change_email"),
+            exclude=("current_password",),
+        )
     else:
-        form = EmailChangeForm()
+        state = _account_form_state(request, "change_email")
+        form = EmailChangeForm(
+            data=deserialise_form_data(state["data"]) if state else None,
+        )
+        if state:
+            form = _restore_account_form(state, form)
 
     return render(request, "accounts/change_email.html", {"form": form})
 
@@ -204,6 +308,29 @@ def reset_password_protected_view(request):
         )
 
     return redirect("accounts:profile_page")
+
+
+class PasswordResetConfirmPRGView(auth_views.PasswordResetConfirmView):
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if self.request.method == "GET":
+            state = _account_form_state(self.request, "password_reset_confirm")
+            if state:
+                form = self.get_form_class()(
+                    user=self.user,
+                    data=deserialise_form_data(state["data"]),
+                )
+                form = _restore_account_form(state, form)
+        return form
+
+    def form_invalid(self, form):
+        return _redirect_with_account_form_state(
+            self.request,
+            action="password_reset_confirm",
+            form=form,
+            url=self.request.path,
+            exclude=("new_password1", "new_password2"),
+        )
 
 
 

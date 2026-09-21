@@ -125,6 +125,19 @@ class ContactFormTests(ContactTestMixin, TestCase):
 
         self.assertEqual(list(form.fields), ["first_name", "last_name"])
 
+    def test_edit_form_does_not_apply_browser_name_length_limits(self):
+        contact = self.create_contact(self.create_user())
+        edit_form = ContactForm(instance=contact)
+        create_form = ContactCreateForm()
+
+        for name in ("first_name", "last_name"):
+            with self.subTest(name=name):
+                self.assertNotIn("maxlength", edit_form.fields[name].widget.attrs)
+                self.assertEqual(
+                    create_form.fields[name].widget.attrs["maxlength"],
+                    "150",
+                )
+
     def test_create_form_accepts_optional_initial_methods(self):
         form = ContactCreateForm(
             data={
@@ -437,10 +450,15 @@ class ContactViewTests(ContactTestMixin, TestCase):
         )
 
     def test_invalid_add_contact_reopens_modal_without_partial_creation(self):
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("contact:add_contact"),
             {"first_name": "Alice", "email": "invalid"},
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["open_modal"], "addContactModal")
@@ -461,6 +479,59 @@ class ContactViewTests(ContactTestMixin, TestCase):
             response,
             f"{reverse('contact:contacts')}?selected={contact.pk}",
         )
+
+    def test_invalid_edit_contact_redirects_and_restores_bound_form_once(self):
+        contact = self.create_contact(self.user, last_name="Smith")
+
+        post_response = self.client.post(
+            reverse("contact:edit_contact", args=[contact.pk]),
+            {"first_name": "", "last_name": "Changed"},
+        )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(reverse("contact:contacts"), post_response.url)
+        self.assertIn(f"selected={contact.pk}", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+        self.assertNotIn("first_name", post_response.url)
+
+        response = self.client.get(post_response.url)
+        form = response.context["edit_contact_form"]
+        contact.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_contact"], contact)
+        self.assertEqual(response.context["active_tab"], "details")
+        self.assertEqual(response.context["open_modal"], "editContactModal")
+        self.assertTrue(form.is_bound)
+        self.assertEqual(form["first_name"].value(), "")
+        self.assertEqual(form["last_name"].value(), "Changed")
+        self.assertIn("first_name", form.errors)
+        self.assertEqual(contact.first_name, "Alice")
+        self.assertEqual(contact.last_name, "Smith")
+
+        refreshed_response = self.client.get(post_response.url)
+        self.assertFalse(refreshed_response.context["edit_contact_form"].is_bound)
+        self.assertIsNone(refreshed_response.context["open_modal"])
+
+    def test_overlong_edit_contact_name_is_rejected_with_visible_error(self):
+        contact = self.create_contact(self.user)
+        overlong_name = "a" * 151
+
+        post_response = self.client.post(
+            reverse("contact:edit_contact", args=[contact.pk]),
+            {"first_name": overlong_name, "last_name": ""},
+        )
+        response = self.client.get(post_response.url)
+        contact.refresh_from_db()
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["edit_contact_form"]["first_name"].value(),
+            overlong_name,
+        )
+        self.assertIn("first_name", response.context["edit_contact_form"].errors)
+        self.assertEqual(contact.first_name, "Alice")
 
     def test_lifecycle_views_change_state_and_soft_delete(self):
         contact = self.create_contact(self.user)
@@ -511,13 +582,45 @@ class ContactViewTests(ContactTestMixin, TestCase):
         self.assertEqual(delete_response.status_code, 302)
         self.assertFalse(ContactMethod.objects.filter(pk=method.pk).exists())
 
+    def test_edit_method_query_opens_modal_with_method_form(self):
+        contact = self.create_contact(self.user)
+        method = self.create_method(contact)
+
+        response = self.client.get(
+            reverse("contact:contacts"),
+            {"selected": contact.pk, "edit_method": method.pk},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_contact"], contact)
+        self.assertEqual(response.context["edit_contact_method"], method)
+        self.assertEqual(
+            response.context["edit_contact_method_form"].instance,
+            method,
+        )
+        self.assertEqual(response.context["open_modal"], "editContactMethodModal")
+        self.assertContains(
+            response,
+            'data-modal-clear-query="edit_method form_state"',
+        )
+        self.assertContains(
+            response,
+            'data-modal-auto-open="editContactMethodModal"',
+        )
+
     def test_invalid_method_form_reopens_correct_modal(self):
         contact = self.create_contact(self.user)
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("contact:add_contact_method", args=[contact.pk]),
             {"type": ContactMethod.Type.EMAIL, "value": "invalid"},
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(f"selected={contact.pk}", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["open_modal"], "addContactMethodModal")
@@ -525,6 +628,33 @@ class ContactViewTests(ContactTestMixin, TestCase):
             "value",
             response.context["add_contact_method_form"].errors,
         )
+
+    def test_invalid_edit_method_form_reopens_correct_modal(self):
+        contact = self.create_contact(self.user)
+        method = self.create_method(contact)
+
+        post_response = self.client.post(
+            reverse(
+                "contact:edit_contact_method",
+                args=[contact.pk, method.pk],
+            ),
+            {"type": ContactMethod.Type.EMAIL, "value": "invalid"},
+        )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(f"selected={contact.pk}", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
+        form = response.context["edit_contact_method_form"]
+        method.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["open_modal"], "editContactMethodModal")
+        self.assertEqual(response.context["edit_contact_method"], method)
+        self.assertEqual(form["value"].value(), "invalid")
+        self.assertIn("value", form.errors)
+        self.assertEqual(method.value, "alice@example.com")
 
     def test_cross_user_contact_and_method_mutations_return_404(self):
         contact = self.create_contact(self.other_user, "Bob")
@@ -674,10 +804,17 @@ class ContactViewTests(ContactTestMixin, TestCase):
     def test_invalid_add_note_form_returns_errors(self):
         contact = self.create_contact(self.user)
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("contact:add_contact_note", args=[contact.pk]),
             {"content": ""},
         )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(f"selected={contact.pk}", post_response.url)
+        self.assertIn("tab=notes", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+
+        response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["active_tab"], "notes")
@@ -695,23 +832,33 @@ class ContactViewTests(ContactTestMixin, TestCase):
         note = self.create_note(self.user, contact)
         original_content = note.content
 
-        response = self.client.post(
+        post_response = self.client.post(
             reverse("contact:edit_contact_note", args=[contact.pk, note.pk]),
             {"content": ""},
         )
 
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn(reverse("contact:contacts"), post_response.url)
+        self.assertIn(f"selected={contact.pk}", post_response.url)
+        self.assertIn("tab=notes", post_response.url)
+        self.assertIn("form_state=", post_response.url)
+        self.assertNotIn("content", post_response.url)
+
+        response = self.client.get(post_response.url)
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["active_tab"], "notes")
         self.assertEqual(response.context["selected_contact"], contact)
+        self.assertEqual(response.context["edit_contact_note"], note)
         form = response.context["edit_contact_note_form"]
         note.refresh_from_db()
 
         self.assertEqual(note.content, original_content)
         self.assertEqual(form["content"].value(), "")
-        self.assertIn(
-            "content",
-            response.context["edit_contact_note_form"].errors,
-        )
+        self.assertIn("content", form.errors)
+
+        refreshed_response = self.client.get(post_response.url)
+        self.assertIsNone(refreshed_response.context["edit_contact_note_form"])
 
     def test_contacts_notes_tab_renders_owned_notes_in_correct_order(self):
         contact = self.create_contact(self.user)

@@ -10,6 +10,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from config.form_state import (
+    deserialise_form_data,
+    pop_form_state,
+    serialise_form_data,
+    store_form_state,
+)
+
 from property.selectors import properties_for_user
 from issue.selectors import issues_for_user
 from task.selectors import tasks_for_user
@@ -107,7 +114,13 @@ def _calendar_query(values, month):
     return urlencode(parameters)
 
 
-def _event_workspace_url(request, *, event_id=None, tab="details"):
+def _event_workspace_url(
+    request,
+    *,
+    event_id=None,
+    tab="details",
+    form_state=None,
+):
     parameters = _list_query_parameters(_normalised_list_values(request))
     try:
         page = int(request.GET.get("page", ""))
@@ -123,8 +136,103 @@ def _event_workspace_url(request, *, event_id=None, tab="details"):
         parameters["selected"] = event_id
     if tab == "calendar":
         parameters["tab"] = "calendar"
+    if form_state is not None:
+        parameters["form_state"] = form_state
     url = reverse("event:events")
     return f"{url}?{urlencode(parameters)}" if parameters else url
+
+
+def _scheduled_event_from_form_state(request, state):
+    return events_for_user(user=request.user).filter(
+        pk=state.get("event_id"),
+        state=Event.State.SCHEDULED,
+    ).first()
+
+
+def _restore_add_event_forms(request, state):
+    data = deserialise_form_data(state.get("data", {}))
+    return {
+        "add_event_form": EventForm(
+            data,
+            user=request.user,
+            auto_id="add_event_%s",
+        ),
+        "initial_contacts_form": EventContactForm(
+            data,
+            user=request.user,
+            auto_id="initial_contacts_%s",
+        ),
+        "open_modal": "addEventModal",
+    }
+
+
+def _restore_edit_event_form(request, state):
+    event = _scheduled_event_from_form_state(request, state)
+    if event is None:
+        return {}
+    return {
+        "selected_event": event,
+        "edit_event_form": EventForm(
+            deserialise_form_data(state.get("data", {})),
+            user=request.user,
+            instance=event,
+            auto_id="edit_event_%s",
+        ),
+        "active_tab": "details",
+        "open_modal": "editEventModal",
+    }
+
+
+def _restore_add_event_contacts_form(request, state):
+    event = _scheduled_event_from_form_state(request, state)
+    if event is None:
+        return {}
+    return {
+        "selected_event": event,
+        "add_contacts_form": EventContactForm(
+            deserialise_form_data(state.get("data", {})),
+            user=request.user,
+            event=event,
+            auto_id="event_contacts_%s",
+        ),
+        "active_tab": "details",
+        "open_modal": "addEventContactsModal",
+    }
+
+
+EVENT_FORM_STATE_RESTORERS = {
+    "add_event": _restore_add_event_forms,
+    "edit_event": _restore_edit_event_form,
+    "add_event_contacts": _restore_add_event_contacts_form,
+}
+
+
+def _restore_event_form_context(request):
+    state = pop_form_state(request)
+    if not isinstance(state, dict):
+        return {}
+    restorer = EVENT_FORM_STATE_RESTORERS.get(state.get("action"))
+    return restorer(request, state) if restorer is not None else {}
+
+
+def _redirect_with_event_form_state(
+    request,
+    *,
+    action,
+    event_id=None,
+):
+    token = store_form_state(request, {
+        "action": action,
+        "event_id": event_id,
+        "data": serialise_form_data(request.POST),
+    })
+    return redirect(
+        _event_workspace_url(
+            request,
+            event_id=event_id,
+            form_state=token,
+        )
+    )
 
 
 def _event_list_context(
@@ -272,7 +380,11 @@ def _event_list_context(
 @login_required
 @require_GET
 def events_view(request):
-    return render(request, "event/events.html", _event_list_context(request))
+    return render(
+        request,
+        "event/events.html",
+        _event_list_context(request, **_restore_event_form_context(request)),
+    )
 
 
 @login_required
@@ -293,12 +405,10 @@ def add_event_view(request):
             **event_form.cleaned_data,
         )
         return redirect(_event_workspace_url(request, event_id=event.pk))
-    return render(request, "event/events.html", _event_list_context(
+    return _redirect_with_event_form_state(
         request,
-        add_event_form=event_form,
-        initial_contacts_form=contacts_form,
-        open_modal="addEventModal",
-    ))
+        action="add_event",
+    )
 
 
 @login_required
@@ -326,13 +436,11 @@ def edit_event_view(request, event_id):
     if form.is_valid():
         update_event(event=event, **form.cleaned_data)
         return redirect(_event_workspace_url(request, event_id=event.pk))
-    return render(request, "event/events.html", _event_list_context(
+    return _redirect_with_event_form_state(
         request,
-        selected_event=event,
-        edit_event_form=form,
-        active_tab="details",
-        open_modal="editEventModal",
-    ))
+        action="edit_event",
+        event_id=event.pk,
+    )
 
 
 @login_required
@@ -373,13 +481,11 @@ def add_event_contacts_to_event_view(request, event_id):
     if form.is_valid():
         add_contacts_to_event(event=event, contacts=form.cleaned_data["contacts"])
         return redirect(_event_workspace_url(request, event_id=event.pk))
-    return render(request, "event/events.html", _event_list_context(
+    return _redirect_with_event_form_state(
         request,
-        selected_event=event,
-        add_contacts_form=form,
-        active_tab="details",
-        open_modal="addEventContactsModal",
-    ))
+        action="add_event_contacts",
+        event_id=event.pk,
+    )
 
 
 @login_required

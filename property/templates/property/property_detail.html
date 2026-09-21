@@ -182,6 +182,7 @@
         <div
             class="modal fade"
             id="editPropertyModal"
+            data-modal-clear-query="edit form_state"
             tabindex="-1"
             aria-labelledby="editPropertyModalLabel"
             aria-hidden="true"
@@ -244,6 +245,7 @@
         <div
             class="modal fade"
             id="deactivatePropertyModal"
+            data-modal-clear-query="deactivate"
             tabindex="-1"
             aria-labelledby="deactivatePropertyModalLabel"
             aria-hidden="true"
@@ -275,6 +277,7 @@
     <div
         class="modal fade"
         id="deletePropertyModal"
+        data-modal-clear-query="confirm_delete"
         tabindex="-1"
         aria-labelledby="deletePropertyModalLabel"
         aria-hidden="true"
@@ -303,34 +306,14 @@
 
 {% block extra_js %}
     {% if edit_property_form.errors %}
-        <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                const modalElement = document.getElementById("editPropertyModal");
-                bootstrap.Modal.getOrCreateInstance(modalElement).show();
-            });
-        </script>
+        <span hidden data-modal-auto-open="editPropertyModal"></span>
     {% elif request.GET.confirm_delete == "1" %}
-        <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                const modalElement = document.getElementById("deletePropertyModal");
-                bootstrap.Modal.getOrCreateInstance(modalElement).show();
-            });
-        </script>
+        <span hidden data-modal-auto-open="deletePropertyModal"></span>
     {% elif property.state == "active" %}
         {% if request.GET.edit == "1" %}
-            <script>
-                document.addEventListener("DOMContentLoaded", () => {
-                    const modalElement = document.getElementById("editPropertyModal");
-                    bootstrap.Modal.getOrCreateInstance(modalElement).show();
-                });
-            </script>
+            <span hidden data-modal-auto-open="editPropertyModal"></span>
         {% elif request.GET.deactivate == "1" %}
-            <script>
-                document.addEventListener("DOMContentLoaded", () => {
-                    const modalElement = document.getElementById("deactivatePropertyModal");
-                    bootstrap.Modal.getOrCreateInstance(modalElement).show();
-                });
-            </script>
+            <span hidden data-modal-auto-open="deactivatePropertyModal"></span>
         {% endif %}
     {% endif %}
 {% endblock %}

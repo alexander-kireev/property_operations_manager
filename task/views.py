@@ -8,6 +8,13 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
 
+from config.form_state import (
+    deserialise_form_data,
+    pop_form_state,
+    serialise_form_data,
+    store_form_state,
+)
+
 from issue.selectors import issues_for_user
 from event.selectors import events_for_user
 
@@ -83,16 +90,77 @@ def _list_query_parameters(values):
     return parameters
 
 
-def _task_workspace_url(request, *, task_id=None):
+def _task_workspace_url(request, *, task_id=None, form_state=None):
     parameters = _list_query_parameters(_normalised_list_values(request))
     page = request.GET.get("page", "")
     if page.isdigit() and int(page) > 1:
         parameters["page"] = page
     if task_id is not None:
         parameters["selected"] = task_id
+    if form_state is not None:
+        parameters["form_state"] = form_state
 
     url = reverse("task:tasks")
     return f"{url}?{urlencode(parameters)}" if parameters else url
+
+
+def _restore_add_task_form(request, state):
+    return {
+        "add_task_form": TaskForm(
+            deserialise_form_data(state.get("data", {})),
+            user=request.user,
+            auto_id="add_task_%s",
+        ),
+        "open_modal": "addTaskModal",
+    }
+
+
+def _restore_edit_task_form(request, state):
+    task = tasks_for_user(user=request.user).filter(
+        pk=state.get("task_id"),
+        state=Task.State.ACTIVE,
+    ).first()
+    if task is None:
+        return {}
+    return {
+        "selected_task": task,
+        "edit_task_form": TaskForm(
+            deserialise_form_data(state.get("data", {})),
+            user=request.user,
+            instance=task,
+            auto_id="edit_task_%s",
+        ),
+        "open_modal": "editTaskModal",
+    }
+
+
+TASK_FORM_STATE_RESTORERS = {
+    "add_task": _restore_add_task_form,
+    "edit_task": _restore_edit_task_form,
+}
+
+
+def _restore_task_form_context(request):
+    state = pop_form_state(request)
+    if not isinstance(state, dict):
+        return {}
+    restorer = TASK_FORM_STATE_RESTORERS.get(state.get("action"))
+    return restorer(request, state) if restorer is not None else {}
+
+
+def _redirect_with_task_form_state(request, *, action, task_id=None):
+    token = store_form_state(request, {
+        "action": action,
+        "task_id": task_id,
+        "data": serialise_form_data(request.POST),
+    })
+    return redirect(
+        _task_workspace_url(
+            request,
+            task_id=task_id,
+            form_state=token,
+        )
+    )
 
 
 def _task_action_redirect(request, *, task, deleted=False):
@@ -229,7 +297,11 @@ def _task_list_context(
 @login_required
 @require_GET
 def tasks_view(request):
-    return render(request, "task/tasks.html", _task_list_context(request))
+    return render(
+        request,
+        "task/tasks.html",
+        _task_list_context(request, **_restore_task_form_context(request)),
+    )
 
 
 @login_required
@@ -243,14 +315,9 @@ def add_task_view(request):
     if form.is_valid():
         task = create_task(user=request.user, **form.cleaned_data)
         return redirect(_task_workspace_url(request, task_id=task.pk))
-    return render(
+    return _redirect_with_task_form_state(
         request,
-        "task/tasks.html",
-        _task_list_context(
-            request,
-            add_task_form=form,
-            open_modal="addTaskModal",
-        ),
+        action="add_task",
     )
 
 
@@ -271,15 +338,10 @@ def edit_task_view(request, task_id):
     if form.is_valid():
         update_task(task=task, **form.cleaned_data)
         return redirect(_task_workspace_url(request, task_id=task.pk))
-    return render(
+    return _redirect_with_task_form_state(
         request,
-        "task/tasks.html",
-        _task_list_context(
-            request,
-            selected_task=task,
-            edit_task_form=form,
-            open_modal="editTaskModal",
-        ),
+        action="edit_task",
+        task_id=task.pk,
     )
 
 
