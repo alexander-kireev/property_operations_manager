@@ -320,6 +320,88 @@ body {
     min-height: 4.75rem;
 }
 
+.property-list-grid {
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 1.35fr) minmax(0, 2.4fr) minmax(6rem, 0.8fr) 2.25rem;
+    align-items: center;
+    column-gap: 1rem;
+}
+
+.property-row-identity,
+.property-row-address,
+.property-row-actions {
+    min-width: 0;
+}
+
+.property-row-name,
+.property-row-address,
+.property-row-mobile-address {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.property-row-name:hover,
+.property-row-name:focus-visible {
+    text-decoration: underline !important;
+}
+
+.property-row-actions {
+    justify-self: end;
+}
+
+.property-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border-color: transparent;
+    opacity: 0;
+}
+
+.property-actions svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.property-row:hover .property-actions,
+.property-row:focus-within .property-actions,
+.property-actions.show {
+    opacity: 1;
+    border-color: var(--bs-border-color);
+}
+
+.property-description-preview,
+.property-description-disclosure p {
+    overflow-wrap: anywhere;
+}
+
+.property-description-disclosure summary {
+    width: fit-content;
+    color: var(--bs-link-color);
+    cursor: pointer;
+}
+
+.property-description-disclosure summary:hover {
+    text-decoration: underline;
+}
+
+.property-description-hide,
+.property-description-disclosure[open] .property-description-show {
+    display: none;
+}
+
+.property-description-disclosure[open] .property-description-hide {
+    display: inline;
+}
+
+.property-details:has(.property-description-disclosure[open]) .property-description-preview {
+    display: none;
+}
+
 .property-toggle {
     width: 2.25rem;
     height: 2.25rem;
@@ -361,6 +443,112 @@ body {
 
 .property-stat {
     min-height: 100%;
+}
+
+.property-detail-page .page-shell,
+.property-detail-page main,
+.property-detail-layout,
+.property-detail-heading {
+    min-width: 0;
+}
+
+.property-detail-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "breadcrumb actions"
+        "heading heading";
+    gap: 1rem;
+}
+
+.property-detail-heading {
+    grid-area: heading;
+}
+
+.property-detail-breadcrumb,
+.property-detail-title,
+.property-detail-address,
+.property-detail-description {
+    overflow-wrap: anywhere;
+}
+
+.property-detail-breadcrumb {
+    grid-area: breadcrumb;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    align-self: center;
+}
+
+.property-detail-breadcrumb > a,
+.property-detail-breadcrumb > span[aria-hidden] {
+    flex: 0 0 auto;
+}
+
+.property-detail-breadcrumb-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.property-detail-title {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.property-detail-actions {
+    grid-area: actions;
+    align-self: start;
+    white-space: nowrap;
+}
+
+@media (min-width: 992px) {
+    .property-detail-header {
+        grid-template-areas:
+            "breadcrumb breadcrumb"
+            "heading actions";
+    }
+
+    .property-detail-actions {
+        min-width: 11rem;
+        justify-content: flex-end;
+    }
+}
+
+.property-form-dialog .modal-header,
+.property-form-dialog .modal-body,
+.property-form-dialog .modal-footer {
+    padding-right: 1.5rem;
+    padding-left: 1.5rem;
+}
+
+.property-form-dialog .modal-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (min-width: 576px) {
+    .property-form-dialog {
+        max-width: 35rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .property-form-dialog .modal-header,
+    .property-form-dialog .modal-body,
+    .property-form-dialog .modal-footer {
+        padding-right: 1.25rem;
+        padding-left: 1.25rem;
+    }
+}
+
+@media (hover: none) {
+    .property-actions {
+        opacity: 1;
+        border-color: var(--bs-border-color);
+    }
 }
 
 .task-metadata-item {
@@ -907,6 +1095,32 @@ body {
     .property-list-heading,
     .task-list-heading {
         display: none;
+    }
+
+    .property-list-grid {
+        grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+        column-gap: 0.75rem;
+        row-gap: 0.25rem;
+    }
+
+    .property-row-toggle {
+        grid-column: 1;
+        grid-row: 1 / 3;
+    }
+
+    .property-row-identity {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .property-row-state {
+        grid-column: 2;
+        grid-row: 2;
+    }
+
+    .property-row-actions {
+        grid-column: 3;
+        grid-row: 1 / 3;
     }
 
     .property-summary,
