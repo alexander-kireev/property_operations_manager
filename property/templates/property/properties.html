@@ -40,7 +40,7 @@
                             placeholder="Search by property name or address"
                         >
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-2">
+                    <div class="col-6 col-lg-2">
                         <label class="visually-hidden" for="stateFilter">Filter by state</label>
                         <select class="form-select" id="stateFilter" name="state">
                             <option value="all" {% if state == "all" %}selected{% endif %}>All states</option>
@@ -64,22 +64,19 @@
             </form>
 
             {% if page_obj %}
-                <div class="property-list-heading border-bottom px-4 py-2 text-body-secondary small fw-medium">
-                    <div class="row align-items-center gx-3">
-                        <div class="col-auto" style="width: 3.25rem;"></div>
-                        <div class="col-md-3">Property</div>
-                        <div class="col">Address</div>
-                        <div class="col-md-2">State</div>
-                        <div class="col-auto" style="width: 3.25rem;"></div>
-                    </div>
+                <div class="property-list-heading property-list-grid border-bottom px-3 px-md-4 py-2 text-body-secondary small fw-medium">
+                    <span aria-hidden="true"></span>
+                    <span>Property</span>
+                    <span>Address</span>
+                    <span>State</span>
+                    <span aria-hidden="true"></span>
                 </div>
 
                 <div id="propertyList">
                     {% for property in page_obj %}
                         <article class="property-row{% if property.state == 'deactivated' %} property-row-deactivated{% endif %}">
-                            <div class="property-summary px-3 px-md-4 py-2">
-                                <div class="row align-items-center gx-3 gy-2 h-100">
-                                    <div class="col-auto">
+                            <div class="property-summary property-list-grid px-3 px-md-4 py-2">
+                                <div class="property-row-toggle">
                                         <button
                                             class="property-toggle btn btn-sm btn-outline-secondary rounded-circle d-inline-flex align-items-center justify-content-center"
                                             type="button"
@@ -93,22 +90,22 @@
                                                 <path d="M3.2 5.7a.75.75 0 0 1 1.1 0L8 9.4l3.7-3.7a.75.75 0 1 1 1.1 1.1l-4.25 4.25a.75.75 0 0 1-1.1 0L3.2 6.8a.75.75 0 0 1 0-1.1Z"></path>
                                             </svg>
                                         </button>
-                                    </div>
+                                </div>
 
-                                    <div class="col-9 col-md-3">
-                                        <a class="fw-semibold link-body-emphasis text-decoration-none" href="{% url 'property:property_detail' property.pk %}">
+                                <div class="property-row-identity">
+                                        <a class="property-row-name fw-semibold link-body-emphasis text-decoration-none" href="{% url 'property:property_detail' property.pk %}" title="{{ property.name }}">
                                             {{ property.name }}
                                         </a>
-                                        <div class="small text-body-secondary d-md-none">
+                                        <div class="property-row-mobile-address small text-body-secondary d-md-none" title="{{ property.address|default:'No address provided' }}">
                                             {{ property.address|default:"No address provided" }}
                                         </div>
-                                    </div>
+                                </div>
 
-                                    <div class="col d-none d-md-block text-body-secondary">
-                                        {{ property.address|default:"No address provided" }}
-                                    </div>
+                                <div class="property-row-address d-none d-md-block text-body-secondary" title="{{ property.address|default:'No address provided' }}">
+                                    {{ property.address|default:"No address provided" }}
+                                </div>
 
-                                    <div class="col-8 col-md-2 ms-5 ms-md-0">
+                                <div class="property-row-state">
                                         {% if property.state == "active" %}
                                             <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis">
                                                 {{ property.get_state_display }}
@@ -118,9 +115,9 @@
                                                 {{ property.get_state_display }}
                                             </span>
                                         {% endif %}
-                                    </div>
+                                </div>
 
-                                    <div class="col-auto ms-auto">
+                                <div class="property-row-actions">
                                         <div class="dropdown">
                                             <button
                                                 class="property-actions btn btn-sm btn-outline-secondary dropdown-toggle"
@@ -129,7 +126,11 @@
                                                 aria-expanded="false"
                                                 aria-label="Actions for {{ property.name }}"
                                             >
-                                                ⋮
+                                                <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                                    <circle cx="8" cy="3" r="1.25"></circle>
+                                                    <circle cx="8" cy="8" r="1.25"></circle>
+                                                    <circle cx="8" cy="13" r="1.25"></circle>
+                                                </svg>
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end">
                                                 <li><a class="dropdown-item" href="{% url 'property:property_detail' property.pk %}">Open property</a></li>
@@ -149,7 +150,6 @@
                                                 <li><a class="dropdown-item text-danger" href="{% url 'property:property_detail' property.pk %}?confirm_delete=1">Delete property</a></li>
                                             </ul>
                                         </div>
-                                    </div>
                                 </div>
                             </div>
 
@@ -158,33 +158,39 @@
                                     <div class="row g-4">
                                         <div class="col-lg-5">
                                             <h3 class="h6">Property summary</h3>
-                                            <p class="text-body-secondary mb-3">
-                                                {{ property.description|default:"No description provided." }}
-                                            </p>
+                                            {% if property.description|length > 220 %}
+                                                <p class="property-description-preview text-body-secondary mb-2">{{ property.description|truncatechars:220 }}</p>
+                                                <details class="property-description-disclosure mb-3">
+                                                    <summary><span class="property-description-show">Show full description</span><span class="property-description-hide">Hide full description</span></summary>
+                                                    <p class="text-body-secondary mt-2 mb-0">{{ property.description }}</p>
+                                                </details>
+                                            {% else %}
+                                                <p class="property-description-preview text-body-secondary mb-3">{{ property.description|default:"No description provided." }}</p>
+                                            {% endif %}
                                             <a class="btn theme-action" href="{% url 'property:property_detail' property.pk %}">Open property</a>
                                         </div>
 
                                         <div class="col-lg-7">
                                             <div class="row g-3">
-                                                <div class="col-6 col-md-3">
+                                                <div class="col-6 col-xl-3">
                                                     <div class="property-stat border rounded bg-body p-3">
                                                         <div class="h4 mb-1">—</div>
                                                         <div class="small text-body-secondary">Open issues</div>
                                                     </div>
                                                 </div>
-                                                <div class="col-6 col-md-3">
+                                                <div class="col-6 col-xl-3">
                                                     <div class="property-stat border rounded bg-body p-3">
                                                         <div class="h4 mb-1">—</div>
                                                         <div class="small text-body-secondary">Open tasks</div>
                                                     </div>
                                                 </div>
-                                                <div class="col-6 col-md-3">
+                                                <div class="col-6 col-xl-3">
                                                     <div class="property-stat border rounded bg-body p-3">
                                                         <div class="h4 mb-1">—</div>
                                                         <div class="small text-body-secondary">Contacts</div>
                                                     </div>
                                                 </div>
-                                                <div class="col-6 col-md-3">
+                                                <div class="col-6 col-xl-3">
                                                     <div class="property-stat border rounded bg-body p-3">
                                                         <div class="fw-semibold mb-1">—</div>
                                                         <div class="small text-body-secondary">Next event</div>
