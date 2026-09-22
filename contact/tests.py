@@ -481,6 +481,21 @@ class ContactViewTests(ContactTestMixin, TestCase):
         self.assertNotContains(response, str(other_contact))
         self.assertEqual(response.context["selected_contact"], contact)
 
+    def test_confirmation_dialogs_keep_long_contact_values_out_of_titles(self):
+        long_name = "A" * 80
+        contact = self.create_contact(self.user, first_name=long_name)
+        long_email = f"contact{'2' * 85}@example.com"
+        self.create_method(contact, value=long_email)
+
+        response = self.client.get(reverse("contact:contacts"))
+
+        self.assertContains(response, 'id="editContactModalLabel">Edit contact</h2>')
+        self.assertContains(response, 'id="deleteContactModalLabel">Delete contact?</h2>')
+        self.assertContains(response, 'class="modal-context-value">' + long_name)
+        self.assertContains(response, 'class="modal-context-value">' + long_email)
+        self.assertContains(response, 'class="btn btn-danger" type="submit">Delete contact')
+        self.assertContains(response, 'class="btn btn-danger" type="submit">Delete detail')
+
     def test_contact_details_group_email_and_telephone_methods(self):
         contact = self.create_contact(self.user)
         email = self.create_method(contact, value="alice@example.com")

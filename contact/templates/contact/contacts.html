@@ -190,7 +190,7 @@
     </section>
 </div>
 
-<div class="modal fade" id="addContactModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addContactModalLabel" aria-hidden="true">
+<div class="modal fade modal-resilient" id="addContactModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addContactModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
         <div class="modal-header"><h2 class="modal-title fs-5" id="addContactModalLabel">Add contact</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
         <form action="{% url 'contact:add_contact' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
@@ -205,9 +205,9 @@
 
 {% if selected_contact %}
     {% if selected_contact.state == "active" %}
-        <div class="modal fade" id="editContactModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editContactModalLabel" aria-hidden="true">
+        <div class="modal fade modal-resilient" id="editContactModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editContactModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-                <div class="modal-header"><h2 class="modal-title fs-5" id="editContactModalLabel">Edit {{ selected_contact }}</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-header"><h2 class="modal-title fs-5" id="editContactModalLabel">Edit contact</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'contact:edit_contact' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
                     <div class="modal-body">{% csrf_token %}{% for field in edit_contact_form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}</div>
                     <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save changes</button></div>
@@ -215,7 +215,7 @@
             </div></div>
         </div>
 
-        <div class="modal fade" id="addContactMethodModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addContactMethodModalLabel" aria-hidden="true">
+        <div class="modal fade modal-resilient" id="addContactMethodModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addContactMethodModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
                 <div class="modal-header"><h2 class="modal-title fs-5" id="addContactMethodModalLabel">Add contact detail</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'contact:add_contact_method' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
@@ -226,7 +226,7 @@
         </div>
 
         {% if edit_contact_method and edit_contact_method_form %}
-            <div class="modal fade" id="editContactMethodModal" data-modal-clear-query="edit_method form_state" tabindex="-1" aria-labelledby="editContactMethodModalLabel" aria-hidden="true">
+            <div class="modal fade modal-resilient" id="editContactMethodModal" data-modal-clear-query="edit_method form_state" tabindex="-1" aria-labelledby="editContactMethodModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
                     <div class="modal-header"><h2 class="modal-title fs-5" id="editContactMethodModalLabel">Edit contact detail</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                     <form action="{% url 'contact:edit_contact_method' selected_contact.pk edit_contact_method.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
@@ -237,19 +237,19 @@
             </div>
         {% endif %}
 
-        <div class="modal fade" id="deactivateContactModal" tabindex="-1" aria-labelledby="deactivateContactModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="deactivateContactModalLabel">Deactivate {{ selected_contact }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body">The contact will become read-only and remain available as history.</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'contact:deactivate_contact' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Deactivate</button></form></div></div></div>
+        <div class="modal fade modal-resilient" id="deactivateContactModal" tabindex="-1" aria-labelledby="deactivateContactModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="deactivateContactModalLabel">Deactivate contact?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>The contact will become read-only and remain available as history.</p><div class="modal-context"><span class="small text-body-secondary d-block">Contact</span><span class="modal-context-value">{{ selected_contact }}</span></div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep contact</button><form action="{% url 'contact:deactivate_contact' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Deactivate contact</button></form></div></div></div>
         </div>
 
         {% for method in contact_methods %}
-            <div class="modal fade" id="deleteContactMethodModal{{ method.pk }}" tabindex="-1" aria-labelledby="deleteContactMethodModalLabel{{ method.pk }}" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="deleteContactMethodModalLabel{{ method.pk }}">Delete {{ method.get_type_display|lower }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-0">{{ method.value }} will be permanently removed from this contact.</p></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'contact:delete_contact_method' selected_contact.pk method.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Delete detail</button></form></div></div></div>
+            <div class="modal fade modal-resilient" id="deleteContactMethodModal{{ method.pk }}" tabindex="-1" aria-labelledby="deleteContactMethodModalLabel{{ method.pk }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="deleteContactMethodModalLabel{{ method.pk }}">Delete {{ method.get_type_display|lower }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>Remove this {{ method.get_type_display|lower }} from the contact?</p><div class="modal-context"><span class="small text-body-secondary d-block">{{ method.get_type_display }}</span><span class="modal-context-value">{{ method.value }}</span></div><p class="text-body-secondary mb-0 mt-3">This detail will be permanently removed.</p></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep detail</button><form action="{% url 'contact:delete_contact_method' selected_contact.pk method.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete detail</button></form></div></div></div>
             </div>
         {% endfor %}
     {% endif %}
 
-    <div class="modal fade" id="deleteContactModal" tabindex="-1" aria-labelledby="deleteContactModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="deleteContactModalLabel">Delete {{ selected_contact }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-2">This contact will be removed from your workspace.</p><p class="text-body-secondary mb-0">The underlying record and its contact details are retained as history.</p></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'contact:delete_contact' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Delete contact</button></form></div></div></div>
+    <div class="modal fade modal-resilient" id="deleteContactModal" tabindex="-1" aria-labelledby="deleteContactModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="deleteContactModalLabel">Delete contact?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>Remove this contact from your workspace?</p><div class="modal-context"><span class="small text-body-secondary d-block">Contact</span><span class="modal-context-value">{{ selected_contact }}</span></div><p class="text-body-secondary mb-0 mt-3">The underlying record and its contact details are retained as history.</p></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep contact</button><form action="{% url 'contact:delete_contact' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete contact</button></form></div></div></div>
     </div>
 {% endif %}
 {% endblock %}

@@ -310,34 +310,34 @@
     {% endif %}
 
     {% if selected_event.state == "scheduled" %}
-        <div class="modal fade" id="occurEventModal" tabindex="-1" aria-labelledby="occurEventModalLabel" aria-hidden="true">
+        <div class="modal fade modal-resilient" id="occurEventModal" tabindex="-1" aria-labelledby="occurEventModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-                <div class="modal-header"><h2 class="modal-title fs-5" id="occurEventModalLabel">Mark {{ selected_event.title }} as occurred?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body"><p class="mb-0">The event will be marked as occurred and retained in your history.</p></div>
+                <div class="modal-header"><h2 class="modal-title fs-5" id="occurEventModalLabel">Mark event as occurred?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body"><p>The event will be marked as occurred and retained in your history.</p><div class="modal-context"><span class="small text-body-secondary d-block">Event</span><span class="modal-context-value">{{ selected_event.title }}</span></div></div>
                 <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep scheduled</button><form action="{% url 'event:mark_event_occurred' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn theme-action" type="submit">Mark occurred</button></form></div>
             </div></div>
         </div>
-        <div class="modal fade" id="cancelEventModal" tabindex="-1" aria-labelledby="cancelEventModalLabel" aria-hidden="true">
+        <div class="modal fade modal-resilient" id="cancelEventModal" tabindex="-1" aria-labelledby="cancelEventModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-                <div class="modal-header"><h2 class="modal-title fs-5" id="cancelEventModalLabel">Cancel {{ selected_event.title }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body"><p class="mb-0">The event will be marked as cancelled and retained in your history.</p></div>
+                <div class="modal-header"><h2 class="modal-title fs-5" id="cancelEventModalLabel">Cancel event?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body"><p>The event will be marked as cancelled and retained in your history.</p><div class="modal-context"><span class="small text-body-secondary d-block">Event</span><span class="modal-context-value">{{ selected_event.title }}</span></div></div>
                 <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep event</button><form action="{% url 'event:cancel_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Cancel event</button></form></div>
             </div></div>
         </div>
     {% else %}
-        <div class="modal fade" id="reactivateEventModal" tabindex="-1" aria-labelledby="reactivateEventModalLabel" aria-hidden="true">
+        <div class="modal fade modal-resilient" id="reactivateEventModal" tabindex="-1" aria-labelledby="reactivateEventModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-                <div class="modal-header"><h2 class="modal-title fs-5" id="reactivateEventModalLabel">Reactivate {{ selected_event.title }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body"><p class="mb-0">The event will return to the scheduled state.</p></div>
+                <div class="modal-header"><h2 class="modal-title fs-5" id="reactivateEventModalLabel">Reactivate event?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body"><p>The event will return to the scheduled state.</p><div class="modal-context"><span class="small text-body-secondary d-block">Event</span><span class="modal-context-value">{{ selected_event.title }}</span></div></div>
                 <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'event:reactivate_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn theme-action" type="submit">Reactivate</button></form></div>
             </div></div>
         </div>
     {% endif %}
-    <div class="modal fade" id="deleteEventModal" tabindex="-1" aria-labelledby="deleteEventModalLabel" aria-hidden="true">
+    <div class="modal fade modal-resilient" id="deleteEventModal" tabindex="-1" aria-labelledby="deleteEventModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-            <div class="modal-header"><h2 class="modal-title fs-5" id="deleteEventModalLabel">Delete {{ selected_event.title }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            <div class="modal-body"><p class="mb-2">This event will be removed from your workspace.</p><p class="text-body-secondary mb-0">The underlying record is retained as operational history.</p></div>
-            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'event:delete_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Delete event</button></form></div>
+            <div class="modal-header"><h2 class="modal-title fs-5" id="deleteEventModalLabel">Delete event?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><p>This event will be removed from your workspace.</p><div class="modal-context"><span class="small text-body-secondary d-block">Event</span><span class="modal-context-value">{{ selected_event.title }}</span></div><p class="text-body-secondary mb-0 mt-3">The underlying record is retained as operational history.</p></div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep event</button><form action="{% url 'event:delete_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete event</button></form></div>
         </div></div>
     </div>
 {% endif %}

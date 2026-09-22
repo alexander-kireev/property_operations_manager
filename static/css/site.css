@@ -559,6 +559,64 @@ body {
     max-width: 18rem;
 }
 
+/* Contact forms and confirmation dialogs grow naturally; only their bodies scroll. */
+.modal-resilient .modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - var(--bs-modal-margin) - var(--bs-modal-margin));
+    overflow: hidden;
+}
+
+.modal-resilient .modal-content > form {
+    display: flex;
+    flex: 0 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.modal-resilient .modal-header,
+.modal-resilient .modal-footer {
+    flex: 0 0 auto;
+}
+
+.modal-resilient .modal-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.modal-resilient .modal-header .btn-close {
+    flex: 0 0 auto;
+}
+
+.modal-resilient .modal-body {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+}
+
+.modal-resilient .modal-body :is(.form-control, .form-select) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.modal-resilient .modal-footer {
+    gap: .5rem;
+}
+
+.modal-resilient .modal-context {
+    padding: .65rem .75rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    background: var(--bs-tertiary-bg);
+}
+
+.modal-resilient .modal-context-value {
+    display: block;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
 :is(.task-command-page, .issue-command-page, .event-command-page)
     .modal[data-modal-clear-query="form_state"] .modal-content {
     max-height: calc(100dvh - var(--bs-modal-margin) - var(--bs-modal-margin));
