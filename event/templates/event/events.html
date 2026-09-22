@@ -43,7 +43,7 @@
                                     <option value="-title"{% if sort == "-title" %} selected{% endif %}>Title: Z–A</option>
                                     <option value="-created_at"{% if sort == "-created_at" %} selected{% endif %}>Newest first</option>
                                 </select>
-                                <button class="btn btn-sm btn-outline-dark" type="button" data-bs-toggle="collapse" data-bs-target="#eventFilters" aria-expanded="{% if has_filters %}true{% else %}false{% endif %}" aria-controls="eventFilters">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#eventFilters" aria-expanded="{% if has_filters %}true{% else %}false{% endif %}" aria-controls="eventFilters">
                                     Filters{% if filter_count %} <span class="badge text-bg-secondary">{{ filter_count }}</span>{% endif %}
                                 </button>
                             </div>
@@ -162,7 +162,7 @@
                                 <div class="event-detail-pane">
                                     {% if selected_event %}
                                         <header class="event-detail-header p-3 p-md-4">
-                                            <a class="event-mobile-back btn btn-sm btn-link px-0 mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to events</a>
+                                            <a class="event-mobile-back btn btn-sm pom-quiet mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to events</a>
                                             <div class="event-detail-header-layout">
                                                 <div class="event-detail-heading-copy">
                                                     <h2 class="event-detail-title h3" title="{{ selected_event.title }}">{{ selected_event.title }}</h2>
@@ -233,7 +233,7 @@
                                                             </div>
                                                             {% if selected_event.state == "scheduled" %}
                                                                 <form class="event-participant-action" action="{% url 'event:delete_event_contact_from_event' selected_event.pk event_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">
-                                                                    {% csrf_token %}<button class="btn btn-sm btn-link text-danger text-decoration-none" type="submit">Remove</button>
+                                                                    {% csrf_token %}<button class="btn btn-sm pom-quiet" type="submit">Remove</button>
                                                                 </form>
                                                             {% endif %}
                                                         </div>

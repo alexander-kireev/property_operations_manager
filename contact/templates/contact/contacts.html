@@ -96,7 +96,7 @@
                     <div class="contact-pane">
                         {% if selected_contact %}
                             <header class="contact-detail-header">
-                                <a class="contact-mobile-back btn btn-sm btn-outline-secondary mb-3" href="{% url 'contact:contacts' %}{% if list_query %}?{{ list_query }}{% endif %}">← Back to contacts</a>
+                                <a class="contact-mobile-back btn btn-sm pom-quiet mb-3" href="{% url 'contact:contacts' %}{% if list_query %}?{{ list_query }}{% endif %}">← Back to contacts</a>
                                 <div class="contact-detail-header-layout">
                                     <div class="contact-detail-heading-copy">
                                         <h2 class="contact-detail-title h3" title="{{ selected_contact }}">{{ selected_contact }}</h2>
