@@ -1,19 +1,20 @@
 {% extends "base.html" %}
 
 {% block title %}{{ property.name }} | Property Operations Manager{% endblock %}
+{% block body_class %}bg-body-tertiary property-detail-page{% endblock %}
 
 {% block content %}
-    <div class="container">
-        <nav aria-label="Breadcrumb" class="mb-3">
-            <a class="link-body-emphasis text-decoration-none" href="{% url 'property:properties' %}">Properties</a>
-            <span class="text-body-secondary mx-2" aria-hidden="true">/</span>
-            <span class="text-body-secondary">{{ property.name }}</span>
-        </nav>
+    <div class="container property-detail-layout">
+        <div class="property-detail-header mb-4">
+            <nav aria-label="Breadcrumb" class="property-detail-breadcrumb">
+                <a class="link-body-emphasis text-decoration-none" href="{% url 'property:properties' %}">Properties</a>
+                <span class="text-body-secondary" aria-hidden="true">/</span>
+                <span class="property-detail-breadcrumb-name text-body-secondary" title="{{ property.name }}">{{ property.name }}</span>
+            </nav>
 
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-4 mb-4">
-            <div>
+            <div class="property-detail-heading">
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                    <h1 class="h2 mb-0">{{ property.name }}</h1>
+                    <h1 class="property-detail-title h2 mb-0">{{ property.name }}</h1>
                     {% if property.state == "active" %}
                         <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis">
                             {{ property.get_state_display }}
@@ -24,17 +25,17 @@
                         </span>
                     {% endif %}
                 </div>
-                <p class="text-body-secondary mb-2">{{ property.address|default:"No address provided" }}</p>
-                <p class="mb-0">{{ property.description|default:"No description provided." }}</p>
+                <p class="property-detail-address text-body-secondary mb-2">{{ property.address|default:"No address provided" }}</p>
+                <p class="property-detail-description mb-0">{{ property.description|default:"No description provided." }}</p>
                 <p class="small text-body-secondary mt-2 mb-0">
                     Property created {{ property.created_at|date:"j F Y" }}
                 </p>
             </div>
 
-            <div class="d-flex flex-wrap gap-2">
+            <div class="property-detail-actions d-flex gap-2">
                 {% if property.state == "active" %}
                     <button
-                        class="btn btn-outline-secondary"
+                        class="property-detail-edit-button btn btn-outline-secondary"
                         type="button"
                         data-bs-toggle="modal"
                         data-bs-target="#editPropertyModal"
@@ -187,10 +188,10 @@
             aria-labelledby="editPropertyModalLabel"
             aria-hidden="true"
         >
-            <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-dialog modal-dialog-centered property-form-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h2 class="modal-title fs-5" id="editPropertyModalLabel">Edit {{ property.name }}</h2>
+                        <h2 class="modal-title fs-5" id="editPropertyModalLabel">Edit property</h2>
                         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
 
@@ -202,34 +203,28 @@
                                 <div class="alert alert-danger">{{ error }}</div>
                             {% endfor %}
 
-                            <div class="row align-items-center mb-3">
-                                <label class="col-md-3 col-form-label" for="{{ edit_property_form.name.id_for_label }}">Name</label>
-                                <div class="col-md-9">
-                                    {{ edit_property_form.name }}
-                                    {% for error in edit_property_form.name.errors %}
-                                        <div class="invalid-feedback d-block">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="{{ edit_property_form.name.id_for_label }}">Name</label>
+                                {{ edit_property_form.name }}
+                                {% for error in edit_property_form.name.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
                             </div>
 
-                            <div class="row align-items-start mb-3">
-                                <label class="col-md-3 col-form-label" for="{{ edit_property_form.description.id_for_label }}">Description</label>
-                                <div class="col-md-9">
-                                    {{ edit_property_form.description }}
-                                    {% for error in edit_property_form.description.errors %}
-                                        <div class="invalid-feedback d-block">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="{{ edit_property_form.description.id_for_label }}">Description</label>
+                                {{ edit_property_form.description }}
+                                {% for error in edit_property_form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
                             </div>
 
-                            <div class="row align-items-center mb-3">
-                                <label class="col-md-3 col-form-label" for="{{ edit_property_form.address.id_for_label }}">Address</label>
-                                <div class="col-md-9">
-                                    {{ edit_property_form.address }}
-                                    {% for error in edit_property_form.address.errors %}
-                                        <div class="invalid-feedback d-block">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                            <div>
+                                <label class="form-label" for="{{ edit_property_form.address.id_for_label }}">Address</label>
+                                {{ edit_property_form.address }}
+                                {% for error in edit_property_form.address.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
                             </div>
                         </div>
 

@@ -288,7 +288,7 @@
         aria-labelledby="addPropertyModalLabel"
         aria-hidden="true"
     >
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered property-form-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="modal-title fs-5" id="addPropertyModalLabel">Add property</h2>
@@ -303,34 +303,28 @@
                             <div class="alert alert-danger">{{ error }}</div>
                         {% endfor %}
 
-                        <div class="row align-items-center mb-3">
-                            <label class="col-md-3 col-form-label" for="{{ add_property_form.name.id_for_label }}">Name</label>
-                            <div class="col-md-9">
-                                {{ add_property_form.name }}
-                                {% for error in add_property_form.name.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ add_property_form.name.id_for_label }}">Name</label>
+                            {{ add_property_form.name }}
+                            {% for error in add_property_form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
                         </div>
 
-                        <div class="row align-items-start mb-3">
-                            <label class="col-md-3 col-form-label" for="{{ add_property_form.description.id_for_label }}">Description</label>
-                            <div class="col-md-9">
-                                {{ add_property_form.description }}
-                                {% for error in add_property_form.description.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ add_property_form.description.id_for_label }}">Description</label>
+                            {{ add_property_form.description }}
+                            {% for error in add_property_form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
                         </div>
 
-                        <div class="row align-items-center mb-3">
-                            <label class="col-md-3 col-form-label" for="{{ add_property_form.address.id_for_label }}">Address</label>
-                            <div class="col-md-9">
-                                {{ add_property_form.address }}
-                                {% for error in add_property_form.address.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        <div>
+                            <label class="form-label" for="{{ add_property_form.address.id_for_label }}">Address</label>
+                            {{ add_property_form.address }}
+                            {% for error in add_property_form.address.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
                         </div>
                     </div>
 

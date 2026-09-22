@@ -445,6 +445,105 @@ body {
     min-height: 100%;
 }
 
+.property-detail-page .page-shell,
+.property-detail-page main,
+.property-detail-layout,
+.property-detail-heading {
+    min-width: 0;
+}
+
+.property-detail-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "breadcrumb actions"
+        "heading heading";
+    gap: 1rem;
+}
+
+.property-detail-heading {
+    grid-area: heading;
+}
+
+.property-detail-breadcrumb,
+.property-detail-title,
+.property-detail-address,
+.property-detail-description {
+    overflow-wrap: anywhere;
+}
+
+.property-detail-breadcrumb {
+    grid-area: breadcrumb;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    align-self: center;
+}
+
+.property-detail-breadcrumb > a,
+.property-detail-breadcrumb > span[aria-hidden] {
+    flex: 0 0 auto;
+}
+
+.property-detail-breadcrumb-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.property-detail-title {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.property-detail-actions {
+    grid-area: actions;
+    align-self: start;
+    white-space: nowrap;
+}
+
+@media (min-width: 992px) {
+    .property-detail-header {
+        grid-template-areas:
+            "breadcrumb breadcrumb"
+            "heading actions";
+    }
+
+    .property-detail-actions {
+        min-width: 11rem;
+        justify-content: flex-end;
+    }
+}
+
+.property-form-dialog .modal-header,
+.property-form-dialog .modal-body,
+.property-form-dialog .modal-footer {
+    padding-right: 1.5rem;
+    padding-left: 1.5rem;
+}
+
+.property-form-dialog .modal-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (min-width: 576px) {
+    .property-form-dialog {
+        max-width: 35rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .property-form-dialog .modal-header,
+    .property-form-dialog .modal-body,
+    .property-form-dialog .modal-footer {
+        padding-right: 1.25rem;
+        padding-left: 1.25rem;
+    }
+}
+
 @media (hover: none) {
     .property-actions {
         opacity: 1;
