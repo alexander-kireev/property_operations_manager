@@ -559,9 +559,55 @@ body {
     max-width: 18rem;
 }
 
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] .modal-content {
+    max-height: calc(100dvh - var(--bs-modal-margin) - var(--bs-modal-margin));
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] .modal-content > form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] .modal-body {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] .modal-body .row > * {
+    min-width: 0;
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] :is(.form-control, .form-select) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] textarea {
+    resize: vertical;
+}
+
 @media (min-width: 576px) {
-    .task-form-dialog {
-        max-width: 680px;
+    .task-form-dialog,
+    .issue-command-page .modal-lg,
+    .event-command-page .modal-lg {
+        max-width: 42.5rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    :is(.task-command-page, .issue-command-page, .event-command-page)
+        .modal[data-modal-clear-query="form_state"] :is(.modal-header, .modal-body, .modal-footer) {
+        padding-right: 1rem;
+        padding-left: 1rem;
     }
 }
 

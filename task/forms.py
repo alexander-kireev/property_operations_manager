@@ -57,7 +57,7 @@ class TaskForm(forms.ModelForm):
             "title", "description", "property", "issue", 
             "priority", "scheduled_date", "completion_deadline")
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 4}),
+            "description": forms.Textarea(attrs={"rows": 3}),
             "scheduled_date": forms.DateInput(
                 format="%Y-%m-%d",
                 attrs={"type": "date"},

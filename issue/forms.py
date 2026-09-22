@@ -51,7 +51,7 @@ class IssueForm(forms.ModelForm):
             "resolution_deadline",
         )
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 4}),
+            "description": forms.Textarea(attrs={"rows": 3}),
             "resolution_deadline": forms.DateInput(
                 format="%Y-%m-%d",
                 attrs={"type": "date"},

@@ -1,6 +1,6 @@
 {% for error in event_form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endfor %}
 
-<div class="row g-3">
+<div class="row gx-3 gy-2">
     <div class="col-12">
         <label class="form-label" for="{{ event_form.title.id_for_label }}">{{ event_form.title.label }}</label>
         {{ event_form.title }}
@@ -22,9 +22,11 @@
         {% for error in event_form.scheduled_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-12">
-        <div class="form-check">
-            {{ event_form.all_day }}
-            <label class="form-check-label" for="{{ event_form.all_day.id_for_label }}">All-day event</label>
+        <div hidden>{{ event_form.all_day }}</div>
+        <div class="event-duration" role="radiogroup" aria-label="Duration">
+            <span class="event-duration-label">Duration</span>
+            <label class="event-duration-choice"><input type="radio" name="{{ event_form.all_day.auto_id }}_duration" value="all_day" data-duration-choice{% if event_form.all_day.value %} checked{% endif %}> All day</label>
+            <label class="event-duration-choice"><input type="radio" name="{{ event_form.all_day.auto_id }}_duration" value="timed" data-duration-choice{% if not event_form.all_day.value %} checked{% endif %}> Set time</label>
         </div>
         {% for error in event_form.all_day.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     </div>
@@ -38,6 +40,7 @@
         {{ event_form.end_time }}
         {% for error in event_form.end_time.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     </div>
+    <div class="col-12"><p class="form-text mt-0 mb-0">Use 24-hour time (HH:MM), for example 09:30.</p></div>
     <div class="col-md-6">
         <div class="form-check">
             {{ event_form.user_participation_required }}
@@ -51,6 +54,6 @@
             <label class="form-check-label" for="{{ event_form.user_presence_required.id_for_label }}">My physical presence is required</label>
         </div>
         {% for error in event_form.user_presence_required.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-        <div class="form-text" data-presence-help></div>
+        <div class="form-text">Requires participation.</div>
     </div>
 </div>
