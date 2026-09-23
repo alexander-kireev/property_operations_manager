@@ -6,7 +6,6 @@
             {% if active_section == "tasks" %}aria-current="page"{% endif %}
         >
             Tasks
-            {% if task_count is not None %}<span class="badge rounded-pill text-bg-secondary">{{ task_count }}</span>{% endif %}
         </a>
         <a
             class="nav-link px-4 py-3 d-flex align-items-center gap-2{% if active_section == 'issues' %} active{% endif %}"
@@ -14,7 +13,6 @@
             {% if active_section == "issues" %}aria-current="page"{% endif %}
         >
             Issues
-            {% if issue_count is not None %}<span class="badge rounded-pill {% if active_section == 'issues' %}text-bg-dark{% else %}text-bg-secondary{% endif %}">{{ issue_count }}</span>{% endif %}
         </a>
         <a
             class="nav-link px-4 py-3 d-flex align-items-center gap-2{% if active_section == 'events' %} active{% endif %}"
@@ -22,7 +20,6 @@
             {% if active_section == "events" %}aria-current="page"{% endif %}
         >
             Events
-            {% if event_count is not None %}<span class="badge rounded-pill {% if active_section == 'events' %}text-bg-dark{% else %}text-bg-secondary{% endif %}">{{ event_count }}</span>{% endif %}
         </a>
     </div>
 </nav>

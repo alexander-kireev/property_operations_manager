@@ -16,7 +16,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const participationNotRequired = participationFilter.value === "not_required";
         const presenceRequiredOption = presenceFilter.querySelector('option[value="required"]');
         if (presenceRequiredOption) presenceRequiredOption.disabled = participationNotRequired;
-        if (participationNotRequired && presenceFilter.value === "required") presenceFilter.value = "";
+        if (participationNotRequired && presenceFilter.value === "required") {
+            presenceFilter.value = "";
+            window.SearchableSelect?.refresh(presenceFilter);
+        }
         if (compatibilityNote) {
             compatibilityNote.textContent = participationNotRequired
                 ? "Presence cannot be required when participation is not required."

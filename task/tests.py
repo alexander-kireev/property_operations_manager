@@ -255,30 +255,29 @@ class TaskFormTests(TestCase):
         self.assertEqual(updated_task.user, self.user)
         self.assertEqual(Task.objects.count(), 1)
 
-    def test_past_scheduled_date_is_rejected(self):
+    def test_past_scheduled_date_is_accepted(self):
         data = self.TASK_DATA.copy()
         data["scheduled_date"] = timezone.localdate() - timedelta(days=1)
 
         form = TaskForm(data=data, user=self.user)
-        self.assertFalse(form.is_valid())
-        self.assertFormError(
-            form,
-            "scheduled_date",
-            "A task can only be scheduled for today or later.",
-        )
+        self.assertTrue(form.is_valid(), form.errors)
 
-    def test_past_completion_deadline_is_rejected(self):
+    def test_past_completion_deadline_is_accepted(self):
         data = self.TASK_DATA.copy()
         data["completion_deadline"] = timezone.localdate() - timedelta(days=1)
 
         form = TaskForm(data=data, user=self.user)
 
-        self.assertFalse(form.is_valid())
-        self.assertFormError(
-            form,
-            "completion_deadline",
-            "A task's deadline can only be set for today or later."
-        )
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_deadline_before_scheduled_date_is_allowed_for_warning(self):
+        data = self.TASK_DATA.copy()
+        data["scheduled_date"] = timezone.localdate() + timedelta(days=7)
+        data["completion_deadline"] = timezone.localdate() + timedelta(days=5)
+
+        form = TaskForm(data=data, user=self.user)
+
+        self.assertTrue(form.is_valid(), form.errors)
 
     def test_today_scheduled_date_is_accepted(self):
         data = self.TASK_DATA.copy()

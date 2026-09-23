@@ -1,6 +1,5 @@
 from .models import Task
 from django import forms
-from django.utils import timezone
 
 from issue.models import Issue
 from property.models import Property
@@ -12,18 +11,35 @@ class TaskForm(forms.ModelForm):
         self.user = user
         self.parent_issue = parent_issue
 
-        self.fields["property"].queryset = Property.objects.filter(
+        active_properties = Property.objects.filter(
             user=user,
             state=Property.State.ACTIVE,
             deleted_at__isnull=True
         )
 
-        self.fields["issue"].queryset = Issue.objects.filter(
+        active_issues = Issue.objects.filter(
             user=user,
             state=Issue.State.ACTIVE,
             terminated_at__isnull=True,
             deleted_at__isnull=True,
         )
+
+        # Keep an existing historical parent selectable while editing, but never
+        # offer it as a new relationship on another task.
+        self.fields["property"].queryset = active_properties
+        self.fields["issue"].queryset = active_issues
+        if self.instance.pk and self.instance.property_id:
+            self.fields["property"].queryset = (
+                active_properties | Property.objects.filter(
+                    user=user, pk=self.instance.property_id,
+                )
+            )
+        if self.instance.pk and self.instance.issue_id:
+            self.fields["issue"].queryset = (
+                active_issues | Issue.objects.filter(
+                    user=user, pk=self.instance.issue_id,
+                )
+            )
 
         self.has_property_choices = self.fields["property"].queryset.exists()
         self.has_issue_choices = self.fields["issue"].queryset.exists()
@@ -76,6 +92,33 @@ class TaskForm(forms.ModelForm):
 
         property_record = cleaned_data.get("property")
         issue = cleaned_data.get("issue")
+        relationship_type = self.data.get("relationship_type") if self.is_bound else None
+
+        if not relationship_type and not property_record and not issue and self.instance.pk:
+            if self.instance.issue_id:
+                cleaned_data["issue"] = self.instance.issue
+                issue = self.instance.issue
+            elif self.instance.property_id:
+                cleaned_data["property"] = self.instance.property
+                property_record = self.instance.property
+
+        if relationship_type not in (None, "", "standalone", "property", "issue"):
+            raise forms.ValidationError("Choose a valid task relationship.")
+
+        if relationship_type == "standalone":
+            cleaned_data["property"] = None
+            cleaned_data["issue"] = None
+            return cleaned_data
+        if relationship_type == "property":
+            cleaned_data["issue"] = None
+            if property_record is None and "property" not in self.errors:
+                self.add_error("property", "Choose a property.")
+            return cleaned_data
+        if relationship_type == "issue":
+            cleaned_data["property"] = None
+            if issue is None and "issue" not in self.errors:
+                self.add_error("issue", "Choose an issue.")
+            return cleaned_data
 
         if property_record is not None and issue is not None:
             raise forms.ValidationError(
@@ -83,23 +126,3 @@ class TaskForm(forms.ModelForm):
             )
 
         return cleaned_data
-
-    def clean_scheduled_date(self):
-        scheduled_date = self.cleaned_data["scheduled_date"]
-
-        if scheduled_date is not None and scheduled_date < timezone.localdate():
-            raise forms.ValidationError(
-                "A task can only be scheduled for today or later."
-            )
-
-        return scheduled_date
-
-    def clean_completion_deadline(self):
-        completion_deadline = self.cleaned_data["completion_deadline"]
-
-        if completion_deadline is not None and completion_deadline < timezone.localdate():
-            raise forms.ValidationError(
-                "A task's deadline can only be set for today or later."
-            )
-
-        return completion_deadline

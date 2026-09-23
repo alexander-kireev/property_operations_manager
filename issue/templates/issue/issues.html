@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load work_status %}
 
 {% block title %}Issues | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary issue-command-page{% endblock %}
@@ -16,7 +17,7 @@
                     <div class="issue-first-empty-mark mx-auto mb-4" aria-hidden="true">!</div>
                     <h1 class="h3 mb-3">No issues yet</h1>
                     <p class="text-body-secondary mb-2">
-                        Add an issue when a problem needs investigation, multiple tasks, or a resolution deadline.
+                        Add an issue when a problem needs investigation, multiple tasks, or a target resolution date.
                     </p>
                     <button class="btn theme-action px-4" type="button" data-bs-toggle="modal" data-bs-target="#addIssueModal">
                         Add your first issue
@@ -41,8 +42,8 @@
                         <div class="issue-local-control-row mt-2">
                             <label class="visually-hidden" for="issueSort">Sort issues</label>
                             <select class="form-select form-select-sm" id="issueSort" name="sort">
-                                <option value="resolution_deadline" {% if sort == "resolution_deadline" %}selected{% endif %}>Deadline: soonest</option>
-                                <option value="-resolution_deadline" {% if sort == "-resolution_deadline" %}selected{% endif %}>Deadline: latest</option>
+                                <option value="resolution_deadline" {% if sort == "resolution_deadline" %}selected{% endif %}>Resolve by: soonest</option>
+                                <option value="-resolution_deadline" {% if sort == "-resolution_deadline" %}selected{% endif %}>Resolve by: latest</option>
                                 <option value="title" {% if sort == "title" %}selected{% endif %}>Title: A–Z</option>
                                 <option value="-title" {% if sort == "-title" %}selected{% endif %}>Title: Z–A</option>
                                 <option value="-priority" {% if sort == "-priority" %}selected{% endif %}>Priority: highest</option>
@@ -80,9 +81,9 @@
                                     </select>
                                 </div>
                                 <div class="col-6">
-                                    <label class="visually-hidden" for="issueDeadline">Deadline</label>
+                                    <label class="visually-hidden" for="issueDeadline">Resolve by</label>
                                     <select class="form-select form-select-sm" id="issueDeadline" name="deadline_period">
-                                        <option value="">Any deadline</option>
+                                        <option value="">Any target date</option>
                                         {% for value, label in deadline_period_options.items %}<option value="{{ value }}" {% if deadline_period == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
                                     </select>
                                 </div>
@@ -102,6 +103,7 @@
 
                     <div class="issue-list list-group list-group-flush">
                         {% for issue in page_obj %}
+                            {% work_status issue today as issue_status %}
                             <a class="issue-list-row list-group-item list-group-item-action{% if selected_issue.pk == issue.pk %} is-selected{% endif %}{% if issue.state != 'active' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ issue.pk }}"{% if selected_issue.pk == issue.pk %} aria-current="true"{% endif %}>
                                 <div class="issue-list-primary d-flex justify-content-between align-items-start gap-3">
                                     <strong class="issue-list-title" title="{{ issue.title }}">{{ issue.title }}</strong>
@@ -109,9 +111,9 @@
                                 </div>
                                 <div class="issue-list-meta d-flex justify-content-between gap-3 mt-2 small">
                                     <span class="issue-list-context text-body-secondary"{% if issue.property %} title="{{ issue.property.name }}"{% endif %}>{% if issue.property %}{{ issue.property.name }}{% else %}&nbsp;{% endif %}</span>
-                                    {% if issue.state != 'active' %}<span class="issue-list-status badge bg-secondary-subtle border text-secondary-emphasis">{{ issue.get_state_display }}</span>
-                                    {% elif not issue.resolution_deadline %}<span class="issue-list-status text-body-secondary">No deadline</span>
-                                    {% elif issue.resolution_deadline < today %}<span class="issue-list-status text-danger">Overdue</span>
+                                    {% if issue.state != 'active' %}{% include "includes/work_state_badge.html" with item=issue only %}
+                                    {% elif issue_status.list_label %}<span class="work-list-timing"><span class="work-pill work-pill--{{ issue_status.kind }}">{{ issue_status.list_label }}</span>{% if issue.resolution_deadline %}<span>{{ issue.resolution_deadline|date:"j M Y" }}</span>{% endif %}</span>
+                                    {% elif not issue.resolution_deadline %}<span class="issue-list-status text-body-secondary">No target date</span>
                                     {% else %}<span class="issue-list-status">{{ issue.resolution_deadline|date:"j M Y" }}</span>{% endif %}
                                 </div>
                             </a>
@@ -133,13 +135,14 @@
             <section class="issue-detail-column col-lg-8" aria-label="Selected issue">
                 <div class="issue-pane">
                     {% if selected_issue %}
+                        {% work_status selected_issue today as selected_status %}
                         <header class="issue-detail-header border-bottom p-3 p-md-4">
                             <a class="issue-mobile-back btn btn-sm pom-quiet mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to issues</a>
                             <div class="issue-detail-header-layout">
                                 <div class="issue-detail-heading-copy">
                                     <h2 class="issue-detail-title h3" title="{{ selected_issue.title }}">{{ selected_issue.title }}</h2>
                                     <div class="issue-detail-meta">
-                                        <span class="badge {% if selected_issue.state == 'active' %}bg-success-subtle border border-success-subtle text-success-emphasis{% else %}text-bg-light border{% endif %}">{{ selected_issue.get_state_display }}</span>
+                                        {% include "includes/work_state_badge.html" with item=selected_issue only %}
                                         {% include "issue/includes/priority_badge.html" with issue=selected_issue %}
                                         <span class="small text-body-secondary">Created {{ selected_issue.created_at|date:"j F Y" }}{% if selected_issue.property %} · {{ selected_issue.property.name }}{% endif %}</span>
                                     </div>
@@ -174,7 +177,13 @@
                                 <div class="issue-detail-scroll p-3 p-md-4">
                                     <div class="row g-3">
                                         <div class="col-xl-7"><article class="card h-100"><div class="card-body p-4"><h3 class="h5">Description</h3><p class="mb-0">{{ selected_issue.description|default:"No description supplied."|linebreaksbr }}</p></div></article></div>
-                                        <div class="col-xl-5"><article class="card h-100"><div class="card-body p-4"><h3 class="h5 mb-3">Status and ownership</h3><dl class="row small mb-0"><dt class="col-6 fw-normal text-body-secondary">State</dt><dd class="col-6 text-end">{{ selected_issue.get_state_display }}</dd><dt class="col-6 fw-normal text-body-secondary">Priority</dt><dd class="col-6 text-end">{{ selected_issue.get_priority_display }}</dd><dt class="col-6 fw-normal text-body-secondary">Property</dt><dd class="col-6 text-end">{{ selected_issue.property.name|default:"Not linked" }}</dd><dt class="col-6 fw-normal text-body-secondary">Deadline</dt><dd class="col-6 text-end{% if selected_issue.state == 'active' and selected_issue.resolution_deadline < today %} text-danger{% endif %}">{{ selected_issue.resolution_deadline|date:"j M Y"|default:"No deadline" }}</dd></dl></div></article></div>
+                                        <div class="col-xl-5"><article class="card h-100"><div class="card-body p-4">
+                                            <div class="work-status-heading"><h3 class="h5 mb-0">Status and ownership</h3><div class="work-status-heading-pills">{% include "issue/includes/priority_badge.html" with issue=selected_issue %}{% include "includes/work_state_badge.html" with item=selected_issue only %}</div></div>
+                                            {% include "includes/work_status_strip.html" with status=selected_status only %}
+                                            <div class="work-status-section-label">Timing</div>
+                                            <dl class="task-planning-list small mb-0"><dt class="fw-normal text-body-secondary">Resolve by</dt><dd>{{ selected_issue.resolution_deadline|date:"j M Y"|default:"No target date" }}{% if selected_issue.resolution_deadline %}<span class="work-date-relative">{{ selected_issue.resolution_deadline|relative_day:today }}</span>{% endif %}</dd></dl>
+                                            <div class="work-relationship"><div class="work-status-section-label">Property</div>{% if selected_issue.property %}<a class="task-related-link" href="{% url 'property:property_detail' selected_issue.property.pk %}" title="{{ selected_issue.property.name }}"><span class="task-related-copy">{{ selected_issue.property.name }}</span><span class="task-related-arrow" aria-hidden="true">→</span></a>{% else %}<span class="small text-body-secondary">Not linked</span>{% endif %}</div>
+                                        </div></article></div>
                                     </div>
                                 </div>
                             </section>
@@ -187,17 +196,18 @@
                                 <div class="issue-task-heading issue-task-grid border-bottom px-3 px-md-4 py-2" aria-hidden="true"><span>Task</span><span>Scheduled</span><span>Deadline</span><span>State</span><span></span></div>
                                 <div class="issue-task-list">
                                     {% for task in selected_tasks %}
+                                        {% work_status task today as linked_status %}
                                         <article class="issue-task-row{% if task.state != 'active' %} terminated{% endif %}">
                                             <div class="issue-task-summary issue-task-grid px-3 px-md-4 py-3" role="button" tabindex="0" data-bs-toggle="collapse" data-bs-target="#issueTask{{ task.pk }}" aria-expanded="false">
-                                                <div class="issue-task-copy"><strong class="issue-task-title" title="{{ task.title }}">{{ task.title }}</strong><div class="mt-1">{% include "task/includes/priority_badge.html" with task=task %}</div></div>
+                                                <div class="issue-task-copy"><strong class="issue-task-title" title="{{ task.title }}">{{ task.title }}</strong><div class="d-flex flex-wrap gap-1 mt-1">{% include "task/includes/priority_badge.html" with task=task %}{% if linked_status.list_label %}<span class="work-pill work-pill--{{ linked_status.kind }}">{{ linked_status.list_label }}</span>{% endif %}</div></div>
                                                 <span class="issue-task-scheduled small">{{ task.scheduled_date|date:"j M Y"|default:"Not scheduled" }}</span>
                                                 <span class="issue-task-deadline small">{{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}</span>
-                                                <span class="badge {% if task.state == 'active' %}bg-success-subtle border border-success-subtle text-success-emphasis{% else %}text-bg-light border{% endif %}">{{ task.get_state_display }}</span>
+                                                <span>{% include "includes/work_state_badge.html" with item=task only %}</span>
                                                 <div class="dropdown issue-task-action" data-no-task-toggle>
                                                     <button class="btn btn-sm btn-outline-secondary dropdown-toggle task-menu-button" type="button" data-bs-toggle="dropdown" aria-label="Task actions">⋮</button>
                                                     <ul class="dropdown-menu dropdown-menu-end">
                                                         {% if task.state == 'active' %}
-                                                            <li><button class="dropdown-item issue-edit-task" type="button" data-bs-toggle="modal" data-bs-target="#editIssueTaskModal" data-action="{% url 'issue:edit_issue_task' selected_issue.pk task.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" data-title="{{ task.title }}" data-description="{{ task.description }}" data-priority="{{ task.priority }}" data-scheduled="{{ task.scheduled_date|date:'Y-m-d' }}" data-deadline="{{ task.completion_deadline|date:'Y-m-d' }}">Edit task</button></li>
+                                                            <li><button class="dropdown-item issue-edit-task" type="button" data-bs-toggle="modal" data-bs-target="#editIssueTaskModal" data-action="{% url 'issue:edit_issue_task' selected_issue.pk task.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" data-title="{{ task.title }}" data-description="{{ task.description }}" data-priority="{{ task.priority }}" data-scheduled="{{ task.scheduled_date|date:'Y-m-d' }}" data-deadline="{{ task.completion_deadline|date:'Y-m-d' }}" data-issue="{{ task.issue_id }}">Edit task</button></li>
                                                             <li><form method="post" action="{% url 'task:complete_task' task.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ task_workspace_url }}"><button class="dropdown-item" type="submit">Complete task</button></form></li>
                                                             <li><form method="post" action="{% url 'task:dismiss_task' task.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ task_workspace_url }}"><button class="dropdown-item" type="submit">Dismiss task</button></form></li>
                                                         {% else %}<li><form method="post" action="{% url 'task:reactivate_task' task.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ task_workspace_url }}"><button class="dropdown-item" type="submit">Reactivate task</button></form></li>{% endif %}
@@ -237,7 +247,7 @@
 {% if selected_issue %}
     {% if edit_issue_form %}<div class="modal fade" id="editIssueModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editIssueModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="editIssueModalLabel">Edit issue</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form action="{% url 'issue:edit_issue' selected_issue.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<div class="modal-body p-4">{% include "issue/includes/issue_form_fields.html" with issue_form=edit_issue_form %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save changes</button></div></form></div></div></div>{% endif %}
     {% if add_task_form %}<div class="modal fade" id="addIssueTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addIssueTaskModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="addIssueTaskModalLabel">Add task to issue</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form action="{% url 'issue:add_issue_task' selected_issue.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<div class="modal-body p-4">{% include "issue/includes/issue_task_form_fields.html" with task_form=add_task_form %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Add task</button></div></form></div></div></div>{% endif %}
-    {% if edit_task_form %}<div class="modal fade" id="editIssueTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editIssueTaskModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="editIssueTaskModalLabel">Edit task</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form id="editIssueTaskForm" action="{% if edit_task %}{% url 'issue:edit_issue_task' selected_issue.pk edit_task.pk %}{% else %}#{% endif %}" method="post">{% csrf_token %}<div class="modal-body p-4">{% include "issue/includes/issue_task_form_fields.html" with task_form=edit_task_form %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save changes</button></div></form></div></div></div>{% endif %}
+    {% if edit_task_form %}<div class="modal fade" id="editIssueTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editIssueTaskModalLabel" aria-hidden="true"><div class="task-form-dialog modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="editIssueTaskModalLabel">Edit task</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form id="editIssueTaskForm" action="{% if edit_task %}{% url 'issue:edit_issue_task' selected_issue.pk edit_task.pk %}{% else %}#{% endif %}" method="post" data-task-form>{% csrf_token %}<div class="modal-body p-4">{% include "task/includes/task_form_fields.html" with task_form=edit_task_form %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save changes</button></div></form></div></div></div>{% endif %}
 
     <div class="modal fade modal-resilient" id="resolveIssueModal" tabindex="-1" aria-labelledby="resolveIssueModalLabel" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="resolveIssueModalLabel">Resolve issue?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form action="{% url 'issue:resolve_issue' selected_issue.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<div class="modal-body"><p>Mark this issue as resolved?</p><div class="modal-context mb-3"><span class="small text-body-secondary d-block">Issue</span><span class="modal-context-value">{{ selected_issue.title }}</span></div>{% if active_task_count %}<div class="form-check"><input class="form-check-input" id="resolveLinkedTasks" name="affect_linked_tasks" value="yes" type="checkbox"><label class="form-check-label" for="resolveLinkedTasks">Also dismiss {{ active_task_count }} active linked task{{ active_task_count|pluralize }}</label></div>{% endif %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep issue</button><button class="btn theme-action" type="submit">Resolve issue</button></div></form></div></div></div>
     <div class="modal fade modal-resilient" id="dismissIssueModal" tabindex="-1" aria-labelledby="dismissIssueModalLabel" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="dismissIssueModalLabel">Dismiss issue?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form action="{% url 'issue:dismiss_issue' selected_issue.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<div class="modal-body"><p>Dismiss this issue?</p><div class="modal-context mb-3"><span class="small text-body-secondary d-block">Issue</span><span class="modal-context-value">{{ selected_issue.title }}</span></div>{% if active_task_count %}<div class="form-check"><input class="form-check-input" id="dismissLinkedTasks" name="affect_linked_tasks" value="yes" type="checkbox"><label class="form-check-label" for="dismissLinkedTasks">Also dismiss {{ active_task_count }} active linked task{{ active_task_count|pluralize }}</label></div>{% endif %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep issue</button><button class="btn theme-action" type="submit">Dismiss issue</button></div></form></div></div></div>
@@ -247,4 +257,4 @@
 {% if open_modal %}<span hidden data-modal-auto-open="{{ open_modal }}"></span>{% endif %}
 {% endblock %}
 
-{% block extra_js %}<script src="{% static 'js/issue-command-centre.js' %}"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/task-form.js' %}"></script><script src="{% static 'js/issue-command-centre.js' %}"></script>{% endblock %}

@@ -88,6 +88,18 @@ class IssueFormTests(IssueTestMixin, TestCase):
             list(form.fields),
             ["title", "description", "property", "priority", "resolution_deadline"],
         )
+        self.assertEqual(form.fields["resolution_deadline"].label, "Resolve by")
+
+    def test_issue_forms_use_searchable_property_picker_and_target_date_copy(self):
+        self.client.force_login(self.user)
+        self.create_issue(self.user, property=self.property)
+
+        response = self.client.get(reverse("issue:issues"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-searchable-select', count=4)
+        self.assertContains(response, "Resolve by")
+        self.assertContains(response, "the issue will not resolve automatically", count=2)
 
     def test_another_users_property_is_rejected(self):
         other_property = self.create_property(
@@ -541,7 +553,7 @@ class IssueViewTests(IssueTestMixin, TestCase):
                 )
                 self.assertEqual(response.status_code, 404)
 
-    def test_edit_issue_task_keeps_parent_locked(self):
+    def test_edit_issue_task_keeps_parent_when_no_relink_requested(self):
         task = self.create_task(self.user, self.issue)
 
         response = self.client.post(

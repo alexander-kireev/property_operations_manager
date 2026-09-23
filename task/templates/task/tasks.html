@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load work_status %}
 
 {% block title %}Tasks | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary task-command-page{% endblock %}
@@ -129,6 +130,7 @@
                         {% if page_obj.object_list %}
                             <div class="task-command-list list-group list-group-flush" aria-label="Tasks">
                                 {% for task in page_obj %}
+                                    {% work_status task today as task_status %}
                                     <a
                                         class="task-command-row list-group-item list-group-item-action{% if task == selected_task %} is-selected{% endif %}{% if task.state != 'active' %} terminated{% endif %}"
                                         href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ task.pk }}"
@@ -144,9 +146,9 @@
                                             <span class="task-command-meta d-flex flex-column align-items-end gap-2">
                                                 <span class="task-command-badges d-flex align-items-center justify-content-end gap-1">
                                                     {% include "task/includes/priority_badge.html" with task=task %}
-                                                    {% if task.state != "active" %}<span class="badge bg-secondary-subtle border text-secondary-emphasis">{{ task.get_state_display }}</span>{% endif %}
+                                                    {% if task.state != "active" %}{% include "includes/work_state_badge.html" with item=task only %}{% elif task_status.list_label %}<span class="work-pill work-pill--{{ task_status.kind }}">{{ task_status.list_label }}</span>{% endif %}
                                                 </span>
-                                                <span class="task-command-deadline{% if task.state == 'active' and task.completion_deadline and task.completion_deadline < today %} text-danger{% endif %}">
+                                                <span class="task-command-deadline">
                                                     {{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}
                                                 </span>
                                             </span>
@@ -185,13 +187,15 @@
                 <section class="task-detail-column col-lg-8" aria-label="Selected task">
                     <div class="task-pane">
                         {% if selected_task %}
+                            {% work_status selected_task today as selected_status %}
+                            {% if relationship_moved %}<div class="alert alert-success rounded-0 mb-0" role="status">Task saved. It is no longer linked to the previous issue.</div>{% endif %}
                             <header class="task-detail-header">
                                 <a class="task-mobile-back btn btn-sm pom-quiet mb-3" href="{{ task_list_url }}">← Back to tasks</a>
                                 <div class="task-detail-header-layout">
                                     <div class="task-detail-heading-copy">
                                         <h2 class="task-detail-title h3" title="{{ selected_task.title }}">{{ selected_task.title }}</h2>
                                         <div class="task-detail-meta">
-                                            {% if selected_task.state == "active" %}<span class="badge bg-success-subtle border border-success-subtle text-success-emphasis">{{ selected_task.get_state_display }}</span>{% else %}<span class="badge bg-secondary-subtle border text-secondary-emphasis">{{ selected_task.get_state_display }}</span>{% endif %}
+                                            {% include "includes/work_state_badge.html" with item=selected_task only %}
                                             {% include "task/includes/priority_badge.html" with task=selected_task %}
                                             <span class="task-detail-created small text-body-secondary">Created {{ selected_task.created_at|date:"j F Y" }}</span>
                                         </div>
@@ -232,22 +236,20 @@
                                     <div class="col-xl-5">
                                         <article class="card h-100">
                                             <div class="card-body p-4">
-                                                <h3 class="h5 mb-3">Planning and status</h3>
+                                                <div class="work-status-heading"><h3 class="h5 mb-0">Planning and status</h3><div class="work-status-heading-pills">{% include "task/includes/priority_badge.html" with task=selected_task %}{% include "includes/work_state_badge.html" with item=selected_task only %}</div></div>
+                                                {% include "includes/work_status_strip.html" with status=selected_status only %}
+                                                <div class="work-status-section-label">Timing</div>
                                                 <dl class="task-planning-list small mb-0">
-                                                    <dt class="fw-normal text-body-secondary">Priority</dt>
-                                                    <dd>{{ selected_task.get_priority_display }}</dd>
                                                     <dt class="fw-normal text-body-secondary">Scheduled</dt>
-                                                    <dd>{{ selected_task.scheduled_date|date:"j M Y"|default:"Not scheduled" }}</dd>
+                                                    <dd>{{ selected_task.scheduled_date|date:"j M Y"|default:"Not scheduled" }}{% if selected_task.scheduled_date %}<span class="work-date-relative">{{ selected_task.scheduled_date|relative_day:today }}</span>{% endif %}</dd>
                                                     <dt class="fw-normal text-body-secondary">Deadline</dt>
-                                                    <dd{% if selected_task.state == 'active' and selected_task.completion_deadline and selected_task.completion_deadline < today %} class="text-danger"{% endif %}>{{ selected_task.completion_deadline|date:"j M Y"|default:"No deadline" }}</dd>
-                                                    <dt class="fw-normal text-body-secondary">State</dt>
-                                                    <dd>{{ selected_task.get_state_display }}</dd>
+                                                    <dd>{{ selected_task.completion_deadline|date:"j M Y"|default:"No deadline" }}{% if selected_task.completion_deadline %}<span class="work-date-relative">{{ selected_task.completion_deadline|relative_day:today }}</span>{% endif %}</dd>
                                                     {% if selected_task.terminated_at %}
                                                         <dt class="fw-normal text-body-secondary">Terminated</dt>
                                                         <dd>{{ selected_task.terminated_at|date:"j M Y" }}</dd>
                                                     {% endif %}
                                                     {% if selected_task.property %}
-                                                        <dt class="task-related-label fw-normal text-body-secondary">Related property</dt>
+                                                        <dt class="task-related-label fw-normal text-body-secondary">Related to · Property</dt>
                                                         <dd class="task-related-value">
                                                             <a class="task-related-link" href="{% url 'property:property_detail' selected_task.property.pk %}" title="{{ selected_task.property.name }}">
                                                                 <span class="task-related-copy">{{ selected_task.property.name }}</span>
@@ -255,7 +257,7 @@
                                                             </a>
                                                         </dd>
                                                     {% elif selected_task.issue %}
-                                                        <dt class="task-related-label fw-normal text-body-secondary">Related issue</dt>
+                                                        <dt class="task-related-label fw-normal text-body-secondary">Related to · Issue</dt>
                                                         <dd class="task-related-value">
                                                             <a class="task-related-link" href="{% url 'issue:issues' %}?selected={{ selected_task.issue.pk }}" title="{{ selected_task.issue.title }}">
                                                                 <span class="task-related-copy">{{ selected_task.issue.title }}</span>
