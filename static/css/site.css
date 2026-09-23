@@ -559,9 +559,113 @@ body {
     max-width: 18rem;
 }
 
+/* Contact forms and confirmation dialogs grow naturally; only their bodies scroll. */
+.modal-resilient .modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - var(--bs-modal-margin) - var(--bs-modal-margin));
+    overflow: hidden;
+}
+
+.modal-resilient .modal-content > form {
+    display: flex;
+    flex: 0 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.modal-resilient .modal-header,
+.modal-resilient .modal-footer {
+    flex: 0 0 auto;
+}
+
+.modal-resilient .modal-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.modal-resilient .modal-header .btn-close {
+    flex: 0 0 auto;
+}
+
+.modal-resilient .modal-body {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+}
+
+.modal-resilient .modal-body :is(.form-control, .form-select) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.modal-resilient .modal-footer {
+    gap: .5rem;
+}
+
+.modal-resilient .modal-context {
+    padding: .65rem .75rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    background: var(--bs-tertiary-bg);
+}
+
+.modal-resilient .modal-context-value {
+    display: block;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] .modal-content {
+    max-height: calc(100dvh - var(--bs-modal-margin) - var(--bs-modal-margin));
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] .modal-content > form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] .modal-body {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] .modal-body .row > * {
+    min-width: 0;
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] :is(.form-control, .form-select) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+:is(.task-command-page, .issue-command-page, .event-command-page)
+    .modal[data-modal-clear-query="form_state"] textarea {
+    resize: vertical;
+}
+
 @media (min-width: 576px) {
-    .task-form-dialog {
-        max-width: 680px;
+    .task-form-dialog,
+    .issue-command-page .modal-lg,
+    .event-command-page .modal-lg {
+        max-width: 42.5rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    :is(.task-command-page, .issue-command-page, .event-command-page)
+        .modal[data-modal-clear-query="form_state"] :is(.modal-header, .modal-body, .modal-footer) {
+        padding-right: 1rem;
+        padding-left: 1rem;
     }
 }
 
@@ -2264,4 +2368,212 @@ body {
         overflow-y: visible;
         overscroll-behavior: auto;
     }
+}
+
+/* Shared button language: primary, strong-outline secondary, destructive, quiet. */
+.theme-action {
+    font-weight: 600;
+}
+
+.btn-outline-secondary {
+    --bs-btn-color: #26313a;
+    --bs-btn-border-color: #56616d;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #27313a;
+    --bs-btn-hover-border-color: #27313a;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #27313a;
+    --bs-btn-active-border-color: #27313a;
+    --bs-btn-disabled-color: #56616d;
+    --bs-btn-disabled-border-color: #8b949d;
+    font-weight: 600;
+}
+
+.btn-danger {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #b42318;
+    --bs-btn-border-color: #b42318;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #941b13;
+    --bs-btn-hover-border-color: #941b13;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #801710;
+    --bs-btn-active-border-color: #801710;
+    font-weight: 600;
+}
+
+.pom-quiet {
+    --bs-btn-color: #2b3741;
+    --bs-btn-bg: transparent;
+    --bs-btn-border-color: transparent;
+    --bs-btn-hover-color: #1f2932;
+    --bs-btn-hover-bg: #e9edf1;
+    --bs-btn-hover-border-color: transparent;
+    --bs-btn-active-color: #1f2932;
+    --bs-btn-active-bg: #dfe5ea;
+    --bs-btn-active-border-color: transparent;
+    --bs-btn-disabled-color: #69747e;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.pom-quiet:hover,
+.pom-quiet:focus-visible {
+    text-decoration: none;
+}
+
+:is(.btn, .page-link, .command-pagination-link, .command-filter-clear,
+    .task-filter-chip, .contact-method-action, .notes-board-shell__action,
+    .contact-detail-tab, .event-form-tab, .dropdown-item, .btn-close,
+    .navbar-toggler):focus-visible,
+.event-duration-choice:focus-within {
+    outline: 3px solid #80b7ff;
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+/* Icons share a generous target without enlarging the glyph. */
+:is(.property-actions, .property-toggle, .property-menu-button,
+    .task-menu-button, .issue-menu-button, .event-menu-button,
+    .contact-menu-button, .account-menu-button, .navbar-toggler,
+    .contact-method-action, .notes-board-shell__action, .btn-close) {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+}
+
+.btn-close {
+    box-sizing: border-box;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: .65rem;
+    border-radius: var(--bs-border-radius-sm);
+}
+
+.btn-close:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
+.contact-method-row--editable,
+.notes-board-shell__content {
+    padding-right: 6.25rem;
+}
+
+/* One selected/hover convention for tabs, regardless of their screen. */
+:is(.property-section-nav, .my-work-section-nav, .issue-detail-tabs,
+    .event-right-tabs) .nav-link,
+.contact-detail-tab,
+.event-command-page .event-form-tab {
+    color: var(--bs-secondary-color);
+    border-bottom: 2px solid transparent;
+    text-decoration: none;
+}
+
+:is(.property-section-nav, .my-work-section-nav, .issue-detail-tabs,
+    .event-right-tabs) .nav-link:hover,
+.contact-detail-tab:hover,
+.event-command-page .event-form-tab:hover {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-tertiary-bg);
+}
+
+:is(.property-section-nav, .my-work-section-nav, .issue-detail-tabs,
+    .event-right-tabs) .nav-link.active,
+.contact-detail-tab.active,
+.event-command-page .event-form-tab.is-active {
+    color: var(--bs-emphasis-color);
+    border-bottom-color: var(--bs-emphasis-color);
+    font-weight: 600;
+}
+
+.contact-detail-tab.active::after {
+    display: none;
+}
+
+/* One chip vocabulary; event chips are labels, not interactive filters. */
+.task-filter-chip,
+.command-filter-clear {
+    color: #26313a;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    font-size: .78rem;
+    font-weight: 600;
+}
+
+.task-filter-chip:hover,
+.command-filter-clear:hover {
+    color: #1f2932;
+    background: #dfe5ea;
+    border-color: #a9b4be;
+}
+
+.event-command-page .event-filter-chip {
+    color: var(--bs-secondary-color);
+    background: transparent;
+    border-color: var(--bs-border-color);
+}
+
+.btn-check:checked + .btn-outline-secondary,
+.btn-check:active + .btn-outline-secondary {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-tertiary-bg);
+    border-color: var(--bs-emphasis-color);
+    box-shadow: none;
+}
+
+.event-command-page .event-duration-choice:has(input:checked) {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-tertiary-bg);
+    border-color: var(--bs-emphasis-color);
+}
+
+/* Property keeps its page numbers but shares the workspace pager palette. */
+.command-pagination-link,
+.pagination .page-link {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-sm);
+    font-size: .8rem;
+    font-weight: 500;
+}
+
+.command-pagination-link:hover,
+.pagination .page-link:hover {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-tertiary-bg);
+    border-color: var(--bs-border-color);
+}
+
+.pagination .page-item.active .page-link {
+    color: var(--bs-body-bg);
+    background: var(--bs-emphasis-color);
+    border-color: var(--bs-emphasis-color);
+}
+
+.pagination .page-item.disabled .page-link,
+.command-pagination-link.is-disabled {
+    color: var(--bs-secondary-color);
+    background: var(--bs-tertiary-bg);
+    opacity: .65;
+}
+
+.pagination {
+    gap: .25rem;
+}
+
+.pagination .page-link {
+    border-radius: var(--bs-border-radius-sm) !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus-visible {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-tertiary-bg);
+}
+
+.dropdown-item.text-danger:hover,
+.dropdown-item.text-danger:focus-visible {
+    color: #a52834 !important;
+    background: #fff0f1;
 }

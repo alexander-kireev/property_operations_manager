@@ -137,6 +137,15 @@ class EventFormTests(EventTestMixin, TestCase):
         self.assertTrue(all_day.is_valid(), all_day.errors)
         self.assertTrue(timed.is_valid(), timed.errors)
 
+    def test_time_fields_use_plain_24_hour_text_inputs(self):
+        form = EventForm(user=self.user)
+
+        for field_name in ("start_time", "end_time"):
+            widget = form.fields[field_name].widget
+            self.assertEqual(widget.input_type, "text")
+            self.assertNotIn("inputmode", widget.attrs)
+            self.assertNotIn("placeholder", widget.attrs)
+
     def test_timing_rules_are_attached_to_time_fields(self):
         all_day_with_times = EventForm(data=self.valid_form_data(
             start_time="09:00",
@@ -444,6 +453,28 @@ class EventViewTests(EventTestMixin, TestCase):
         self.assertEqual(response.context["calendar_month_label"], "September 2026")
         self.assertEqual(response.context["calendar_event_count"], 1)
         self.assertContains(response, event.title)
+
+    def test_add_event_modal_renders_tabbed_contact_cards(self):
+        contact = self.create_contact(self.user, first_name="Leila", last_name="Davies")
+        ContactMethod.objects.create(
+            contact=contact,
+            type=ContactMethod.Type.EMAIL,
+            value="leila@example.com",
+        )
+
+        response = self.client.get(reverse("event:events"))
+
+        self.assertContains(response, 'data-event-tab="details"')
+        self.assertContains(response, 'data-event-tab="participants"')
+        self.assertContains(response, 'data-duration-choice')
+        self.assertContains(response, 'value="all_day"')
+        self.assertContains(response, 'value="timed"')
+        self.assertContains(response, "Use 24-hour time (HH:MM), for example 09:30.")
+        self.assertContains(response, "Requires participation.")
+        self.assertContains(response, 'data-contact-option')
+        self.assertContains(response, 'leila@example.com')
+        self.assertContains(response, 'data-search-text="Leila Davies leila@example.com')
+        self.assertContains(response, 'name="contacts"')
 
     def test_workspace_defaults_to_scheduled_events_and_can_show_all_states(self):
         scheduled = self.create_event(self.user, "Scheduled visit")

@@ -299,6 +299,18 @@ class IssueViewTests(IssueTestMixin, TestCase):
             self.user, property=self.property, priority=Issue.Priority.URGENT
         )
 
+    def test_confirmation_keeps_issue_title_and_linked_task_choice_in_body(self):
+        self.issue.title = "Roof " + "X" * 90
+        self.issue.save(update_fields=["title"])
+        self.create_task(self.user, self.issue)
+
+        response = self.client.get(reverse("issue:issues"))
+
+        self.assertContains(response, 'id="resolveIssueModalLabel">Resolve issue?</h2>')
+        self.assertContains(response, 'class="modal-context-value">' + self.issue.title)
+        self.assertContains(response, 'id="resolveLinkedTasks"')
+        self.assertContains(response, 'class="btn btn-danger" type="submit">Delete issue')
+
     def test_issue_list_defaults_to_active_and_can_show_terminal_states(self):
         resolved = self.create_issue(self.user, "Resolved issue", state=Issue.State.RESOLVED)
         dismissed = self.create_issue(self.user, "Dismissed issue", state=Issue.State.DISMISSED)

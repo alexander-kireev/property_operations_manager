@@ -186,7 +186,7 @@
                     <div class="task-pane">
                         {% if selected_task %}
                             <header class="task-detail-header">
-                                <a class="task-mobile-back btn btn-sm btn-outline-secondary mb-3" href="{{ task_list_url }}">Back to tasks</a>
+                                <a class="task-mobile-back btn btn-sm pom-quiet mb-3" href="{{ task_list_url }}">← Back to tasks</a>
                                 <div class="task-detail-header-layout">
                                     <div class="task-detail-heading-copy">
                                         <h2 class="task-detail-title h3" title="{{ selected_task.title }}">{{ selected_task.title }}</h2>
@@ -298,7 +298,7 @@
     {% if selected_task.state == "active" %}
         <div class="modal fade" id="editTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editTaskModalLabel" aria-hidden="true">
             <div class="task-form-dialog modal-dialog modal-dialog-centered"><div class="modal-content">
-                <div class="modal-header"><h2 class="modal-title fs-5" id="editTaskModalLabel">Edit {{ selected_task.title }}</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-header"><h2 class="modal-title fs-5" id="editTaskModalLabel">Edit task</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'task:edit_task' selected_task.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off" data-task-form>
                     <div class="modal-body">{% csrf_token %}{% include "task/includes/task_form_fields.html" with task_form=edit_task_form %}</div>
                     <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action px-4" type="submit">Save changes</button></div>
@@ -306,28 +306,28 @@
             </div></div>
         </div>
 
-        <div class="modal fade" id="completeTaskModal" tabindex="-1" aria-labelledby="completeTaskModalLabel" aria-hidden="true">
+        <div class="modal fade modal-resilient" id="completeTaskModal" tabindex="-1" aria-labelledby="completeTaskModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-                <div class="modal-header"><h2 class="modal-title fs-5" id="completeTaskModalLabel">Complete {{ selected_task.title }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body"><p class="mb-0">The task will be marked as completed and retained in your history.</p></div>
+                <div class="modal-header"><h2 class="modal-title fs-5" id="completeTaskModalLabel">Complete task?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body"><p>The task will be marked as completed and retained in your history.</p><div class="modal-context"><span class="small text-body-secondary d-block">Task</span><span class="modal-context-value">{{ selected_task.title }}</span></div></div>
                 <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'task:complete_task' selected_task.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">{% csrf_token %}<input type="hidden" name="next" value="{{ task_workspace_url }}"><button class="btn theme-action" type="submit">Complete task</button></form></div>
             </div></div>
         </div>
 
-        <div class="modal fade" id="dismissTaskModal" tabindex="-1" aria-labelledby="dismissTaskModalLabel" aria-hidden="true">
+        <div class="modal fade modal-resilient" id="dismissTaskModal" tabindex="-1" aria-labelledby="dismissTaskModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-                <div class="modal-header"><h2 class="modal-title fs-5" id="dismissTaskModalLabel">Dismiss {{ selected_task.title }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body"><p class="mb-0">The task will be marked as dismissed and retained in your history.</p></div>
+                <div class="modal-header"><h2 class="modal-title fs-5" id="dismissTaskModalLabel">Dismiss task?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body"><p>The task will be marked as dismissed and retained in your history.</p><div class="modal-context"><span class="small text-body-secondary d-block">Task</span><span class="modal-context-value">{{ selected_task.title }}</span></div></div>
                 <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'task:dismiss_task' selected_task.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">{% csrf_token %}<input type="hidden" name="next" value="{{ task_workspace_url }}"><button class="btn btn-outline-secondary" type="submit">Dismiss task</button></form></div>
             </div></div>
         </div>
     {% endif %}
 
-    <div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal fade modal-resilient" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-            <div class="modal-header"><h2 class="modal-title fs-5" id="deleteTaskModalLabel">Delete {{ selected_task.title }}?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            <div class="modal-body"><p class="mb-2">This task will be removed from your workspace.</p><p class="text-body-secondary mb-0">The underlying record is retained as operational history.</p></div>
-            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><form action="{% url 'task:delete_task' selected_task.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">{% csrf_token %}<input type="hidden" name="next" value="{{ task_list_url }}"><button class="btn btn-outline-danger" type="submit">Delete task</button></form></div>
+            <div class="modal-header"><h2 class="modal-title fs-5" id="deleteTaskModalLabel">Delete task?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><p>This task will be removed from your workspace.</p><div class="modal-context"><span class="small text-body-secondary d-block">Task</span><span class="modal-context-value">{{ selected_task.title }}</span></div><p class="text-body-secondary mb-0 mt-3">The underlying record is retained as operational history.</p></div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep task</button><form action="{% url 'task:delete_task' selected_task.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">{% csrf_token %}<input type="hidden" name="next" value="{{ task_list_url }}"><button class="btn btn-danger" type="submit">Delete task</button></form></div>
         </div></div>
     </div>
 {% endif %}

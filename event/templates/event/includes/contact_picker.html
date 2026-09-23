@@ -1,0 +1,34 @@
+<div class="event-contact-picker" data-contact-picker>
+    <div class="event-contact-picker-heading">
+        <p class="small text-body-secondary mb-0">Choose from active contacts. You can update this later.</p>
+        <span class="small fw-semibold text-nowrap" aria-live="polite" data-contact-picker-status>{{ picker_field.value|length }} selected</span>
+    </div>
+    <label class="visually-hidden" for="{{ picker_id }}Search">Search contacts</label>
+    <input
+        class="form-control"
+        id="{{ picker_id }}Search"
+        type="search"
+        placeholder="Search by name, email or phone"
+        autocomplete="off"
+        aria-controls="{{ picker_id }}Choices"
+        data-contact-search
+    >
+    <div class="event-contact-choices mt-2" id="{{ picker_id }}Choices" role="group" aria-label="Contacts">
+        {% for choice in picker_field %}
+            {% with contact=choice.data.value.instance %}
+                <label class="event-contact-option" data-contact-option data-search-text="{{ contact.first_name }} {{ contact.last_name }} {{ contact.first_email }} {{ contact.first_telephone }}" title="{{ contact }}">
+                    <span class="event-contact-avatar" aria-hidden="true">{{ contact.first_name|first|upper }}{{ contact.last_name|first|upper }}</span>
+                    <span class="event-contact-copy">
+                        <span class="event-contact-name">{{ contact }}</span>
+                        <span class="event-contact-meta">{% if contact.first_email %}{{ contact.first_email }}{% elif contact.first_telephone %}{{ contact.first_telephone }}{% else %}No contact details{% endif %}</span>
+                    </span>
+                    {{ choice.tag }}
+                </label>
+            {% endwith %}
+        {% empty %}
+            <p class="small text-body-secondary m-0 p-3 event-contact-empty-state">No active contacts available.</p>
+        {% endfor %}
+        <p class="small text-body-secondary m-0 p-3 event-contact-empty-state" data-contact-empty hidden>No matching contacts.</p>
+    </div>
+    {% for error in picker_field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+</div>

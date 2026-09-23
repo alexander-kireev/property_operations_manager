@@ -4,6 +4,7 @@ from .models import Event
 
 from property.models import Property
 from contact.models import Contact
+from contact.selectors import contacts_for_user
 
 class EventForm(forms.ModelForm):
     def __init__(self, *args, user, **kwargs):
@@ -82,14 +83,14 @@ class EventForm(forms.ModelForm):
             ),
             "start_time": forms.TimeInput(
                 format="%H:%M",
-                attrs={"type": "time"},
+                attrs={"type": "text", "maxlength": 5},
             ),
             "end_time": forms.TimeInput(
                 format="%H:%M",
-                attrs={"type": "time"},
+                attrs={"type": "text", "maxlength": 5},
             ),
             "description": forms.Textarea(
-                attrs={"rows": 4}
+                attrs={"rows": 3}
             ),
         }
 
@@ -132,10 +133,8 @@ class EventContactForm(forms.Form):
     def __init__(self, *args, user, event=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        contacts = Contact.objects.filter(
-            user=user,
+        contacts = contacts_for_user(user=user).filter(
             state=Contact.State.ACTIVE,
-            deleted_at__isnull=True,
         )
 
         if event is not None and event.pk:
@@ -152,11 +151,6 @@ class EventContactForm(forms.Form):
     contacts = forms.ModelMultipleChoiceField(
         queryset=Contact.objects.none(),
         required=False,
-        widget=forms.SelectMultiple(
-            attrs={
-                "class": "form-select",
-                "size": 6,
-            }
-        ),
+        widget=forms.CheckboxSelectMultiple(),
     )
 
