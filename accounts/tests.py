@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
+from urllib.parse import urlsplit
 from unittest.mock import patch
 
 from django.test import TestCase, override_settings
-from .models import User, PendingRegistration
+from .models import User, PendingEmailChange, PendingRegistration
 
 from django.urls import reverse
 from django.core import mail
@@ -506,7 +507,6 @@ class UserAccountManagementTests(TestCase):
             reverse("accounts:change_email"),
             {
                 "new_email": new_email,
-                "confirm_email": new_email,
                 "current_password": self.USER_1["password"],
             },
         )
@@ -514,7 +514,66 @@ class UserAccountManagementTests(TestCase):
         self.assertRedirects(response, reverse("accounts:change_email"))
 
         user.refresh_from_db()
+        self.assertEqual(user.email, self.USER_1["email"])
+        self.assertEqual(PendingEmailChange.objects.get(user=user).new_email, new_email)
+        self.assertEqual(mail.outbox[-1].to, [new_email])
+
+        confirmation_url = next(line for line in mail.outbox[-1].body.splitlines() if "/change_email/confirm/" in line)
+        confirmation_path = urlsplit(confirmation_url).path
+        self.assertEqual(self.client.get(confirmation_path).status_code, 200)
+        user.refresh_from_db()
+        self.assertEqual(user.email, self.USER_1["email"])
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(confirmation_path)
+        self.assertRedirects(response, reverse("accounts:email_change_complete"))
+        user.refresh_from_db()
         self.assertEqual(user.email, new_email)
+        self.assertFalse(PendingEmailChange.objects.filter(user=user).exists())
+        self.assertEqual(mail.outbox[-1].to, [self.USER_1["email"]])
+        self.assertEqual(self.client.post(confirmation_path).status_code, 400)
+
+    def test_email_change_link_expires_and_replaced_link_cannot_be_used(self):
+        user = self.create_user(self.USER_1)
+        self.client.force_login(user)
+        self.client.post(reverse("accounts:change_email"), {"new_email": "first@example.com", "current_password": self.USER_1["password"]})
+        first_path = urlsplit(next(line for line in mail.outbox[-1].body.splitlines() if "/change_email/confirm/" in line)).path
+        self.client.post(reverse("accounts:change_email"), {"new_email": "second@example.com", "current_password": self.USER_1["password"]})
+        self.assertEqual(self.client.post(first_path).status_code, 400)
+        pending = PendingEmailChange.objects.get(user=user)
+        pending.expires_at = timezone.now() - timedelta(seconds=1)
+        pending.save(update_fields=["expires_at"])
+        second_path = urlsplit(next(line for line in mail.outbox[-1].body.splitlines() if "/change_email/confirm/" in line)).path
+        self.assertEqual(self.client.post(second_path).status_code, 400)
+        user.refresh_from_db()
+        self.assertEqual(user.email, self.USER_1["email"])
+
+    def test_email_change_rejects_address_taken_after_request(self):
+        user = self.create_user(self.USER_1)
+        self.client.force_login(user)
+        target = "later@example.com"
+        self.client.post(reverse("accounts:change_email"), {"new_email": target, "current_password": self.USER_1["password"]})
+        confirmation_path = urlsplit(next(line for line in mail.outbox[-1].body.splitlines() if "/change_email/confirm/" in line)).path
+        User.objects.create_user(email=target, password="StrongPassword123!")
+        self.assertEqual(self.client.post(confirmation_path).status_code, 409)
+        user.refresh_from_db()
+        self.assertEqual(user.email, self.USER_1["email"])
+
+    def test_old_login_works_until_new_email_is_verified(self):
+        user = self.create_user(self.USER_1)
+        self.client.force_login(user)
+        target = "alice.verified@example.com"
+        self.client.post(reverse("accounts:change_email"), {"new_email": target, "current_password": self.USER_1["password"]})
+        confirmation_path = urlsplit(next(line for line in mail.outbox[-1].body.splitlines() if "/change_email/confirm/" in line)).path
+
+        self.client.logout()
+        self.assertTrue(self.client.login(username=self.USER_1["email"], password=self.USER_1["password"]))
+        self.client.logout()
+        self.assertFalse(self.client.login(username=target, password=self.USER_1["password"]))
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(confirmation_path)
+        self.assertFalse(self.client.login(username=self.USER_1["email"], password=self.USER_1["password"]))
+        self.assertTrue(self.client.login(username=target, password=self.USER_1["password"]))
 
     def test_email_change_taken_email_is_rejected(self):
         user = self.create_user(self.USER_1)
@@ -525,7 +584,6 @@ class UserAccountManagementTests(TestCase):
             reverse("accounts:change_email"),
             {
                 "new_email": user_2.email,
-                "confirm_email": user_2.email,
                 "current_password": self.USER_1["password"],
             },
         )
@@ -552,7 +610,6 @@ class UserAccountManagementTests(TestCase):
             reverse("accounts:change_email"),
             {
                 "new_email": new_email,
-                "confirm_email": new_email,
                 "current_password": f"{self.USER_1['password']}_invalid",
             },
         )
@@ -569,7 +626,7 @@ class UserAccountManagementTests(TestCase):
         user.refresh_from_db()
         self.assertEqual(user.email, self.USER_1["email"])
 
-    def test_email_change_mismatched_email_confirmation_is_rejected(self):
+    def test_email_change_does_not_require_typed_email_confirmation(self):
         user = self.create_user(self.USER_1)
         self.client.force_login(user)
 
@@ -577,18 +634,18 @@ class UserAccountManagementTests(TestCase):
             reverse("accounts:change_email"),
             {
                 "new_email": "alice.new@example.com",
-                "confirm_email": "alice.different@example.com",
                 "current_password": self.USER_1["password"],
             },
         )
 
         self.assertEqual(post_response.status_code, 302)
-        self.assertIn("form_state=", post_response.url)
+        self.assertEqual(post_response.url, reverse("accounts:change_email"))
 
         response = self.client.get(post_response.url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context["form"].errors)
+        self.assertFalse(response.context["form"].errors)
+        self.assertContains(response, "Verification is pending")
 
         user.refresh_from_db()
         self.assertEqual(user.email, self.USER_1["email"])

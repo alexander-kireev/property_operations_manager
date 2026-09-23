@@ -3,7 +3,7 @@
 
 {% block content %}
 
-    <div class="container profile-content">
+    <div class="container profile-content profile-settings-content">
         <div class="mb-4">
             <h1 class="h2 mb-2">Profile</h1>
             <p class="text-body-secondary mb-0">
@@ -45,29 +45,6 @@
                         </div>
                     </div>
 
-                    <div class="row align-items-center mb-4">
-                        <label class="col-md-3 col-form-label" for="email">Email</label>
-                        <div class="col-md-9">
-                            <div class="row g-2">
-                                <div class="col">
-                                    <input
-                                        class="form-control"
-                                        id="email"
-                                        name="email"
-                                        type="email"
-                                        value="{{ request.user.email }}"
-                                        readonly
-                                    >
-                                </div>
-                                <div class="col-auto">
-                                    <a class="btn btn-outline-secondary" href="{% url 'accounts:change_email' %}">
-                                        Change email
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="row">
                         <div class="col-md-9 offset-md-3">
                             <button class="btn theme-action" type="submit">Save changes</button>
@@ -83,19 +60,29 @@
             <div class="card-body p-4 p-md-5">
                 <h2 class="h5 mb-4" id="account-heading">Account</h2>
 
-                <div class="row align-items-center mb-3">
-                    <div class="col-md-3 fw-medium">Password</div>
-                    <div class="col-md-9">
-                        <a class="btn btn-outline-secondary" href="{% url 'accounts:change_password' %}">Change password</a>
+                <div class="row align-items-center gy-2 py-3 border-top">
+                    <div class="col-sm-3 fw-medium">Email</div>
+                    <div class="col-sm-9 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <span class="profile-email-value">{{ request.user.email }}</span>
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:change_email' %}">Change email</a>
                     </div>
                 </div>
 
-                <div class="row align-items-center">
-                    <div class="col-md-3 fw-medium">Current session</div>
-                    <div class="col-md-9">
+                <div class="row align-items-center gy-2 py-3 border-top">
+                    <div class="col-sm-3 fw-medium">Password</div>
+                    <div class="col-sm-9 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <span class="text-body-secondary">Keep your account secure.</span>
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:change_password' %}">Change password</a>
+                    </div>
+                </div>
+
+                <div class="row align-items-center gy-2 pt-3 border-top">
+                    <div class="col-sm-3 fw-medium">Session</div>
+                    <div class="col-sm-9 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <span class="text-body-secondary">Signed in on this device.</span>
                         <form method="post" action="{% url 'accounts:logout' %}" autocomplete="off">
                             {% csrf_token %}
-                            <button class="dropdown-item" type="submit">Log out</button>
+                            <button class="btn btn-outline-secondary btn-sm" type="submit">Log out</button>
                         </form>
                     </div>
                 </div>

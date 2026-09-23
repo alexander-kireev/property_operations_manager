@@ -15,6 +15,10 @@ def pending_registration_expiry():
     return timezone.now() + timedelta(hours=72)
 
 
+def pending_email_change_expiry():
+    return timezone.now() + timedelta(hours=24)
+
+
 class User(AbstractUser):
     username = None
     first_name = models.CharField(max_length=150)
@@ -66,6 +70,19 @@ class PendingRegistration(models.Model):
 
     def check_password(self, raw_password):
         return check_password(raw_password, self.password_hash)
+
+
+class PendingEmailChange(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="pending_email_change")
+    old_email = models.EmailField()
+    new_email = models.EmailField()
+    token_hash = models.CharField(max_length=64, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(default=pending_email_change_expiry)
+
+    @property
+    def is_expired(self):
+        return self.expires_at <= timezone.now()
 
 
 

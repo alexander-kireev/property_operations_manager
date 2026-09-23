@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Email changed | Property Operations Manager{% endblock %}
+{% block content %}
+<div class="container account-content">
+    <section class="card border-0 shadow-sm" aria-labelledby="email-changed-heading">
+        <div class="card-body p-4 p-md-5">
+            <h1 class="h3 mb-3" id="email-changed-heading">Email address changed</h1>
+            <p>Your new address is now your sign-in email. We’ve sent a notification to your previous address.</p>
+            <a class="btn theme-action" href="{% url 'accounts:profile_page' %}">Back to profile</a>
+        </div>
+    </section>
+</div>
+{% endblock %}

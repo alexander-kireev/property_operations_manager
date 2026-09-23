@@ -144,6 +144,19 @@ body {
     max-width: 860px;
 }
 
+.profile-settings-content {
+    max-width: 760px;
+}
+
+.account-content {
+    max-width: 760px;
+}
+
+.profile-email-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .account-menu-button {
     width: 2.5rem;
     height: 2.5rem;
