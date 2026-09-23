@@ -32,6 +32,7 @@ class IssueForm(forms.ModelForm):
 
         self.fields["property"].queryset = properties.order_by("name", "pk")
         self.fields["property"].empty_label = "No property"
+        self.fields["resolution_deadline"].label = "Resolve by"
 
         for field_name, field in self.fields.items():
             field.widget.attrs["autocomplete"] = "off"

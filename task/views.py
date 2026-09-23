@@ -294,6 +294,11 @@ def _task_list_context(
         "show_mobile_detail": bool(request.GET.get("selected")) or (
             open_modal == "editTaskModal"
         ),
+        "relationship_moved": (
+            request.GET.get("moved") == "1"
+            and selected_task is not None
+            and request.GET.get("selected") == str(selected_task.pk)
+        ),
     }
 
 

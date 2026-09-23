@@ -1,5 +1,24 @@
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("[data-task-form]").forEach((form) => {
+        const scheduledDate = form.querySelector('[name="scheduled_date"]');
+        const completionDeadline = form.querySelector('[name="completion_deadline"]');
+        const dateWarning = form.querySelector('[data-task-date-warning]');
+
+        function updateDateWarning() {
+            if (scheduledDate && completionDeadline && dateWarning) {
+                dateWarning.hidden = !(
+                    scheduledDate.value && completionDeadline.value &&
+                    completionDeadline.value < scheduledDate.value
+                );
+            }
+        }
+
+        [scheduledDate, completionDeadline].forEach((field) => {
+            field?.addEventListener("input", updateDateWarning);
+            field?.addEventListener("change", updateDateWarning);
+        });
+        updateDateWarning();
+
         const relationshipFieldset = form.querySelector("[data-task-relationship]");
 
         if (!relationshipFieldset) {
@@ -8,6 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const relationshipChoices = relationshipFieldset.querySelectorAll(
             'input[name="relationship_type"]'
+        );
+        const standalonePanel = relationshipFieldset.querySelector(
+            '[data-relationship-panel="standalone"]'
         );
         const propertyPanel = relationshipFieldset.querySelector(
             '[data-relationship-panel="property"]'
@@ -43,6 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const showProperty = relationshipType === "property";
             const showIssue = relationshipType === "issue";
 
+            standalonePanel.hidden = relationshipType !== "standalone";
             propertyPanel.hidden = !showProperty;
             issuePanel.hidden = !showIssue;
             propertySelect.disabled = !showProperty;
@@ -55,6 +78,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (clearInactive && !showIssue) {
                 issueSelect.value = "";
             }
+
+            window.SearchableSelect?.refresh(propertySelect);
+            window.SearchableSelect?.refresh(issueSelect);
         }
 
         relationshipChoices.forEach((choice) => {

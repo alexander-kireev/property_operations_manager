@@ -13,7 +13,7 @@
     </div>
     <div class="col-md-6">
         <label class="form-label" for="{{ event_form.property.id_for_label }}">{{ event_form.property.label }}</label>
-        {{ event_form.property }}
+        <div data-searchable-select>{{ event_form.property }}</div>
         {% for error in event_form.property.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-md-6">

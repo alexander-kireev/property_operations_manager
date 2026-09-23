@@ -12,7 +12,7 @@ ISSUE_DEADLINE_PERIOD_OPTIONS = {
     "today": "Today",
     "next_7_days": "Next 7 days",
     "upcoming": "Upcoming",
-    "no_deadline": "No deadline",
+    "no_deadline": "No target date",
 }
 
 ISSUE_SORT_OPTIONS = {

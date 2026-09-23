@@ -24,18 +24,18 @@
         <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-label="Task relationship type">
             <input
                 class="btn-check"
-                id="{{ task_form.prefix|default:'task' }}RelationshipStandalone"
+                id="{{ task_form.title.id_for_label }}_relationship_standalone"
                 name="relationship_type"
                 type="radio"
                 value="standalone"
                 autocomplete="off"
                 {% if task_form.data.relationship_type == "standalone" %}checked{% elif not task_form.is_bound and not task_form.instance.property_id and not task_form.instance.issue_id %}checked{% elif task_form.is_bound and not task_form.data.relationship_type and not task_form.data.property and not task_form.data.issue %}checked{% endif %}
             >
-            <label class="btn btn-outline-secondary" for="{{ task_form.prefix|default:'task' }}RelationshipStandalone">Standalone</label>
+            <label class="btn btn-outline-secondary" for="{{ task_form.title.id_for_label }}_relationship_standalone">Standalone</label>
 
             <input
                 class="btn-check"
-                id="{{ task_form.prefix|default:'task' }}RelationshipProperty"
+                id="{{ task_form.title.id_for_label }}_relationship_property"
                 name="relationship_type"
                 type="radio"
                 value="property"
@@ -43,11 +43,11 @@
                 {% if task_form.data.relationship_type == "property" %}checked{% elif not task_form.is_bound and task_form.instance.property_id %}checked{% endif %}
                 {% if not task_form.has_property_choices %}disabled{% endif %}
             >
-            <label class="btn btn-outline-secondary" for="{{ task_form.prefix|default:'task' }}RelationshipProperty">Property</label>
+            <label class="btn btn-outline-secondary" for="{{ task_form.title.id_for_label }}_relationship_property">Property</label>
 
             <input
                 class="btn-check"
-                id="{{ task_form.prefix|default:'task' }}RelationshipIssue"
+                id="{{ task_form.title.id_for_label }}_relationship_issue"
                 name="relationship_type"
                 type="radio"
                 value="issue"
@@ -55,7 +55,7 @@
                 {% if task_form.data.relationship_type == "issue" %}checked{% elif not task_form.is_bound and task_form.instance.issue_id %}checked{% endif %}
                 {% if not task_form.has_issue_choices %}disabled{% endif %}
             >
-            <label class="btn btn-outline-secondary" for="{{ task_form.prefix|default:'task' }}RelationshipIssue">Issue</label>
+            <label class="btn btn-outline-secondary" for="{{ task_form.title.id_for_label }}_relationship_issue">Issue</label>
         </div>
 
         {% if not task_form.has_property_choices or not task_form.has_issue_choices %}
@@ -68,11 +68,18 @@
 
     </div>
 
+    <div class="col-12 mt-3" data-relationship-panel="standalone">
+        <div class="row align-items-start">
+            <span class="col-md-4 col-form-label text-body-secondary">Link</span>
+            <div class="col-md-8"><div class="form-control-plaintext text-body-secondary">No linked property or issue</div></div>
+        </div>
+    </div>
+
     <div class="col-12 mt-3" data-relationship-panel="property">
         <div class="row align-items-start">
             <label class="col-md-4 col-form-label" for="{{ task_form.property.id_for_label }}">Property</label>
             <div class="col-md-8">
-                {{ task_form.property }}
+                <div data-searchable-select>{{ task_form.property }}</div>
                 {% for error in task_form.property.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
             </div>
         </div>
@@ -82,7 +89,7 @@
         <div class="row align-items-start">
             <label class="col-md-4 col-form-label" for="{{ task_form.issue.id_for_label }}">Issue</label>
             <div class="col-md-8">
-                {{ task_form.issue }}
+                <div data-searchable-select>{{ task_form.issue }}</div>
                 {% for error in task_form.issue.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
             </div>
         </div>
@@ -112,3 +119,4 @@
         {% for error in task_form.completion_deadline.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     </div>
 </div>
+<p class="form-text task-date-warning mb-0 mt-2" data-task-date-warning hidden>Deadline is before the scheduled date. You can save this, but check whether one date needs updating.</p>

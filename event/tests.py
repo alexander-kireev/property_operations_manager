@@ -475,6 +475,15 @@ class EventViewTests(EventTestMixin, TestCase):
         self.assertContains(response, 'leila@example.com')
         self.assertContains(response, 'data-search-text="Leila Davies leila@example.com')
         self.assertContains(response, 'name="contacts"')
+        self.assertContains(response, 'data-searchable-select')
+        self.assertContains(response, 'js/searchable-select.js')
+
+    def test_add_and_edit_event_modals_use_the_same_property_picker(self):
+        self.create_event(self.user)
+
+        response = self.client.get(reverse("event:events"))
+
+        self.assertContains(response, 'data-searchable-select', count=2)
 
     def test_workspace_defaults_to_scheduled_events_and_can_show_all_states(self):
         scheduled = self.create_event(self.user, "Scheduled visit")

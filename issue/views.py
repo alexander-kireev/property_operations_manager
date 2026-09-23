@@ -180,7 +180,6 @@ def _restore_edit_issue_task_form(request, state):
         "edit_task_form": TaskForm(
             deserialise_form_data(state.get("data", {})),
             user=request.user,
-            parent_issue=issue,
             instance=task,
             auto_id="edit_issue_task_%s",
         ),
@@ -310,7 +309,6 @@ def _issue_list_context(
         "edit_task_form": edit_task_form or (
             TaskForm(
                 user=request.user,
-                parent_issue=selected_issue,
                 auto_id="edit_issue_task_%s",
             )
             if selected_issue and selected_issue.state == Issue.State.ACTIVE
@@ -507,17 +505,13 @@ def edit_issue_task_view(request, issue_id, task_id):
     form = TaskForm(
         request.POST,
         user=request.user,
-        parent_issue=issue,
         instance=task,
         auto_id="edit_issue_task_%s",
     )
     if form.is_valid():
-        update_task(
-            task=task,
-            property=None,
-            issue=issue,
-            **form.cleaned_data,
-        )
+        update_task(task=task, **form.cleaned_data)
+        if task.issue_id != issue.pk:
+            return redirect(f"{reverse('task:tasks')}?selected={task.pk}&moved=1")
         return redirect(_issue_workspace_url(request, issue_id=issue.pk, tab="tasks"))
     return _redirect_with_issue_form_state(
         request,
