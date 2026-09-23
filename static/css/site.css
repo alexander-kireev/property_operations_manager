@@ -2009,8 +2009,21 @@ body {
     color: var(--bs-secondary-color) !important;
 }
 
+.contact-command-heading {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.contact-command-heading .badge {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
 .contact-command-title {
     min-width: 0;
+    flex: 1 1 auto;
     overflow: hidden;
     font-weight: 600;
     text-overflow: ellipsis;
@@ -2018,11 +2031,23 @@ body {
 }
 
 .contact-command-methods {
+    display: flex;
     min-width: 0;
-    overflow: hidden;
+    align-items: baseline;
+    gap: 0.45rem;
     color: var(--bs-secondary-color);
     font-size: 0.875rem;
+}
+
+.contact-command-primary-method {
+    min-width: 0;
+    overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.contact-command-more {
+    flex: 0 0 auto;
     white-space: nowrap;
 }
 
@@ -2214,7 +2239,7 @@ body {
     overflow-wrap: anywhere;
     line-height: 1.25;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
 }
 
 .contact-detail-meta {

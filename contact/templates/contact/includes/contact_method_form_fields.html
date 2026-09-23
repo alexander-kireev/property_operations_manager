@@ -1,0 +1,14 @@
+{% for error in method_form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endfor %}
+<div data-contact-method-form>
+    <div class="mb-3">
+        <label class="form-label" for="{{ method_form.type.id_for_label }}">{{ method_form.type.label }}</label>
+        {{ method_form.type }}
+        {% for error in method_form.type.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <div>
+        <label class="form-label" for="{{ method_form.value.id_for_label }}" data-contact-method-value-label>{{ method_form.value.label }}</label>
+        {{ method_form.value }}
+        {% for error in method_form.value.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        <div class="form-text" data-contact-method-help hidden>Use international format beginning with +, for example +447700900123.</div>
+    </div>
+</div>

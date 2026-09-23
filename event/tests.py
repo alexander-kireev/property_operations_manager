@@ -1,4 +1,5 @@
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
+from unittest.mock import patch
 
 from django.db import IntegrityError, transaction
 from django.test import TestCase
@@ -58,7 +59,7 @@ class EventTestMixin:
         data = {
             "title": "Inspection",
             "description": "Annual inspection",
-            "scheduled_date": "2026-09-20",
+            "scheduled_date": (timezone.localdate() + timedelta(days=1)).isoformat(),
             "all_day": "on",
         }
         data.update(values)
@@ -166,6 +167,56 @@ class EventFormTests(EventTestMixin, TestCase):
         self.assertNotIn("end_time", timed_without_times.errors)
         self.assertFalse(reversed_times.is_valid())
         self.assertIn("end_time", reversed_times.errors)
+
+    def test_scheduled_event_rejects_new_past_date_but_allows_unchanged_historical_date(self):
+        past = timezone.localdate() - timedelta(days=1)
+        new_event = EventForm(
+            data=self.valid_form_data(scheduled_date=past.isoformat()),
+            user=self.user,
+        )
+        event = self.create_event(self.user, scheduled_date=past)
+        unchanged = EventForm(
+            data=self.valid_form_data(scheduled_date=past.isoformat(), title="Updated"),
+            user=self.user,
+            instance=event,
+        )
+        moved_earlier = EventForm(
+            data=self.valid_form_data(scheduled_date=(past - timedelta(days=1)).isoformat()),
+            user=self.user,
+            instance=event,
+        )
+
+        self.assertIn("scheduled_date", new_event.errors)
+        self.assertTrue(unchanged.is_valid(), unchanged.errors)
+        self.assertIn("scheduled_date", moved_earlier.errors)
+
+    def test_today_timed_event_rejects_elapsed_time_and_all_day_remains_available(self):
+        today = date(2026, 9, 23)
+        with (
+            patch("event.forms.timezone.localdate", return_value=today),
+            patch("event.forms.timezone.localtime", return_value=datetime(2026, 9, 23, 12)),
+        ):
+            ended = EventForm(
+                data=self.valid_form_data(
+                    scheduled_date=today.isoformat(), all_day="",
+                    start_time="09:00", end_time="10:00",
+                ),
+                user=self.user,
+            )
+            without_end = EventForm(
+                data=self.valid_form_data(
+                    scheduled_date=today.isoformat(), all_day="", start_time="09:00",
+                ),
+                user=self.user,
+            )
+            all_day = EventForm(
+                data=self.valid_form_data(scheduled_date=today.isoformat()),
+                user=self.user,
+            )
+
+            self.assertIn("end_time", ended.errors)
+            self.assertIn("start_time", without_end.errors)
+            self.assertTrue(all_day.is_valid(), all_day.errors)
 
     def test_presence_requires_participation(self):
         form = EventForm(data=self.valid_form_data(
@@ -477,6 +528,29 @@ class EventViewTests(EventTestMixin, TestCase):
         self.assertContains(response, 'name="contacts"')
         self.assertContains(response, 'data-searchable-select')
         self.assertContains(response, 'js/searchable-select.js')
+        self.assertContains(response, '>Date</label>')
+
+    def test_participant_name_links_to_active_or_deactivated_contact(self):
+        event = self.create_event(self.user)
+        active = self.create_contact(self.user, first_name="Active")
+        inactive = self.create_contact(
+            self.user, first_name="Inactive", state=Contact.State.DEACTIVATED,
+        )
+        EventContact.objects.create(event=event, contact=active)
+        EventContact.objects.create(event=event, contact=inactive)
+
+        response = self.client.get(reverse("event:events"), {
+            "selected": event.pk, "tab": "details",
+        })
+
+        self.assertContains(
+            response,
+            f'{reverse("contact:contacts")}?selected={active.pk}',
+        )
+        self.assertContains(
+            response,
+            f'{reverse("contact:contacts")}?state=all&amp;selected={inactive.pk}',
+        )
 
     def test_add_and_edit_event_modals_use_the_same_property_picker(self):
         self.create_event(self.user)
@@ -627,6 +701,19 @@ class EventViewTests(EventTestMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["open_modal"], "addEventModal")
         self.assertIn("title", response.context["add_event_form"].errors)
+        self.assertFalse(Event.objects.exists())
+
+    def test_past_scheduled_date_returns_field_error_in_add_modal(self):
+        past = timezone.localdate() - timedelta(days=1)
+        post_response = self.client.post(
+            reverse("event:add_event"),
+            self.valid_form_data(scheduled_date=past.isoformat()),
+        )
+
+        response = self.client.get(post_response.url)
+
+        self.assertEqual(response.context["open_modal"], "addEventModal")
+        self.assertIn("scheduled_date", response.context["add_event_form"].errors)
         self.assertFalse(Event.objects.exists())
 
     def test_invalid_initial_contact_creates_no_event(self):

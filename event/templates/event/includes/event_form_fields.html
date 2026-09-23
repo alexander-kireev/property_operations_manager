@@ -17,14 +17,14 @@
         {% for error in event_form.property.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-md-6">
-        <label class="form-label" for="{{ event_form.scheduled_date.id_for_label }}">{{ event_form.scheduled_date.label }}</label>
+        <label class="form-label" for="{{ event_form.scheduled_date.id_for_label }}">Date</label>
         {{ event_form.scheduled_date }}
         {% for error in event_form.scheduled_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-12">
         <div hidden>{{ event_form.all_day }}</div>
-        <div class="event-duration" role="radiogroup" aria-label="Duration">
-            <span class="event-duration-label">Duration</span>
+        <div class="event-duration" role="radiogroup" aria-label="Time">
+            <span class="event-duration-label">Time</span>
             <label class="event-duration-choice"><input type="radio" name="{{ event_form.all_day.auto_id }}_duration" value="all_day" data-duration-choice{% if event_form.all_day.value %} checked{% endif %}> All day</label>
             <label class="event-duration-choice"><input type="radio" name="{{ event_form.all_day.auto_id }}_duration" value="timed" data-duration-choice{% if not event_form.all_day.value %} checked{% endif %}> Set time</label>
         </div>

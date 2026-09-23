@@ -1,4 +1,4 @@
-from django.db.models import OuterRef, Prefetch, Q, Subquery
+from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
 from django.db.models.functions import Lower
 
 from .models import Contact, ContactMethod
@@ -23,6 +23,7 @@ def contacts_for_user(*, user):
         user=user,
         deleted_at__isnull=True,
     ).annotate(
+        method_count=Count("contact_methods", distinct=True),
         first_email=Subquery(
             first_method.filter(type=ContactMethod.Type.EMAIL).values("value")[:1]
         ),

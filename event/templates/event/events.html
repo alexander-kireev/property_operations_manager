@@ -224,7 +224,11 @@
                                                         <div class="event-participant-row">
                                                             <div class="event-participant-copy">
                                                                 <div class="d-flex align-items-center flex-wrap gap-2">
-                                                                    <span class="event-participant-name fw-semibold" title="{{ event_contact.contact }}">{{ event_contact.contact }}</span>
+                                                                    {% if event_contact.contact.deleted_at %}
+                                                                        <span class="event-participant-name fw-semibold" title="{{ event_contact.contact }}">{{ event_contact.contact }}</span>
+                                                                    {% else %}
+                                                                        <a class="event-participant-name fw-semibold link-body-emphasis" href="{% url 'contact:contacts' %}?{% if event_contact.contact.state != 'active' %}state=all&amp;{% endif %}selected={{ event_contact.contact.pk }}" title="{{ event_contact.contact }}">{{ event_contact.contact }}</a>
+                                                                    {% endif %}
                                                                     {% if event_contact.contact.state != "active" or event_contact.contact.deleted_at %}<span class="badge text-bg-secondary">Historical contact</span>{% endif %}
                                                                 </div>
                                                                 <div class="event-participant-methods small text-body-secondary">

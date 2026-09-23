@@ -155,6 +155,35 @@ class ContactFormTests(ContactTestMixin, TestCase):
                     "150",
                 )
 
+    def test_overlong_names_receive_field_specific_errors(self):
+        form = ContactForm(data={"first_name": "A" * 151, "last_name": "B" * 152})
+
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            list(form.errors["first_name"]),
+            ["First name must be 150 characters or fewer. You entered 151."],
+        )
+        self.assertEqual(
+            list(form.errors["last_name"]),
+            ["Last name must be 150 characters or fewer. You entered 152."],
+        )
+
+    def test_contact_method_form_uses_clear_choices_and_value_label(self):
+        form = ContactMethodForm()
+
+        self.assertEqual(form.fields["type"].label, "Contact method")
+        self.assertEqual(form.fields["value"].label, "Contact information")
+        self.assertEqual(form.fields["type"].choices[0], ("", "Choose email or telephone"))
+
+    def test_create_form_uses_the_same_friendly_name_error(self):
+        form = ContactCreateForm(data={"first_name": "A" * 151})
+
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            list(form.errors["first_name"]),
+            ["First name must be 150 characters or fewer. You entered 151."],
+        )
+
     def test_create_form_accepts_optional_initial_methods(self):
         form = ContactCreateForm(
             data={
@@ -532,7 +561,7 @@ class ContactViewTests(ContactTestMixin, TestCase):
         self.assertContains(response, f'title="{email}"')
         self.assertContains(response, f'aria-label="Email {email}"')
 
-    def test_contact_list_shows_first_email_and_telephone_only(self):
+    def test_contact_list_shows_one_method_and_explicit_remaining_count(self):
         contact = self.create_contact(self.user)
         for value in ("first@example.com", "second@example.com"):
             self.create_method(contact, value=value)
@@ -548,13 +577,14 @@ class ContactViewTests(ContactTestMixin, TestCase):
         list_html = list_html.split('class="contact-detail-column', 1)[0]
 
         self.assertIn("first@example.com", list_html)
-        self.assertIn("+447700900001", list_html)
+        self.assertIn("+3 more", list_html)
+        self.assertNotIn("+447700900001", list_html)
         self.assertNotIn("second@example.com", list_html)
         self.assertNotIn("+447700900002", list_html)
         self.assertContains(response, "second@example.com")
         self.assertContains(response, "+447700900002")
 
-    def test_deactivated_contact_list_shows_state_instead_of_methods(self):
+    def test_deactivated_contact_list_shows_state_beside_name_and_primary_method(self):
         contact = self.create_contact(
             self.user,
             state=Contact.State.DEACTIVATED,
@@ -569,7 +599,8 @@ class ContactViewTests(ContactTestMixin, TestCase):
         list_html = list_html.split('class="contact-detail-column', 1)[0]
 
         self.assertIn("Deactivated", list_html)
-        self.assertNotIn("alice@example.com", list_html)
+        self.assertIn("alice@example.com", list_html)
+        self.assertIn('class="contact-command-heading"', list_html)
         self.assertContains(response, "alice@example.com")
         self.assertNotContains(response, 'class="contact-method-actions"')
 
@@ -831,6 +862,10 @@ class ContactViewTests(ContactTestMixin, TestCase):
             response,
             'data-modal-auto-open="editContactMethodModal"',
         )
+        self.assertContains(response, 'data-contact-method-form', count=2)
+        self.assertContains(response, 'js/contact-method-form.js')
+        self.assertContains(response, "Choose email or telephone")
+        self.assertContains(response, "Use international format beginning with +")
 
     def test_invalid_method_form_reopens_correct_modal(self):
         contact = self.create_contact(self.user)

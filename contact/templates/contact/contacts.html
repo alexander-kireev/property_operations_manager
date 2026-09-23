@@ -64,9 +64,13 @@
                                         href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ contact.pk }}"
                                         {% if contact == selected_contact %}aria-current="true"{% endif %}
                                     >
-                                        <span class="contact-command-title d-block" title="{{ contact }}">{{ contact }}</span>
-                                        <span class="contact-command-methods d-block mt-2">
-                                            {% if contact.state != "active" %}<span class="badge bg-secondary-subtle border text-secondary-emphasis">{{ contact.get_state_display }}</span>{% else %}{% if contact.first_email %}{{ contact.first_email }}{% endif %}{% if contact.first_email and contact.first_telephone %} · {% endif %}{% if contact.first_telephone %}{{ contact.first_telephone }}{% endif %}{% if not contact.first_email and not contact.first_telephone %}No contact details{% endif %}{% endif %}
+                                        <span class="contact-command-heading">
+                                            <span class="contact-command-title" title="{{ contact }}">{{ contact }}</span>
+                                            {% if contact.state != "active" %}<span class="badge bg-secondary-subtle border text-secondary-emphasis">{{ contact.get_state_display }}</span>{% endif %}
+                                        </span>
+                                        <span class="contact-command-methods mt-2">
+                                            {% if contact.first_email %}<span class="contact-command-primary-method" title="{{ contact.first_email }}">{{ contact.first_email }}</span>{% elif contact.first_telephone %}<span class="contact-command-primary-method" title="{{ contact.first_telephone }}">{{ contact.first_telephone }}</span>{% else %}<span>No contact details</span>{% endif %}
+                                            {% if contact.method_count > 1 %}<span class="contact-command-more">+{{ contact.method_count|add:"-1" }} more</span>{% endif %}
                                         </span>
                                     </a>
                                 {% endfor %}
@@ -219,7 +223,7 @@
             <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
                 <div class="modal-header"><h2 class="modal-title fs-5" id="addContactMethodModalLabel">Add contact detail</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'contact:add_contact_method' selected_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
-                    <div class="modal-body">{% csrf_token %}{% for field in add_contact_method_form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}</div>
+                    <div class="modal-body">{% csrf_token %}{% include "contact/includes/contact_method_form_fields.html" with method_form=add_contact_method_form %}</div>
                     <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Add detail</button></div>
                 </form>
             </div></div>
@@ -230,7 +234,7 @@
                 <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
                     <div class="modal-header"><h2 class="modal-title fs-5" id="editContactMethodModalLabel">Edit contact detail</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                     <form action="{% url 'contact:edit_contact_method' selected_contact.pk edit_contact_method.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
-                        <div class="modal-body">{% csrf_token %}{% for field in edit_contact_method_form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}</div>
+                        <div class="modal-body">{% csrf_token %}{% include "contact/includes/contact_method_form_fields.html" with method_form=edit_contact_method_form %}</div>
                         <div class="modal-footer"><a class="btn btn-outline-secondary" href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ selected_contact.pk }}">Cancel</a><button class="btn theme-action" type="submit">Save changes</button></div>
                     </form>
                 </div></div>
@@ -255,6 +259,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{% static 'js/contact-method-form.js' %}"></script>
     <script src="{% static 'js/note-board.js' %}"></script>
     {% if open_modal %}<span hidden data-modal-auto-open="{{ open_modal }}"></span>{% endif %}
 {% endblock %}
