@@ -321,7 +321,7 @@ body {
 
 .property-list-grid {
     display: grid;
-    grid-template-columns: 2.25rem minmax(0, 1.35fr) minmax(0, 2.4fr) minmax(6rem, 0.8fr) 2.25rem;
+    grid-template-columns: 2.25rem minmax(0, 1.35fr) minmax(0, 2.4fr) minmax(6rem, 0.8fr);
     align-items: center;
     column-gap: 1rem;
 }
@@ -339,6 +339,14 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.property-row-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .property-row-name:hover,
@@ -442,6 +450,7 @@ body {
 
 .property-stat {
     min-height: 100%;
+    overflow-wrap: anywhere;
 }
 
 .property-detail-page .page-shell,

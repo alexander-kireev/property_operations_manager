@@ -1,11 +1,16 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.db import IntegrityError, transaction
+from django.db.models import DateField, IntegerField, Value
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
+from event.models import Event
+from issue.models import Issue
+from task.models import Task
 
 from .forms import PropertyForm
 from .models import Property
@@ -141,6 +146,78 @@ class PropertyViewTests(TestCase):
             address=address,
             state=state,
         )
+
+    def test_list_summary_uses_real_counts_and_next_upcoming_event(self):
+        property_record = self.create_property()
+        issue = Issue.objects.create(user=self.user, property=property_record, title="Open issue")
+        Issue.objects.create(user=self.user, property=property_record, title="Resolved", state=Issue.State.RESOLVED)
+        Task.objects.create(user=self.user, property=property_record, title="Direct task")
+        Task.objects.create(user=self.user, issue=issue, title="Issue task")
+        Task.objects.create(user=self.user, property=property_record, title="Done", state=Task.State.COMPLETED)
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        Event.objects.create(user=self.user, property=property_record, title="Visit", scheduled_date=tomorrow, all_day=True)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:properties"))
+        listed = response.context["page_obj"].object_list[0]
+
+        self.assertEqual(listed.open_issues, 1)
+        self.assertEqual(listed.open_direct_tasks + listed.open_issue_tasks, 2)
+        self.assertEqual(listed.next_event_date, tomorrow)
+        self.assertContains(response, "2</div>")
+        self.assertNotContains(response, "Contacts</div>")
+
+    def test_list_summary_handles_zero_and_large_counts(self):
+        empty = self.create_property(name="Empty")
+        busy = self.create_property(name="Busy")
+        Issue.objects.bulk_create(Issue(user=self.user, property=busy, title=f"Issue {index}") for index in range(1000))
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:properties"))
+        listed = {record.pk: record for record in response.context["page_obj"].object_list}
+
+        self.assertEqual(listed[empty.pk].open_issues, 0)
+        self.assertEqual(listed[busy.pk].open_issues, 1000)
+
+    def test_mocked_summary_values_render_without_placeholder(self):
+        self.create_property()
+        self.client.force_login(self.user)
+        for count in (0, 999, 1000, 100000):
+            with self.subTest(count=count), patch("property.views.with_work_summary") as summary:
+                summary.side_effect = lambda records: records.annotate(
+                    open_issues=Value(count, output_field=IntegerField()),
+                    open_direct_tasks=Value(count, output_field=IntegerField()),
+                    open_issue_tasks=Value(0, output_field=IntegerField()),
+                    next_event_date=Value(None, output_field=DateField()),
+                )
+                response = self.client.get(reverse("property:properties"))
+                self.assertContains(response, f">{count}</div>")
+
+    def test_list_edit_and_state_actions_preserve_filters_and_page(self):
+        property_record = self.create_property(name="Oak House")
+        self.client.force_login(self.user)
+        query = "?return_to=list&search=Oak&state=all&sort=-name&page=2"
+        expected = f"{reverse('property:properties')}?search=Oak&state=all&sort=-name&page=2"
+
+        response = self.client.post(reverse("property:edit_property", args=[property_record.pk]) + query, {
+            "name": "Oak House", "description": "Updated", "address": "10 Oak Road",
+        })
+        self.assertRedirects(response, expected, fetch_redirect_response=False)
+        response = self.client.post(reverse("property:deactivate_property", args=[property_record.pk]) + query)
+        self.assertRedirects(response, expected, fetch_redirect_response=False)
+        response = self.client.post(reverse("property:reactivate_property", args=[property_record.pk]) + query)
+        self.assertRedirects(response, expected, fetch_redirect_response=False)
+
+    def test_invalid_list_edit_reopens_shared_modal(self):
+        property_record = self.create_property(name="Oak House")
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("property:edit_property", args=[property_record.pk]) + "?return_to=list&search=Oak", {
+            "name": "", "description": "Updated", "address": "10 Oak Road",
+        }, follow=True)
+
+        self.assertContains(response, 'data-modal-auto-open="listEditPropertyModal"')
+        self.assertContains(response, "This field is required")
 
     def test_property_list_requires_login(self):
         response = self.client.get(reverse("property:properties"))

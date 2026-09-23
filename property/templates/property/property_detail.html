@@ -26,7 +26,6 @@
                     {% endif %}
                 </div>
                 <p class="property-detail-address text-body-secondary mb-2">{{ property.address|default:"No address provided" }}</p>
-                <p class="property-detail-description mb-0">{{ property.description|default:"No description provided." }}</p>
                 <p class="small text-body-secondary mt-2 mb-0">
                     Property created {{ property.created_at|date:"j F Y" }}
                 </p>
@@ -96,12 +95,9 @@
 
         <nav class="property-section-nav card border-0 shadow-sm mb-4" aria-label="Property sections">
             <div class="nav px-3">
-                <a class="nav-link active px-3 py-3" aria-current="page" href="#overview">Overview</a>
-                <a class="nav-link disabled px-3 py-3" href="#" aria-disabled="true">Issues</a>
-                <a class="nav-link disabled px-3 py-3" href="#" aria-disabled="true">Tasks</a>
-                <a class="nav-link disabled px-3 py-3" href="#" aria-disabled="true">Events</a>
-                <a class="nav-link disabled px-3 py-3" href="#" aria-disabled="true">Contacts</a>
-                <a class="nav-link disabled px-3 py-3" href="#" aria-disabled="true">Notes</a>
+                <a class="nav-link px-3 py-3" href="#overview">Overview</a>
+                <a class="nav-link px-3 py-3" href="#work">Work</a>
+                <a class="nav-link px-3 py-3" href="#schedule">Schedule</a>
             </div>
         </nav>
 
@@ -114,68 +110,51 @@
                         <div class="card-header bg-body d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 p-4">
                             <div>
                                 <h2 class="h5 mb-1" id="current-work-heading">Current work</h2>
-                                <p class="small text-body-secondary mb-0">Issues, tasks and events requiring attention.</p>
-                            </div>
-                            <div class="dropdown">
-                                <button
-                                    class="btn theme-action dropdown-toggle"
-                                    type="button"
-                                    data-bs-toggle="dropdown"
-                                    aria-expanded="false"
-                                    {% if property.state == "deactivated" %}disabled{% endif %}
-                                >
-                                    Add work
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><button class="dropdown-item" type="button" disabled>Create issue</button></li>
-                                    <li><button class="dropdown-item" type="button" disabled>Create task</button></li>
-                                    <li><button class="dropdown-item" type="button" disabled>Create event</button></li>
-                                </ul>
+                                <p class="small text-body-secondary mb-0">Open issues and tasks for this property.</p>
                             </div>
                         </div>
 
-                        <div class="card-body d-flex align-items-center justify-content-center p-5 text-center">
+                        <div class="card-body p-4">
                             <div>
-                                <h3 class="h6">No current work</h3>
-                                <p class="small text-body-secondary mb-0">
-                                    Issues, tasks and events for this property will appear here.
-                                </p>
+                                <p class="mb-2"><a class="link-body-emphasis" href="#work">{{ open_issues.count }} open issue{{ open_issues.count|pluralize }}</a></p>
+                                <p class="mb-0"><a class="link-body-emphasis" href="#work">{{ open_tasks.count }} open task{{ open_tasks.count|pluralize }}</a></p>
                             </div>
                         </div>
                     </section>
                 </div>
 
                 <div class="col-xl-4">
-                    <section class="card border-0 shadow-sm h-100" id="notes" aria-labelledby="notes-heading">
+                    <section class="card border-0 shadow-sm h-100" aria-labelledby="property-context-heading">
                         <div class="card-header bg-body p-4">
-                            <h2 class="h5 mb-1" id="notes-heading">Quick property notes</h2>
-                            <p class="small text-body-secondary mb-0">Capture information without creating structured work.</p>
+                            <h2 class="h5 mb-0" id="property-context-heading">Property context</h2>
                         </div>
-
-                        <div class="card-body p-4 text-center">
-                            <p class="small text-body-secondary mb-0">No notes have been added yet.</p>
-                        </div>
-
-                        <div class="card-body border-top p-4">
-                            <label class="visually-hidden" for="quickNote">Add a property note</label>
-                            <textarea
-                                class="form-control mb-2"
-                                id="quickNote"
-                                rows="3"
-                                placeholder="Write a quick note…"
-                                disabled
-                            ></textarea>
-                            <div class="d-grid">
-                                <button class="btn theme-action" type="button" disabled>Add note</button>
-                            </div>
-                        </div>
-
-                        <div class="card-footer bg-body px-4 py-3">
-                            <span class="small text-body-secondary">NotesBoard functionality follows in a later slice.</span>
+                        <div class="card-body p-4">
+                            <p class="property-detail-description mb-0">{{ property.description|default:"No description provided."|linebreaksbr }}</p>
                         </div>
                     </section>
                 </div>
             </div>
+        </section>
+
+        <section class="mt-4" id="work" aria-labelledby="property-work-heading">
+            <h2 class="h5 mb-3" id="property-work-heading">Work</h2>
+            <div class="row g-3">
+                <div class="col-lg-6"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4">
+                    <h3 class="h6">Open issues <span class="text-body-secondary">{{ open_issues.count }}</span></h3>
+                    {% for issue in open_issues %}<div class="border-top py-2"><a class="link-body-emphasis" href="{% url 'issue:issues' %}?selected={{ issue.pk }}">{{ issue.title }}</a></div>{% empty %}<p class="text-body-secondary mb-0">No open issues.</p>{% endfor %}
+                </div></div></div>
+                <div class="col-lg-6"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4">
+                    <h3 class="h6">Open tasks <span class="text-body-secondary">{{ open_tasks.count }}</span></h3>
+                    {% for task in open_tasks %}<div class="border-top py-2"><a class="link-body-emphasis" href="{% url 'task:tasks' %}?selected={{ task.pk }}">{{ task.title }}</a></div>{% empty %}<p class="text-body-secondary mb-0">No open tasks.</p>{% endfor %}
+                </div></div></div>
+            </div>
+        </section>
+
+        <section class="mt-4 mb-4" id="schedule" aria-labelledby="property-schedule-heading">
+            <h2 class="h5 mb-3" id="property-schedule-heading">Schedule</h2>
+            <div class="card border-0 shadow-sm"><div class="card-body p-4">
+                {% for event in next_events %}<div class="border-top py-2 d-flex justify-content-between gap-3"><a class="link-body-emphasis" href="{% url 'event:events' %}?selected={{ event.pk }}">{{ event.title }}</a><span class="text-body-secondary">{{ event.scheduled_date|date:"j M Y" }}</span></div>{% empty %}<p class="text-body-secondary mb-0">No upcoming events.</p>{% endfor %}
+            </div></div>
         </section>
     </div>
 

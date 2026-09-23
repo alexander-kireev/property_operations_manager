@@ -65,7 +65,6 @@
 
             {% if page_obj %}
                 <div class="property-list-heading property-list-grid border-bottom px-3 px-md-4 py-2 text-body-secondary small fw-medium">
-                    <span aria-hidden="true"></span>
                     <span>Property</span>
                     <span>Address</span>
                     <span>State</span>
@@ -117,40 +116,6 @@
                                         {% endif %}
                                 </div>
 
-                                <div class="property-row-actions">
-                                        <div class="dropdown">
-                                            <button
-                                                class="property-actions btn btn-sm btn-outline-secondary dropdown-toggle"
-                                                type="button"
-                                                data-bs-toggle="dropdown"
-                                                aria-expanded="false"
-                                                aria-label="Actions for {{ property.name }}"
-                                            >
-                                                <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                                                    <circle cx="8" cy="3" r="1.25"></circle>
-                                                    <circle cx="8" cy="8" r="1.25"></circle>
-                                                    <circle cx="8" cy="13" r="1.25"></circle>
-                                                </svg>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                <li><a class="dropdown-item" href="{% url 'property:property_detail' property.pk %}">Open property</a></li>
-                                                {% if property.state == "active" %}
-                                                    <li><a class="dropdown-item" href="{% url 'property:property_detail' property.pk %}?edit=1">Edit property</a></li>
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li><a class="dropdown-item text-danger" href="{% url 'property:property_detail' property.pk %}?deactivate=1">Deactivate property</a></li>
-                                                {% else %}
-                                                    <li>
-                                                        <form action="{% url 'property:reactivate_property' property.pk %}" method="post" autocomplete="off">
-                                                            {% csrf_token %}
-                                                            <button class="dropdown-item" type="submit">Reactivate property</button>
-                                                        </form>
-                                                    </li>
-                                                {% endif %}
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item text-danger" href="{% url 'property:property_detail' property.pk %}?confirm_delete=1">Delete property</a></li>
-                                            </ul>
-                                        </div>
-                                </div>
                             </div>
 
                             <div class="collapse" id="propertyDetails{{ property.pk }}" data-bs-parent="#propertyList">
@@ -167,32 +132,34 @@
                                             {% else %}
                                                 <p class="property-description-preview text-body-secondary mb-3">{{ property.description|default:"No description provided." }}</p>
                                             {% endif %}
-                                            <a class="btn theme-action" href="{% url 'property:property_detail' property.pk %}">Open property</a>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                {% if property.state == "active" %}
+                                                    <button class="btn btn-outline-secondary property-list-edit" type="button" data-bs-toggle="modal" data-bs-target="#listEditPropertyModal" data-action="{% url 'property:edit_property' property.pk %}?{{ list_return_query }}" data-name="{{ property.name }}" data-description="{{ property.description }}" data-address="{{ property.address }}">Edit</button>
+                                                    <button class="btn btn-outline-secondary property-list-confirm" type="button" data-bs-toggle="modal" data-bs-target="#listDeactivatePropertyModal" data-action="{% url 'property:deactivate_property' property.pk %}?{{ list_return_query }}" data-name="{{ property.name }}">Deactivate</button>
+                                                {% else %}
+                                                    <form action="{% url 'property:reactivate_property' property.pk %}?{{ list_return_query }}" method="post">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Reactivate</button></form>
+                                                {% endif %}
+                                                <button class="btn btn-outline-danger property-list-confirm" type="button" data-bs-toggle="modal" data-bs-target="#listDeletePropertyModal" data-action="{% url 'property:delete_property' property.pk %}?{{ list_return_query }}" data-name="{{ property.name }}">Delete</button>
+                                            </div>
                                         </div>
 
                                         <div class="col-lg-7">
                                             <div class="row g-3">
-                                                <div class="col-6 col-xl-3">
+                                                <div class="col-6 col-xl-4">
                                                     <div class="property-stat border rounded bg-body p-3">
-                                                        <div class="h4 mb-1">—</div>
+                                                        <div class="h4 mb-1">{{ property.open_issues }}</div>
                                                         <div class="small text-body-secondary">Open issues</div>
                                                     </div>
                                                 </div>
-                                                <div class="col-6 col-xl-3">
+                                                <div class="col-6 col-xl-4">
                                                     <div class="property-stat border rounded bg-body p-3">
-                                                        <div class="h4 mb-1">—</div>
+                                                        <div class="h4 mb-1">{{ property.open_direct_tasks|add:property.open_issue_tasks }}</div>
                                                         <div class="small text-body-secondary">Open tasks</div>
                                                     </div>
                                                 </div>
-                                                <div class="col-6 col-xl-3">
+                                                <div class="col-6 col-xl-4">
                                                     <div class="property-stat border rounded bg-body p-3">
-                                                        <div class="h4 mb-1">—</div>
-                                                        <div class="small text-body-secondary">Contacts</div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6 col-xl-3">
-                                                    <div class="property-stat border rounded bg-body p-3">
-                                                        <div class="fw-semibold mb-1">—</div>
+                                                        <div class="fw-semibold mb-1">{{ property.next_event_date|date:"j M Y"|default:"None scheduled" }}</div>
                                                         <div class="small text-body-secondary">Next event</div>
                                                     </div>
                                                 </div>
@@ -280,6 +247,38 @@
         </section>
     </div>
 
+    <div class="modal fade" id="listEditPropertyModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="listEditPropertyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered property-form-dialog"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="listEditPropertyModalLabel">Edit property</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <form id="listEditPropertyForm" action="{{ list_edit_action }}" method="post" autocomplete="off">
+                {% csrf_token %}
+                <div class="modal-body">
+                    {% for error in list_edit_form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+                    <div class="mb-3"><label class="form-label" for="listEditName">Name</label><input class="form-control" id="listEditName" name="name" maxlength="150" required value="{{ list_edit_form.name.value|default_if_none:'' }}">{% for error in list_edit_form.name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+                    <div class="mb-3"><label class="form-label" for="listEditDescription">Description</label><textarea class="form-control" id="listEditDescription" name="description" rows="3">{{ list_edit_form.description.value|default_if_none:'' }}</textarea>{% for error in list_edit_form.description.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+                    <div><label class="form-label" for="listEditAddress">Address</label><input class="form-control" id="listEditAddress" name="address" maxlength="250" value="{{ list_edit_form.address.value|default_if_none:'' }}">{% for error in list_edit_form.address.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save changes</button></div>
+            </form>
+        </div></div>
+    </div>
+
+    <div class="modal fade modal-resilient" id="listDeactivatePropertyModal" tabindex="-1" aria-labelledby="listDeactivatePropertyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="listDeactivatePropertyModalLabel">Deactivate property?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><p>This property will leave active-property views. Its work and history remain stored.</p><div class="modal-context"><span class="small text-body-secondary d-block">Property</span><span class="modal-context-value" data-property-name></span></div></div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep property</button><form method="post" autocomplete="off">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Deactivate property</button></form></div>
+        </div></div>
+    </div>
+
+    <div class="modal fade modal-resilient" id="listDeletePropertyModal" tabindex="-1" aria-labelledby="listDeletePropertyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="listDeletePropertyModalLabel">Delete property?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><p>This property and its associated history will be removed from your workspace.</p><div class="modal-context mb-3"><span class="small text-body-secondary d-block">Property</span><span class="modal-context-value" data-property-name></span></div><p class="text-body-secondary mb-0">This action cannot be undone from the application.</p></div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep property</button><form method="post" autocomplete="off">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete property</button></form></div>
+        </div></div>
+    </div>
+
     <div
         class="modal fade"
         id="addPropertyModal"
@@ -339,7 +338,27 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script>
+        document.querySelectorAll('.property-list-edit').forEach((button) => {
+            button.addEventListener('click', () => {
+                const form = document.getElementById('listEditPropertyForm');
+                form.action = button.dataset.action;
+                form.elements.name.value = button.dataset.name;
+                form.elements.description.value = button.dataset.description;
+                form.elements.address.value = button.dataset.address;
+            });
+        });
+        document.querySelectorAll('.property-list-confirm').forEach((button) => {
+            button.addEventListener('click', () => {
+                const modal = document.querySelector(button.dataset.bsTarget);
+                modal.querySelector('form').action = button.dataset.action;
+                modal.querySelector('[data-property-name]').textContent = button.dataset.name;
+            });
+        });
+    </script>
     {% if add_property_form.errors %}
         <span hidden data-modal-auto-open="addPropertyModal"></span>
+    {% elif list_edit_form.errors %}
+        <span hidden data-modal-auto-open="listEditPropertyModal"></span>
     {% endif %}
 {% endblock %}
