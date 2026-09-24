@@ -17,10 +17,6 @@ class ContactForm(forms.ModelForm):
             field.widget.attrs["autocomplete"] = "off"
             field.widget.attrs["class"] = "form-control"
 
-        if self.instance.pk is not None:
-            self.fields["first_name"].widget.attrs.pop("maxlength", None)
-            self.fields["last_name"].widget.attrs.pop("maxlength", None)
-
     class Meta:
         model = Contact
         fields = (

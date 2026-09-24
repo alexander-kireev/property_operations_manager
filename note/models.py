@@ -19,7 +19,7 @@ class Note(models.Model):
         blank=True,
     )
 
-    content = models.TextField()
+    content = models.CharField(max_length=250)
     created_at = models.DateTimeField(auto_now_add=True)
 
 

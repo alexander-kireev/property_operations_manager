@@ -451,12 +451,68 @@ class PropertyViewTests(TestCase):
         self.client.force_login(self.user)
 
         response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
-        self.assertContains(response, f'href="{reverse("issue:issues")}?selected={issue.pk}&amp;open=detail"')
-        self.assertContains(response, f'href="{reverse("task:tasks")}?selected={task.pk}&amp;open=detail"')
+        self.assertContains(response, f'href="{reverse("issue:issues")}?state=all&amp;selected={issue.pk}&amp;open=detail"')
+        self.assertContains(response, f'href="{reverse("task:tasks")}?state=all&amp;selected={task.pk}&amp;open=detail"')
         self.assertContains(response, 'class="navbar-nav app-mobile-menu d-lg-none"')
         self.assertContains(response, 'class="app-mobile-logout" type="submit">Log out</button>')
 
-    def test_command_centre_shows_four_tabs_on_list_and_detail_routes(self):
+    def test_mobile_property_header_keeps_long_name_status_and_actions_together(self):
+        name = "Northgate Mews and Gardens Residential Building"
+        property_record = self.create_property(name=name)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
+
+        self.assertContains(response, 'class="property-command-header"')
+        self.assertNotContains(response, 'class="property-detail-header"')
+        self.assertContains(response, 'class="property-mobile-back-row"')
+        self.assertContains(response, 'class="property-heading-title-row"')
+        self.assertContains(response, f'<h2 class="h3 mb-1">{name}</h2>')
+        self.assertContains(response, 'class="property-heading-status work-pill work-pill--active"')
+        self.assertContains(response, 'class="property-heading-description"')
+        self.assertContains(response, 'class="property-heading-actions"')
+        self.assertContains(response, 'aria-label="Property actions"')
+
+    def test_property_rows_show_existing_work_and_event_flags(self):
+        property_record = self.create_property()
+        Issue.objects.create(
+            user=self.user, property=property_record, title="Urgent issue",
+            priority=Issue.Priority.URGENT, resolution_deadline=timezone.localdate() - timedelta(days=1),
+        )
+        Task.objects.create(
+            user=self.user, property=property_record, title="High task",
+            priority=Task.Priority.HIGH, completion_deadline=timezone.localdate() + timedelta(days=1),
+        )
+        Event.objects.create(
+            user=self.user, property=property_record, title="Site visit",
+            scheduled_date=timezone.localdate() + timedelta(days=1), all_day=True,
+            user_participation_required=True, user_presence_required=True,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
+
+        self.assertContains(response, 'name="records_type"')
+        self.assertContains(response, 'name="records_scope"')
+        self.assertContains(response, 'work-pill--priority-4')
+        self.assertContains(response, 'work-pill--overdue')
+        self.assertContains(response, 'work-pill--priority-3')
+        self.assertContains(response, 'work-pill--soon')
+        self.assertContains(response, 'property-event-badge">Scheduled')
+        self.assertContains(response, 'property-presence-badge">Presence required')
+
+    def test_related_records_default_to_current_records(self):
+        property_record = self.create_property()
+        Task.objects.create(user=self.user, property=property_record, title="Book plumber")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
+
+        self.assertContains(response, '1 record')
+        self.assertContains(response, 'Book plumber')
+        self.assertContains(response, 'value="current" selected')
+
+    def test_command_centre_shows_one_related_records_view(self):
         property_record = self.create_property()
         self.client.force_login(self.user)
 
@@ -464,9 +520,65 @@ class PropertyViewTests(TestCase):
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.context["selected_property"], property_record)
-                for section in ("overview", "work", "schedule", "history"):
-                    self.assertContains(response, f'data-property-tab="{section}"')
+                self.assertContains(response, 'Related records')
+                self.assertNotContains(response, 'data-property-tab=')
                 self.assertContains(response, 'data-workspace-scroll-root="properties"')
+
+    def test_related_records_link_to_canonical_details(self):
+        property_record = self.create_property()
+        Issue.objects.create(user=self.user, property=property_record, title="Repair tap", description="Water is leaking.")
+        Task.objects.create(user=self.user, property=property_record, title="Book plumber", description="Call the contractor.")
+        Event.objects.create(
+            user=self.user, property=property_record, title="Inspection", description="Meet at the entrance.",
+            scheduled_date=timezone.localdate() + timedelta(days=1), all_day=True,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
+
+        self.assertContains(response, 'class="property-related-record"', count=3)
+        self.assertNotContains(response, '<details class="property-record">')
+        self.assertContains(response, 'Repair tap')
+        self.assertContains(response, 'Book plumber')
+        self.assertContains(response, 'Inspection')
+
+    def test_heading_shows_description_above_related_records(self):
+        property_record = self.create_property()
+        property_record.description = "Long property context. " * 30
+        property_record.save(update_fields=["description"])
+        Issue.objects.create(user=self.user, property=property_record, title="Entry phone")
+        Task.objects.create(user=self.user, property=property_record, title="Arrange access")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
+
+        self.assertContains(response, 'class="property-heading-description"')
+        self.assertContains(response, 'Related records')
+        self.assertContains(response, '2 records')
+        self.assertContains(response, 'data-property-description-preview')
+        self.assertContains(response, 'data-bs-target="#propertyDescriptionModal"')
+        self.assertContains(response, 'class="modal-body property-description-full"')
+        self.assertNotContains(response, "At a glance")
+
+    def test_related_records_list_all_current_types_without_duplicates(self):
+        property_record = self.create_property()
+        for number in range(3):
+            Issue.objects.create(user=self.user, property=property_record, title=f"Issue {number}")
+            Task.objects.create(user=self.user, property=property_record, title=f"Task {number}")
+            Event.objects.create(
+                user=self.user, property=property_record, title=f"Event {number}",
+                scheduled_date=timezone.localdate() + timedelta(days=number + 1), all_day=True,
+            )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
+        html = response.content.decode()
+        self.assertEqual(html.count('class="property-related-record"'), 9)
+        self.assertNotIn('<details class="property-record">', html)
+        for number in range(3):
+            self.assertIn(f"Issue {number}", html)
+            self.assertIn(f"Task {number}", html)
+            self.assertIn(f"Event {number}", html)
 
     def test_history_contains_terminated_records_but_not_deleted_or_other_users_records(self):
         property_record = self.create_property()
@@ -478,12 +590,172 @@ class PropertyViewTests(TestCase):
         Issue.objects.create(user=self.other_user, property=property_record, title="Other user issue", state=Issue.State.RESOLVED, terminated_at=now)
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]), {"tab": "history"})
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]), {"records_scope": "past"})
 
-        self.assertEqual([entry["item"].title for entry in response.context["history"]], ["Fixed leak", "Finished job", "Completed visit"])
-        self.assertContains(response, 'data-property-panel="history"')
+        self.assertEqual([entry["item"].title for entry in response.context["related_page"]], ["Fixed leak", "Finished job", "Completed visit"])
+        self.assertContains(response, 'property-outcome--resolved">Resolved')
+        self.assertContains(response, 'property-outcome--completed">Completed')
+        self.assertContains(response, 'property-outcome--occurred">Occurred')
         self.assertNotContains(response, "Hidden issue")
         self.assertNotContains(response, "Other user issue")
+
+    def test_related_records_filter_by_type_scope_and_search(self):
+        property_record = self.create_property()
+        Issue.objects.create(user=self.user, property=property_record, title="Leaking pipe", description="Kitchen")
+        Task.objects.create(user=self.user, property=property_record, title="Call plumber")
+        Event.objects.create(
+            user=self.user, property=property_record, title="Past visit",
+            scheduled_date=timezone.localdate(), all_day=True,
+            state=Event.State.OCCURRED, terminated_at=timezone.now(),
+        )
+        self.client.force_login(self.user)
+        url = reverse("property:property_detail", args=[property_record.pk])
+
+        current = self.client.get(url)
+        self.assertEqual(current.context["related_page"].paginator.count, 2)
+        past = self.client.get(url, {"records_scope": "past"})
+        self.assertEqual([entry["item"].title for entry in past.context["related_page"]], ["Past visit"])
+        issues = self.client.get(url, {"records_type": "issue", "records_search": "kitchen"})
+        self.assertEqual([entry["item"].title for entry in issues.context["related_page"]], ["Leaking pipe"])
+
+    def test_add_buttons_open_forms_on_the_property_page(self):
+        property_record = self.create_property()
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
+        for kind, modal in (
+            ("issue", "propertyAddIssueModal"),
+            ("task", "propertyAddTaskModal"),
+            ("event", "propertyAddEventModal"),
+        ):
+            with self.subTest(kind=kind):
+                self.assertContains(response, f'data-bs-target="#{modal}"')
+                self.assertContains(response, reverse("property:add_property_record", args=[property_record.pk, kind]))
+                self.assertEqual(response.context[f"property_add_{kind}_form"].initial["property"], property_record.pk)
+
+    def test_property_add_creates_each_record_without_leaving_property(self):
+        property_record = self.create_property()
+        self.client.force_login(self.user)
+        cases = (
+            ("issue", Issue, {"title": "Repair window", "priority": Issue.Priority.HIGH}),
+            ("task", Task, {"title": "Call contractor", "priority": Task.Priority.HIGH}),
+            ("event", Event, {
+                "title": "Site visit",
+                "scheduled_date": (timezone.localdate() + timedelta(days=1)).isoformat(),
+                "all_day": "on",
+            }),
+        )
+        for kind, model, data in cases:
+            with self.subTest(kind=kind):
+                response = self.client.post(
+                    reverse("property:add_property_record", args=[property_record.pk, kind]), data,
+                )
+                self.assertRedirects(
+                    response,
+                    reverse("property:property_detail", args=[property_record.pk])
+                    + f"?records_type={kind}&records_scope=current&records_sort=recent",
+                    fetch_redirect_response=False,
+                )
+                self.assertTrue(model.objects.filter(user=self.user, property=property_record, title=data["title"]).exists())
+
+    def test_invalid_property_add_reopens_same_modal_with_entered_values(self):
+        property_record = self.create_property()
+        self.client.force_login(self.user)
+        for kind, modal in (
+            ("issue", "propertyAddIssueModal"),
+            ("task", "propertyAddTaskModal"),
+            ("event", "propertyAddEventModal"),
+        ):
+            with self.subTest(kind=kind):
+                response = self.client.post(
+                    reverse("property:add_property_record", args=[property_record.pk, kind]),
+                    {"title": "", "description": "Keep this text"},
+                )
+                restored = self.client.get(response.url)
+                self.assertIn(f"/properties/{property_record.pk}/?form_state=", response.url)
+                self.assertEqual(restored.context["property_record_modal"], modal)
+                self.assertEqual(restored.context[f"property_add_{kind}_form"].data["description"], "Keep this text")
+
+    def test_property_add_ignores_tampered_property_field(self):
+        origin = self.create_property(name="Origin")
+        destination = self.create_property(name="Destination")
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("property:add_property_record", args=[origin.pk, "task"]),
+            {"title": "Stay here", "property": destination.pk, "relationship_type": "standalone", "priority": Task.Priority.LOW},
+        )
+        self.assertEqual(response.status_code, 302)
+        task = Task.objects.get(title="Stay here")
+        self.assertEqual(task.property, origin)
+        self.assertIsNone(task.issue)
+
+    def test_creating_from_property_returns_to_its_new_record(self):
+        property_record = self.create_property()
+        self.client.force_login(self.user)
+        cases = (
+            ("issue:add_issue", Issue, "issue", {
+                "title": "Repair window", "property": property_record.pk,
+                "priority": Issue.Priority.HIGH,
+            }),
+            ("task:add_task", Task, "task", {
+                "title": "Call contractor", "property": property_record.pk,
+                "relationship_type": "property", "priority": Task.Priority.HIGH,
+            }),
+            ("event:add_event", Event, "event", {
+                "title": "Site visit", "property": property_record.pk,
+                "scheduled_date": (timezone.localdate() + timedelta(days=1)).isoformat(),
+                "all_day": "on",
+            }),
+        )
+        for route, model, kind, data in cases:
+            with self.subTest(route=route):
+                response = self.client.post(reverse(route), {**data, "return_property": property_record.pk})
+                self.assertRedirects(
+                    response,
+                    reverse("property:property_detail", args=[property_record.pk])
+                    + f"?records_type={kind}&records_scope=current&records_sort=recent",
+                    fetch_redirect_response=False,
+                )
+                self.assertTrue(model.objects.filter(user=self.user, property=property_record, title=data["title"]).exists())
+
+    def test_invalid_property_origin_form_keeps_return_destination(self):
+        property_record = self.create_property()
+        self.client.force_login(self.user)
+        response = self.client.post(reverse("issue:add_issue"), {
+            "title": "", "property": property_record.pk,
+            "return_property": property_record.pk,
+        })
+        restored = self.client.get(response.url)
+        self.assertEqual(restored.context["open_modal"], "addIssueModal")
+        self.assertEqual(restored.context["return_property_id"], property_record.pk)
+        self.assertContains(restored, f'name="return_property" value="{property_record.pk}"')
+
+    def test_property_origin_does_not_redirect_when_record_is_moved_elsewhere(self):
+        origin = self.create_property(name="Origin")
+        destination = self.create_property(name="Destination")
+        self.client.force_login(self.user)
+        response = self.client.post(reverse("task:add_task"), {
+            "title": "New task", "property": destination.pk,
+            "relationship_type": "property", "return_property": origin.pk,
+            "priority": Task.Priority.LOW,
+        })
+        task = Task.objects.get(title="New task")
+        self.assertEqual(response.url, f"{reverse('task:tasks')}?selected={task.pk}")
+
+    def test_related_records_are_paginated_without_losing_filters(self):
+        property_record = self.create_property()
+        for number in range(27):
+            Task.objects.create(user=self.user, property=property_record, title=f"Task {number:02d}")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]), {
+            "records_type": "task", "records_sort": "title", "records_page": "2",
+        })
+
+        self.assertEqual(response.context["related_page"].paginator.count, 27)
+        self.assertEqual(len(response.context["related_page"]), 2)
+        self.assertContains(response, "Task 25")
+        self.assertContains(response, "Task 26")
+        self.assertContains(response, "records_type=task&amp;records_scope=current&amp;records_sort=title&amp;records_page=1")
 
     def test_property_task_quick_action_returns_to_property_workspace(self):
         property_record = self.create_property()

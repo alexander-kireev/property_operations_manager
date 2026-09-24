@@ -136,12 +136,12 @@ def padded(label, character, length):
     return (f"{label} " + character * length)[:length]
 
 
-def long_description(label):
+def long_description(label, length=1000):
     sentence = (
         "This deliberately long boundary-test description checks wrapping, spacing, "
         "modal height, cards, lists, and detail-page behaviour. "
     )
-    return (f"{label} " + sentence * 20)[:1000]
+    return (f"{label} " + sentence * 20)[:length]
 
 
 def aware_datetime(day, hour=12):
@@ -215,13 +215,13 @@ class Command(BaseCommand):
             address = f"{number} {root}, London, N{1 + index % 19} {1 + index % 9}AB"
 
             if index == 27:
-                name = padded("[LAYOUT STRESS PROPERTY]", "P", 150)
+                name = padded("[LAYOUT STRESS PROPERTY]", "P", 75)
                 description = long_description("[1,000 CHARACTER PROPERTY DESCRIPTION]")
             elif index == 28:
-                name = "W" * 150
+                name = "W" * 75
                 description = long_description("[UNBROKEN PROPERTY NAME]")
             elif index == 29:
-                name = padded("A property name with many separate words", " word", 150)
+                name = padded("A property name with many separate words", " word", 75)
                 description = long_description("[VERBOSE PROPERTY]")
 
             records.append(Property(
@@ -243,17 +243,17 @@ class Command(BaseCommand):
             (pair for first in FIRST_NAMES for pair in ((first, last) for last in LAST_NAMES))
         ):
             if index == 71:
-                first_name = padded("[LAYOUT STRESS FIRST NAME]", "F", 150)
-                last_name = padded("[LAYOUT STRESS LAST NAME]", "L", 150)
+                first_name = padded("[LAYOUT STRESS FIRST NAME]", "F", 50)
+                last_name = padded("[LAYOUT STRESS LAST NAME]", "L", 50)
             elif index == 72:
-                first_name = "N" * 150
+                first_name = "N" * 50
                 last_name = ""
             elif index == 73:
-                first_name = padded("Hyphenated-and-multi-part-contact", "X", 150)
-                last_name = padded("Very long family name", "Y", 150)
+                first_name = padded("Hyphenated-and-multi-part-contact", "X", 50)
+                last_name = padded("Very long family name", "Y", 50)
             elif index == 74:
                 first_name = "Boundary"
-                last_name = "Z" * 150
+                last_name = "Z" * 50
 
             records.append(Contact(
                 user=user,
@@ -311,7 +311,7 @@ class Command(BaseCommand):
                 terminated_at = timezone.now() - timedelta(days=index - 20)
 
             if index >= 22:
-                title = padded(f"[LAYOUT STRESS ISSUE {index - 21}]", "I", 150)
+                title = padded(f"[LAYOUT STRESS ISSUE {index - 21}]", "I", 100)
                 description = long_description("[1,000 CHARACTER ISSUE DESCRIPTION]")
 
             deadline = None if index % 6 == 0 else today + timedelta(days=index - 12)
@@ -336,7 +336,7 @@ class Command(BaseCommand):
                 "when contacting the relevant tenant, contractor, or property owner."
             )
             if index >= 144:
-                title = padded(f"[LAYOUT STRESS TASK {index - 143}]", "T", 150)
+                title = padded(f"[LAYOUT STRESS TASK {index - 143}]", "T", 100)
                 description = long_description("[1,000 CHARACTER TASK DESCRIPTION]")
 
             relation = index % 3
@@ -379,7 +379,7 @@ class Command(BaseCommand):
                 "work to the relevant property record after the appointment."
             )
             if index >= 27:
-                title = padded(f"[LAYOUT STRESS EVENT {index - 26}]", "E", 150)
+                title = padded(f"[LAYOUT STRESS EVENT {index - 26}]", "E", 100)
                 description = long_description("[1,000 CHARACTER EVENT DESCRIPTION]")
 
             if index < 20:
@@ -457,7 +457,7 @@ class Command(BaseCommand):
                 "Confirm appointments at least one day in advance."
             )
             if index >= 10:
-                content = long_description("[1,000 CHARACTER CONTACT NOTE]")
+                content = long_description("[250 CHARACTER CONTACT NOTE]", 250)
             records.append(Note(
                 user=user,
                 contact=contacts[index],

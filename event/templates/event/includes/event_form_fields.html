@@ -11,11 +11,11 @@
         {{ event_form.description }}
         {% for error in event_form.description.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     </div>
-    <div class="col-md-6">
+    {% if not property_context %}<div class="col-md-6">
         <label class="form-label" for="{{ event_form.property.id_for_label }}">{{ event_form.property.label }}</label>
         <div data-searchable-select>{{ event_form.property }}</div>
         {% for error in event_form.property.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-    </div>
+    </div>{% else %}{% for error in event_form.property.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}{% endif %}
     <div class="col-md-6">
         <label class="form-label" for="{{ event_form.scheduled_date.id_for_label }}">Date</label>
         {{ event_form.scheduled_date }}

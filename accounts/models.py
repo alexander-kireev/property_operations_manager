@@ -21,9 +21,9 @@ def pending_email_change_expiry():
 
 class User(AbstractUser):
     username = None
-    first_name = models.CharField(max_length=150)
-    last_name = models.CharField(max_length=150)
-    email = models.EmailField(unique=True)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    email = models.EmailField(max_length=254, unique=True)
 
     objects = UserManager()
 
@@ -43,9 +43,9 @@ class User(AbstractUser):
 
 
 class PendingRegistration(models.Model):
-    first_name = models.CharField(max_length=150)
-    last_name = models.CharField(max_length=150)
-    email = models.EmailField(unique=True)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    email = models.EmailField(max_length=254, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     password_hash = models.CharField(max_length=128, editable=False)
     expires_at = models.DateTimeField(default=pending_registration_expiry)
@@ -74,8 +74,8 @@ class PendingRegistration(models.Model):
 
 class PendingEmailChange(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="pending_email_change")
-    old_email = models.EmailField()
-    new_email = models.EmailField()
+    old_email = models.EmailField(max_length=254)
+    new_email = models.EmailField(max_length=254)
     token_hash = models.CharField(max_length=64, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(default=pending_email_change_expiry)

@@ -1,48 +1,45 @@
-<div class="property-record">
-    <div class="property-record-copy">
-        {% if kind == "issue" %}
-            <a href="{% url 'issue:issues' %}?selected={{ item.pk }}&amp;open=detail">{{ item.title }} <span aria-hidden="true">→</span></a>
-            <small>
-                {{ item.get_priority_display }}
-                {% if item.resolution_deadline %} · Resolve by {{ item.resolution_deadline|date:"j M Y" }}
-                {% else %} · No resolve-by date{% endif %}
-            </small>
-        {% elif kind == "task" %}
-            <a href="{% url 'task:tasks' %}?selected={{ item.pk }}&amp;open=detail">{{ item.title }} <span aria-hidden="true">→</span></a>
-            <small>
-                {% if item.issue %}Linked to {{ item.issue.title }}{% else %}Direct property task{% endif %}
-                {% if item.completion_deadline %} · Deadline {{ item.completion_deadline|date:"j M Y" }}
-                {% elif item.scheduled_date %} · Scheduled {{ item.scheduled_date|date:"j M Y" }}
-                {% else %} · No date set{% endif %}
-            </small>
-        {% else %}
-            <a href="{% url 'event:events' %}?selected={{ item.pk }}&amp;tab=details">{{ item.title }} <span aria-hidden="true">→</span></a>
-            <small>
-                {{ item.scheduled_date|date:"j M Y" }}
-                {% if item.all_day %} · All day
-                {% elif item.start_time %} · {{ item.start_time|time:"H:i" }}{% if item.end_time %}–{{ item.end_time|time:"H:i" }}{% endif %}{% endif %}
-                {% if item.user_presence_required %} · Presence required{% endif %}
-            </small>
-        {% endif %}
-    </div>
-    {% if selected_property.state == "active" %}
-        <div class="property-record-actions" role="group" aria-label="Quick actions for {{ item.title }}">
+{% load work_status %}
+{% if kind != "event" %}{% work_status item as timing %}{% endif %}
+<details class="property-record">
+    <summary class="property-record-link" title="{{ item.title }}">
+        <span class="property-record-main">
+            <strong>{{ item.title }}</strong>
+            <small>{% if kind == "issue" %}Issue{% elif kind == "task" %}{% if item.issue %}Task · Linked to {{ item.issue.title }}{% else %}Direct property task{% endif %}{% else %}Event · {% if item.all_day %}All day{% elif item.start_time %}{{ item.start_time|time:"H:i" }}{% if item.end_time %}–{{ item.end_time|time:"H:i" }}{% endif %}{% endif %}{% endif %}</small>
+        </span>
+        <span class="property-record-aside">
+            <span class="property-record-badges">
+                {% if kind == "event" %}<span class="property-event-badge">{{ item.get_state_display }}</span>{% if item.user_presence_required %}<span class="property-presence-badge">Presence required</span>{% endif %}
+                {% else %}{% include "includes/work_priority_badge.html" with item=item only %}{% if timing.list_label %}<span class="work-pill work-pill--{{ timing.kind }}">{{ timing.list_label }}</span>{% endif %}{% endif %}
+            </span>
+            <span class="property-record-date">
+                {% if kind == "issue" %}{% if item.resolution_deadline %}Resolve by {{ item.resolution_deadline|date:"j M Y" }}{% else %}No deadline{% endif %}
+                {% elif kind == "task" %}{% if item.completion_deadline %}Deadline {{ item.completion_deadline|date:"j M Y" }}{% elif item.scheduled_date %}Scheduled {{ item.scheduled_date|date:"j M Y" }}{% else %}No date{% endif %}
+                {% else %}{{ item.scheduled_date|date:"j M Y" }}{% endif %}
+            </span>
+        </span>
+        <span class="property-record-chevron" aria-hidden="true">›</span>
+    </summary>
+    <div class="property-record-details">
+        {% if item.description %}<p class="property-record-description">{{ item.description|linebreaksbr }}</p>{% else %}<p class="property-record-description text-body-secondary">No description.</p>{% endif %}
+        <div class="property-record-meta">
+            {% if kind == "issue" %}<span>Priority: {{ item.get_priority_display }}</span><span>State: {{ item.get_state_display }}</span>
+            {% elif kind == "task" %}<span>Priority: {{ item.get_priority_display }}</span><span>State: {{ item.get_state_display }}</span>{% if item.scheduled_date %}<span>Scheduled: {{ item.scheduled_date|date:"j M Y" }}</span>{% endif %}
+            {% else %}<span>{% if item.all_day %}All day{% else %}{{ item.start_time|time:"H:i" }}{% if item.end_time %}–{{ item.end_time|time:"H:i" }}{% endif %}{% endif %}</span><span>Participation: {% if item.user_participation_required %}Required{% else %}Not required{% endif %}</span><span>Presence: {% if item.user_presence_required %}Required{% else %}Not required{% endif %}</span>{% endif %}
+        </div>
+        <div class="property-record-actions" role="group" aria-label="Actions for {{ item.title }}">
             {% if kind == "issue" %}
-                <a class="btn btn-sm btn-outline-secondary" href="{% url 'issue:issues' %}?selected={{ item.pk }}&amp;open=edit">Edit</a>
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#propertyQuickActionModal"
-                    data-kind="issue" data-name="{{ item.title }}" data-action="{% url 'issue:resolve_issue' item.pk %}"
-                    data-return="{% url 'property:property_detail' selected_property.pk %}?tab=work" data-verb="Resolve">Resolve</button>
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'issue:issues' %}?selected={{ item.pk }}&amp;open=detail">Full details</a>
+                {% if selected_property.state == "active" %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'issue:issues' %}?selected={{ item.pk }}&amp;open=edit">Edit</a>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#propertyQuickActionModal" data-kind="issue" data-name="{{ item.title }}" data-action="{% url 'issue:resolve_issue' item.pk %}" data-return="{% url 'property:property_detail' selected_property.pk %}?tab=work" data-verb="Resolve">Resolve</button>{% endif %}
             {% elif kind == "task" %}
-                <a class="btn btn-sm btn-outline-secondary" href="{% url 'task:tasks' %}?selected={{ item.pk }}&amp;open=edit">Edit</a>
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#propertyQuickActionModal"
-                    data-kind="task" data-name="{{ item.title }}" data-action="{% url 'task:complete_task' item.pk %}"
-                    data-return="{% url 'property:property_detail' selected_property.pk %}?tab=work" data-verb="Complete">Complete</button>
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'task:tasks' %}?selected={{ item.pk }}&amp;open=detail">Full details</a>
+                {% if selected_property.state == "active" %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'task:tasks' %}?selected={{ item.pk }}&amp;open=edit">Edit</a>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#propertyQuickActionModal" data-kind="task" data-name="{{ item.title }}" data-action="{% url 'task:complete_task' item.pk %}" data-return="{% url 'property:property_detail' selected_property.pk %}?tab=work" data-verb="Complete">Complete</button>{% endif %}
             {% else %}
-                <a class="btn btn-sm btn-outline-secondary" href="{% url 'event:events' %}?selected={{ item.pk }}&amp;tab=details&amp;open=edit">Edit</a>
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#propertyQuickActionModal"
-                    data-kind="event" data-name="{{ item.title }}" data-action="{% url 'event:cancel_event' item.pk %}"
-                    data-return="{% url 'property:property_detail' selected_property.pk %}?tab=schedule" data-verb="Cancel">Cancel</button>
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'event:events' %}?selected={{ item.pk }}&amp;tab=details">Full details</a>
+                {% if selected_property.state == "active" %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'event:events' %}?selected={{ item.pk }}&amp;tab=details&amp;open=edit">Edit</a>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#propertyQuickActionModal" data-kind="event" data-name="{{ item.title }}" data-action="{% url 'event:cancel_event' item.pk %}" data-return="{% url 'property:property_detail' selected_property.pk %}?tab=schedule" data-verb="Cancel">Cancel</button>{% endif %}
             {% endif %}
         </div>
-    {% endif %}
-</div>
+    </div>
+</details>

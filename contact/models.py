@@ -38,8 +38,8 @@ class Contact(models.Model):
         default=State.ACTIVE
     )
 
-    first_name = models.CharField(max_length=150)
-    last_name = models.CharField(max_length=150, blank=True)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 

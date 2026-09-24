@@ -1,0 +1,20 @@
+{% load work_status %}
+{% if entry.kind != "event" %}{% work_status entry.item as timing %}{% endif %}
+{% if entry.kind == "issue" %}<a class="property-related-record" href="{% url 'issue:issues' %}?state=all&amp;selected={{ entry.item.pk }}&amp;open=detail" title="{{ entry.item.title }}">
+{% elif entry.kind == "task" %}<a class="property-related-record" href="{% url 'task:tasks' %}?state=all&amp;selected={{ entry.item.pk }}&amp;open=detail" title="{{ entry.item.title }}">
+{% else %}<a class="property-related-record" href="{% url 'event:events' %}?state=all&amp;selected={{ entry.item.pk }}&amp;tab=details" title="{{ entry.item.title }}">{% endif %}
+    <span class="property-related-record-main">
+        <strong>{{ entry.item.title }}</strong>
+        <small>{{ entry.kind|title }}{% if entry.kind == "task" and entry.item.issue %} · Linked to {{ entry.item.issue.title }}{% endif %}</small>
+    </span>
+    <span class="property-related-record-aside">
+        <span class="property-related-record-badges">
+            {% if entry.current %}
+                {% if entry.kind == "event" %}<span class="property-event-badge">Scheduled</span>{% if entry.item.user_presence_required %}<span class="property-presence-badge">Presence required</span>{% endif %}
+                {% else %}{% include "includes/work_priority_badge.html" with item=entry.item only %}{% if timing.list_label %}<span class="work-pill work-pill--{{ timing.kind }}">{{ timing.list_label }}</span>{% endif %}{% endif %}
+            {% else %}<span class="property-outcome-badge property-outcome--{{ entry.item.state }}">{{ entry.item.get_state_display }}</span>{% endif %}
+        </span>
+        <small>{% if entry.current %}{% if entry.kind == "issue" %}{% if entry.date %}Resolve by {{ entry.date|date:"j M Y" }}{% else %}No deadline{% endif %}{% elif entry.kind == "task" %}{% if entry.date %}Deadline {{ entry.date|date:"j M Y" }}{% elif entry.item.scheduled_date %}Scheduled {{ entry.item.scheduled_date|date:"j M Y" }}{% else %}No date{% endif %}{% else %}{{ entry.date|date:"j M Y" }}{% endif %}{% else %}{{ entry.item.terminated_at|default:entry.item.created_at|date:"j M Y" }}{% endif %}</small>
+    </span>
+    <span class="property-related-chevron" aria-hidden="true">›</span>
+</a>

@@ -1,0 +1,44 @@
+<div class="modal fade" id="propertyAddTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="propertyAddTaskTitle" aria-hidden="true">
+    <div class="task-form-dialog modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="propertyAddTaskTitle">Add task · {{ selected_property.name }}</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <form action="{% url 'property:add_property_record' selected_property.pk 'task' %}" method="post" autocomplete="off" data-task-form>
+            {% csrf_token %}<input type="hidden" name="property" value="{{ selected_property.pk }}"><input type="hidden" name="relationship_type" value="property">
+            <div class="modal-body">{% include "task/includes/task_form_fields.html" with task_form=property_add_task_form property_context=True %}</div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save task</button></div>
+        </form>
+    </div></div>
+</div>
+
+<div class="modal fade" id="propertyAddIssueModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="propertyAddIssueTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="propertyAddIssueTitle">Add issue · {{ selected_property.name }}</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <form action="{% url 'property:add_property_record' selected_property.pk 'issue' %}" method="post" autocomplete="off">
+            {% csrf_token %}<input type="hidden" name="property" value="{{ selected_property.pk }}">
+            <div class="modal-body p-4">{% include "issue/includes/issue_form_fields.html" with issue_form=property_add_issue_form property_context=True %}</div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save issue</button></div>
+        </form>
+    </div></div>
+</div>
+
+<div class="modal fade" id="propertyAddEventModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="propertyAddEventTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="propertyAddEventTitle">Add event · {{ selected_property.name }}</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <form class="event-tabbed-form" action="{% url 'property:add_property_record' selected_property.pk 'event' %}" method="post" autocomplete="off" data-event-form data-event-tabs>
+            {% csrf_token %}<input type="hidden" name="property" value="{{ selected_property.pk }}">
+            <div class="event-form-tabs" role="tablist" aria-label="Add event sections">
+                <button class="event-form-tab{% if not property_event_contacts_form.errors or property_add_event_form.errors %} is-active{% endif %}" id="propertyEventDetailsTab" type="button" role="tab" aria-controls="propertyEventDetailsPanel" aria-selected="{% if property_event_contacts_form.errors and not property_add_event_form.errors %}false{% else %}true{% endif %}" data-event-tab="details">Details</button>
+                <button class="event-form-tab{% if property_event_contacts_form.errors and not property_add_event_form.errors %} is-active{% endif %}" id="propertyEventParticipantsTab" type="button" role="tab" aria-controls="propertyEventParticipantsPanel" aria-selected="{% if property_event_contacts_form.errors and not property_add_event_form.errors %}true{% else %}false{% endif %}" data-event-tab="participants">Participants <span class="event-form-tab-count" data-contact-tab-count>{{ property_event_contacts_form.contacts.value|length }}</span></button>
+            </div>
+            <div class="modal-body event-form-body">
+                <div id="propertyEventDetailsPanel" role="tabpanel" aria-labelledby="propertyEventDetailsTab" data-event-panel="details"{% if property_event_contacts_form.errors and not property_add_event_form.errors %} hidden{% endif %}>
+                    {% include "event/includes/event_form_fields.html" with event_form=property_add_event_form property_context=True %}
+                </div>
+                <div id="propertyEventParticipantsPanel" role="tabpanel" aria-labelledby="propertyEventParticipantsTab" data-event-panel="participants"{% if not property_event_contacts_form.errors or property_add_event_form.errors %} hidden{% endif %}>
+                    {% if property_event_contacts_form.non_field_errors %}<div class="alert alert-danger py-2">{{ property_event_contacts_form.non_field_errors }}</div>{% endif %}
+                    {% include "event/includes/contact_picker.html" with picker_field=property_event_contacts_form.contacts picker_id="propertyEventContacts" %}
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save event</button></div>
+        </form>
+    </div></div>
+</div>

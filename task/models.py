@@ -61,8 +61,8 @@ class Task(models.Model):
         choices=Priority.choices,
         default=Priority.LOW
     )
-    title = models.CharField(max_length=150)
-    description = models.TextField(blank=True)
+    title = models.CharField(max_length=100)
+    description = models.CharField(max_length=1000, blank=True)
     scheduled_date = models.DateField(null=True, blank=True)
     completion_deadline = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

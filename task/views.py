@@ -17,6 +17,7 @@ from config.form_state import (
 
 from issue.selectors import issues_for_user
 from event.selectors import events_for_user
+from property.navigation import active_property_for_user, created_record_property_url
 
 from .forms import TaskForm
 from .models import Task
@@ -313,6 +314,15 @@ def _task_list_context(
 @require_GET
 def tasks_view(request):
     context = _task_list_context(request, **_restore_task_form_context(request))
+    origin = None
+    if request.GET.get("open") == "add" and not context["open_modal"]:
+        origin = active_property_for_user(request.user, request.GET.get("property"))
+        if origin:
+            context["add_task_form"].initial["property"] = origin.pk
+            context["open_modal"] = "addTaskModal"
+    elif context["open_modal"] == "addTaskModal":
+        origin = active_property_for_user(request.user, context["add_task_form"].data.get("return_property"))
+    context["return_property_id"] = origin.pk if origin else None
     if request.GET.get("open") == "edit" and context["edit_task_form"] is not None:
         context["open_modal"] = "editTaskModal"
         context["show_mobile_detail"] = True
@@ -333,6 +343,9 @@ def add_task_view(request):
     )
     if form.is_valid():
         task = create_task(user=request.user, **form.cleaned_data)
+        property_url = created_record_property_url(task, request.POST.get("return_property"), "task")
+        if property_url:
+            return redirect(property_url)
         return redirect(_task_workspace_url(request, task_id=task.pk))
     return _redirect_with_task_form_state(
         request,

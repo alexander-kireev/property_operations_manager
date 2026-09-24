@@ -40,7 +40,7 @@
                         <form class="task-list-controls border-bottom p-3" id="taskFilterForm" method="get" autocomplete="off">
                             <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
                                 <h1 class="h5 mb-0">Tasks</h1>
-                                <button class="btn btn-sm theme-action px-3" type="button" data-bs-toggle="modal" data-bs-target="#addTaskModal">+ Add task</button>
+                                <button class="btn btn-sm theme-action work-add-button" type="button" data-bs-toggle="modal" data-bs-target="#addTaskModal">+ Add task</button>
                             </div>
 
                             <div class="task-local-control-row">
@@ -291,10 +291,10 @@
 
 <div class="modal fade" id="addTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
     <div class="task-form-dialog modal-dialog modal-dialog-centered"><div class="modal-content">
-        <div class="modal-header"><h2 class="modal-title fs-5" id="addTaskModalLabel">Add task</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-header"><h2 class="modal-title fs-5" id="addTaskModalLabel">Add task</h2>{% if return_property_id %}<a class="btn-close" href="{% url 'property:property_detail' return_property_id %}" aria-label="Close and return to property"></a>{% else %}<button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>{% endif %}</div>
         <form action="{% url 'task:add_task' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off" data-task-form>
-            <div class="modal-body">{% csrf_token %}{% include "task/includes/task_form_fields.html" with task_form=add_task_form %}</div>
-            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action px-4" type="submit">Save task</button></div>
+            <div class="modal-body">{% csrf_token %}{% if return_property_id %}<input type="hidden" name="return_property" value="{{ return_property_id }}">{% endif %}{% include "task/includes/task_form_fields.html" with task_form=add_task_form %}</div>
+            <div class="modal-footer">{% if return_property_id %}<a class="btn btn-outline-secondary" href="{% url 'property:property_detail' return_property_id %}">Cancel</a>{% else %}<button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>{% endif %}<button class="btn theme-action px-4" type="submit">Save task</button></div>
         </form>
     </div></div>
 </div>
