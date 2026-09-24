@@ -1,7 +1,8 @@
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, SetPasswordForm, UserChangeForm, UserCreationForm
 from django.contrib.auth.password_validation import validate_password
 
-from .models import User, PendingRegistration
+from .models import User, PendingEmailChange, PendingRegistration
+from django.utils import timezone
 
 from django import forms
 
@@ -68,7 +69,8 @@ class EmailAuthenticationForm(AuthenticationForm):
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
-            field.widget.attrs["autocomplete"] = "off"
+        self.fields["username"].widget.attrs["autocomplete"] = "username"
+        self.fields["password"].widget.attrs["autocomplete"] = "current-password"
 
     def clean_username(self):
         email = self.cleaned_data["username"]
@@ -89,32 +91,30 @@ class ProfileForm(forms.ModelForm):
 
 
 class EmailChangeForm(forms.Form):
-    new_email = forms.EmailField(label="Email")
-    confirm_email = forms.EmailField(label="Confirm email")
+    new_email = forms.EmailField(label="New email")
     current_password = forms.CharField(strip=False, widget=forms.PasswordInput)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
+        self.user = user
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
-            field.widget.attrs["autocomplete"] = "off"
+        self.fields["new_email"].widget.attrs["autocomplete"] = "off"
+        self.fields["current_password"].widget.attrs["autocomplete"] = "current-password"
 
     def clean_new_email(self):
-        new_email = self.cleaned_data["new_email"].lower()
+        new_email = self.cleaned_data["new_email"].strip().lower()
+
+        if new_email == self.user.email.lower():
+            raise forms.ValidationError("This is already your current email address.")
 
         if (User.objects.filter(email__iexact=new_email).exists() or
             PendingRegistration.objects.filter(email__iexact=new_email).exists()) :
             raise forms.ValidationError("An account already exists with this email address.")
 
-        return new_email
-
-    def clean_confirm_email(self):
-        new_email = self.cleaned_data.get("new_email")
-        confirm_email = self.cleaned_data["confirm_email"].lower()
-
-        if new_email != confirm_email:
-            raise forms.ValidationError("The new email and confirmation email addresses must match.")
+        if PendingEmailChange.objects.filter(new_email__iexact=new_email, expires_at__gt=timezone.now()).exclude(user=self.user).exists():
+            raise forms.ValidationError("A change to this email address is already pending.")
 
         return new_email
 
@@ -134,5 +134,7 @@ class AccountPasswordChangeForm(PasswordChangeForm):
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
-            field.widget.attrs["autocomplete"] = "off"
+        self.fields["old_password"].widget.attrs["autocomplete"] = "current-password"
+        self.fields["new_password1"].widget.attrs["autocomplete"] = "new-password"
+        self.fields["new_password2"].widget.attrs["autocomplete"] = "new-password"
 

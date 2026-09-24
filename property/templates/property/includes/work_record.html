@@ -1,0 +1,48 @@
+<div class="property-record">
+    <div class="property-record-copy">
+        {% if kind == "issue" %}
+            <a href="{% url 'issue:issues' %}?selected={{ item.pk }}&amp;open=detail">{{ item.title }} <span aria-hidden="true">→</span></a>
+            <small>
+                {{ item.get_priority_display }}
+                {% if item.resolution_deadline %} · Resolve by {{ item.resolution_deadline|date:"j M Y" }}
+                {% else %} · No resolve-by date{% endif %}
+            </small>
+        {% elif kind == "task" %}
+            <a href="{% url 'task:tasks' %}?selected={{ item.pk }}&amp;open=detail">{{ item.title }} <span aria-hidden="true">→</span></a>
+            <small>
+                {% if item.issue %}Linked to {{ item.issue.title }}{% else %}Direct property task{% endif %}
+                {% if item.completion_deadline %} · Deadline {{ item.completion_deadline|date:"j M Y" }}
+                {% elif item.scheduled_date %} · Scheduled {{ item.scheduled_date|date:"j M Y" }}
+                {% else %} · No date set{% endif %}
+            </small>
+        {% else %}
+            <a href="{% url 'event:events' %}?selected={{ item.pk }}&amp;tab=details">{{ item.title }} <span aria-hidden="true">→</span></a>
+            <small>
+                {{ item.scheduled_date|date:"j M Y" }}
+                {% if item.all_day %} · All day
+                {% elif item.start_time %} · {{ item.start_time|time:"H:i" }}{% if item.end_time %}–{{ item.end_time|time:"H:i" }}{% endif %}{% endif %}
+                {% if item.user_presence_required %} · Presence required{% endif %}
+            </small>
+        {% endif %}
+    </div>
+    {% if selected_property.state == "active" %}
+        <div class="property-record-actions" role="group" aria-label="Quick actions for {{ item.title }}">
+            {% if kind == "issue" %}
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'issue:issues' %}?selected={{ item.pk }}&amp;open=edit">Edit</a>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#propertyQuickActionModal"
+                    data-kind="issue" data-name="{{ item.title }}" data-action="{% url 'issue:resolve_issue' item.pk %}"
+                    data-return="{% url 'property:property_detail' selected_property.pk %}?tab=work" data-verb="Resolve">Resolve</button>
+            {% elif kind == "task" %}
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'task:tasks' %}?selected={{ item.pk }}&amp;open=edit">Edit</a>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#propertyQuickActionModal"
+                    data-kind="task" data-name="{{ item.title }}" data-action="{% url 'task:complete_task' item.pk %}"
+                    data-return="{% url 'property:property_detail' selected_property.pk %}?tab=work" data-verb="Complete">Complete</button>
+            {% else %}
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'event:events' %}?selected={{ item.pk }}&amp;tab=details&amp;open=edit">Edit</a>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#propertyQuickActionModal"
+                    data-kind="event" data-name="{{ item.title }}" data-action="{% url 'event:cancel_event' item.pk %}"
+                    data-return="{% url 'property:property_detail' selected_property.pk %}?tab=schedule" data-verb="Cancel">Cancel</button>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>

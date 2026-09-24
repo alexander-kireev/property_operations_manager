@@ -1,0 +1,32 @@
+<section class="event-mobile-expanded" id="eventInlineDetails{{ event.pk }}" aria-label="Details for {{ event.title }}">
+    {% if event.state != "scheduled" %}<p class="event-mobile-history-note">This event was {{ event.get_state_display|lower }} and remains in history.</p>{% endif %}
+    {% if event.description %}<p class="event-mobile-description">{{ event.description|linebreaksbr }}</p>{% endif %}
+    <dl class="event-detail-list">
+        <dt>Date</dt><dd>{{ event.scheduled_date|date:"j F Y" }}</dd>
+        <dt>Time</dt><dd>{% if event.all_day %}All day{% else %}{{ event.start_time|time:"H:i" }}{% if event.end_time %}–{{ event.end_time|time:"H:i" }}{% endif %}{% endif %}</dd>
+        <dt>Property</dt><dd>{{ event.property.name|default:"Not linked" }}</dd>
+        <dt>Participation</dt><dd>{% if event.user_participation_required %}Required{% else %}Not required{% endif %}</dd>
+        <dt>Presence</dt><dd>{% if event.user_presence_required %}Required{% else %}Not required{% endif %}</dd>
+    </dl>
+    {% if participants %}
+        <div class="event-mobile-participants">
+            <h3>Participants</h3>
+            {% for event_contact in participants %}
+                <div class="event-mobile-participant-row">
+                    <span>{{ event_contact.contact }}{% if event_contact.contact_email %}<small>{{ event_contact.contact_email }}</small>{% endif %}{% if event_contact.contact_telephone %}<small>{{ event_contact.contact_telephone }}</small>{% endif %}</span>
+                    {% if event.state == "scheduled" %}<form action="{% url 'event:delete_event_contact_from_event' event.pk event_contact.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-sm pom-quiet" type="submit">Remove</button></form>{% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <div class="event-mobile-inline-actions">
+        {% if event.state == "scheduled" %}
+            <button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#occurEventModal">Mark occurred</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editEventModal">Edit event</button>
+            {% if add_contacts_form %}<button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#addEventContactsModal">Add participants</button>{% endif %}
+        {% else %}
+            <button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#reactivateEventModal">Reactivate</button>
+        {% endif %}
+        <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteEventModal">Delete event</button>
+    </div>
+</section>

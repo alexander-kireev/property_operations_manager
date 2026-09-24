@@ -1,4 +1,5 @@
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
+from unittest.mock import patch
 
 from django.db import IntegrityError, transaction
 from django.test import TestCase
@@ -58,7 +59,7 @@ class EventTestMixin:
         data = {
             "title": "Inspection",
             "description": "Annual inspection",
-            "scheduled_date": "2026-09-20",
+            "scheduled_date": (timezone.localdate() + timedelta(days=1)).isoformat(),
             "all_day": "on",
         }
         data.update(values)
@@ -166,6 +167,56 @@ class EventFormTests(EventTestMixin, TestCase):
         self.assertNotIn("end_time", timed_without_times.errors)
         self.assertFalse(reversed_times.is_valid())
         self.assertIn("end_time", reversed_times.errors)
+
+    def test_scheduled_event_rejects_new_past_date_but_allows_unchanged_historical_date(self):
+        past = timezone.localdate() - timedelta(days=1)
+        new_event = EventForm(
+            data=self.valid_form_data(scheduled_date=past.isoformat()),
+            user=self.user,
+        )
+        event = self.create_event(self.user, scheduled_date=past)
+        unchanged = EventForm(
+            data=self.valid_form_data(scheduled_date=past.isoformat(), title="Updated"),
+            user=self.user,
+            instance=event,
+        )
+        moved_earlier = EventForm(
+            data=self.valid_form_data(scheduled_date=(past - timedelta(days=1)).isoformat()),
+            user=self.user,
+            instance=event,
+        )
+
+        self.assertIn("scheduled_date", new_event.errors)
+        self.assertTrue(unchanged.is_valid(), unchanged.errors)
+        self.assertIn("scheduled_date", moved_earlier.errors)
+
+    def test_today_timed_event_rejects_elapsed_time_and_all_day_remains_available(self):
+        today = date(2026, 9, 23)
+        with (
+            patch("event.forms.timezone.localdate", return_value=today),
+            patch("event.forms.timezone.localtime", return_value=datetime(2026, 9, 23, 12)),
+        ):
+            ended = EventForm(
+                data=self.valid_form_data(
+                    scheduled_date=today.isoformat(), all_day="",
+                    start_time="09:00", end_time="10:00",
+                ),
+                user=self.user,
+            )
+            without_end = EventForm(
+                data=self.valid_form_data(
+                    scheduled_date=today.isoformat(), all_day="", start_time="09:00",
+                ),
+                user=self.user,
+            )
+            all_day = EventForm(
+                data=self.valid_form_data(scheduled_date=today.isoformat()),
+                user=self.user,
+            )
+
+            self.assertIn("end_time", ended.errors)
+            self.assertIn("start_time", without_end.errors)
+            self.assertTrue(all_day.is_valid(), all_day.errors)
 
     def test_presence_requires_participation(self):
         form = EventForm(data=self.valid_form_data(
@@ -454,6 +505,69 @@ class EventViewTests(EventTestMixin, TestCase):
         self.assertEqual(response.context["calendar_event_count"], 1)
         self.assertContains(response, event.title)
 
+    def test_crowded_day_shows_first_event_and_more_link_then_filters_list(self):
+        day = date(2026, 10, 1)
+        for index in range(10):
+            self.create_event(self.user, f"Visit {index:02d}", scheduled_date=day)
+        other = self.create_event(self.user, "Another day", scheduled_date=date(2026, 10, 2))
+
+        response = self.client.get(reverse("event:events"), {"month": 10, "year": 2026})
+        cell = next(item for week in response.context["calendar_weeks"] for item in week if item["date"] == day)
+        self.assertEqual(cell["more_count"], 9)
+        self.assertEqual(cell["first_event"].title, "Visit 00")
+        self.assertContains(response, "+9 more")
+        self.assertContains(response, 'data-calendar-day-href="?month=10&amp;year=2026&amp;day=2026-10-01#eventResults"')
+
+        filtered = self.client.get(reverse("event:events"), {
+            "month": 10, "year": 2026, "day": "2026-10-01",
+        })
+        self.assertEqual(filtered.context["page_obj"].paginator.count, 10)
+        self.assertEqual(filtered.context["calendar_event_count"], 11)
+        self.assertEqual(filtered.context["selected_day"], day)
+        self.assertContains(filtered, "Date: 1 Oct 2026")
+        self.assertContains(filtered, 'aria-label="Clear date filter for 1 October 2026"')
+        self.assertNotIn(other, filtered.context["page_obj"].object_list)
+        self.assertEqual(filtered.context["mobile_agenda_day"], day)
+        self.assertEqual(len(filtered.context["mobile_agenda_events"]), 10)
+        self.assertContains(filtered, 'id="eventAgenda"')
+        self.assertContains(filtered, 'class="event-calendar-count" aria-hidden="true">10</span>')
+
+    def test_mobile_agenda_orders_all_day_then_timed_events(self):
+        day = date(2026, 10, 1)
+        late = self.create_event(self.user, "Late", scheduled_date=day, all_day=False, start_time=time(16))
+        early = self.create_event(self.user, "Early", scheduled_date=day, all_day=False, start_time=time(9))
+        all_day = self.create_event(self.user, "All day", scheduled_date=day)
+
+        response = self.client.get(reverse("event:events"), {"month": 10, "year": 2026, "day": day.isoformat()})
+        self.assertEqual(response.context["mobile_agenda_events"], [all_day, early, late])
+        self.assertContains(response, f'day=2026-10-01&amp;selected={early.pk}&amp;tab=details')
+
+    def test_selected_event_renders_mobile_inline_details(self):
+        event = self.create_event(self.user, "Boiler inspection", scheduled_date=date(2026, 10, 1))
+        response = self.client.get(reverse("event:events"), {"selected": event.pk})
+
+        self.assertEqual(response.context["mobile_expanded_event_id"], event.pk)
+        self.assertContains(response, f'id="eventInlineDetails{event.pk}"')
+        self.assertContains(response, f'aria-controls="eventInlineDetails{event.pk}"')
+
+        unselected = self.client.get(reverse("event:events"))
+        self.assertIsNone(unselected.context["mobile_expanded_event_id"])
+        self.assertNotContains(unselected, f'id="eventInlineDetails{event.pk}"')
+
+    def test_invalid_day_is_ignored(self):
+        self.create_event(self.user)
+        response = self.client.get(reverse("event:events"), {"day": "not-a-date"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context["selected_day"])
+
+    def test_day_filter_orders_all_day_then_timed_events(self):
+        day = date(2026, 10, 1)
+        late = self.create_event(self.user, "Late", scheduled_date=day, all_day=False, start_time=time(16))
+        early = self.create_event(self.user, "Early", scheduled_date=day, all_day=False, start_time=time(9))
+        all_day = self.create_event(self.user, "All day", scheduled_date=day)
+        response = self.client.get(reverse("event:events"), {"day": day.isoformat()})
+        self.assertEqual(list(response.context["page_obj"].object_list), [all_day, early, late])
+
     def test_add_event_modal_renders_tabbed_contact_cards(self):
         contact = self.create_contact(self.user, first_name="Leila", last_name="Davies")
         ContactMethod.objects.create(
@@ -477,6 +591,29 @@ class EventViewTests(EventTestMixin, TestCase):
         self.assertContains(response, 'name="contacts"')
         self.assertContains(response, 'data-searchable-select')
         self.assertContains(response, 'js/searchable-select.js')
+        self.assertContains(response, '>Date</label>')
+
+    def test_participant_name_links_to_active_or_deactivated_contact(self):
+        event = self.create_event(self.user)
+        active = self.create_contact(self.user, first_name="Active")
+        inactive = self.create_contact(
+            self.user, first_name="Inactive", state=Contact.State.DEACTIVATED,
+        )
+        EventContact.objects.create(event=event, contact=active)
+        EventContact.objects.create(event=event, contact=inactive)
+
+        response = self.client.get(reverse("event:events"), {
+            "selected": event.pk, "tab": "details",
+        })
+
+        self.assertContains(
+            response,
+            f'{reverse("contact:contacts")}?selected={active.pk}',
+        )
+        self.assertContains(
+            response,
+            f'{reverse("contact:contacts")}?state=all&amp;selected={inactive.pk}',
+        )
 
     def test_add_and_edit_event_modals_use_the_same_property_picker(self):
         self.create_event(self.user)
@@ -593,14 +730,21 @@ class EventViewTests(EventTestMixin, TestCase):
         self.assertEqual(response.context["active_tab"], "details")
 
     def test_paginates_twenty_events(self):
+        last_event = None
         for index in range(21):
-            self.create_event(self.user, f"Event {index:02d}")
+            last_event = self.create_event(self.user, f"Event {index:02d}")
         response = self.client.get(reverse("event:events"))
         self.assertEqual(len(response.context["page_obj"]), 20)
         self.assertEqual(response.context["page_obj"].paginator.num_pages, 2)
         self.assertContains(response, "Page 1 of 2")
         self.assertContains(response, 'aria-disabled="true">← Previous</span>')
         self.assertContains(response, "?page=2")
+        selected_response = self.client.get(reverse("event:events"), {"page": 2, "selected": last_event.pk, "tab": "details"})
+        self.assertContains(selected_response, 'data-workspace-scroll-root="events"')
+        self.assertContains(selected_response, 'data-workspace-scroll-list')
+        self.assertContains(selected_response, 'data-workspace-scroll-row')
+        self.assertContains(selected_response, 'js/workspace-list-scroll.js')
+        self.assertContains(selected_response, 'class="event-mobile-back btn btn-sm pom-quiet mb-2" href="?page=2&amp;month=')
 
     def test_create_event_with_initial_contacts(self):
         contact = self.create_contact(self.user)
@@ -627,6 +771,19 @@ class EventViewTests(EventTestMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["open_modal"], "addEventModal")
         self.assertIn("title", response.context["add_event_form"].errors)
+        self.assertFalse(Event.objects.exists())
+
+    def test_past_scheduled_date_returns_field_error_in_add_modal(self):
+        past = timezone.localdate() - timedelta(days=1)
+        post_response = self.client.post(
+            reverse("event:add_event"),
+            self.valid_form_data(scheduled_date=past.isoformat()),
+        )
+
+        response = self.client.get(post_response.url)
+
+        self.assertEqual(response.context["open_modal"], "addEventModal")
+        self.assertIn("scheduled_date", response.context["add_event_form"].errors)
         self.assertFalse(Event.objects.exists())
 
     def test_invalid_initial_contact_creates_no_event(self):

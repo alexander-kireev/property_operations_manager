@@ -419,6 +419,11 @@ class IssueViewTests(IssueTestMixin, TestCase):
         self.assertContains(response, "Page 2 of 3")
         self.assertContains(response, "?search=Issue&amp;page=1")
         self.assertContains(response, "?search=Issue&amp;page=3")
+        self.assertContains(response, 'data-workspace-scroll-root="issues"')
+        self.assertContains(response, 'data-workspace-scroll-list')
+        self.assertContains(response, 'data-workspace-scroll-row')
+        self.assertContains(response, 'js/workspace-list-scroll.js')
+        self.assertContains(response, 'class="issue-mobile-back btn btn-sm pom-quiet mb-2" href="?search=Issue&amp;page=2"')
 
     def test_issues_view_normalises_query_parameters(self):
         response = self.client.get(

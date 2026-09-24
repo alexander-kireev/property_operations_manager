@@ -6,6 +6,48 @@ document.addEventListener("DOMContentLoaded", () => {
         workspace.classList.add("show-detail");
     }
 
+    document.querySelectorAll("[data-calendar-day-href]").forEach((day) => {
+        const mobileDayHref = (href) => window.matchMedia("(max-width: 767.98px)").matches
+            ? href.replace("#eventResults", "#eventAgenda") : href;
+        day.addEventListener("click", (event) => {
+            const dateLink = event.target.closest(".event-calendar-day-number");
+            if (dateLink && window.matchMedia("(max-width: 767.98px)").matches) {
+                event.preventDefault();
+                window.location.assign(mobileDayHref(dateLink.href));
+                return;
+            }
+            if (event.target.closest("a, button")) return;
+            window.location.assign(mobileDayHref(day.dataset.calendarDayHref));
+        });
+    });
+
+    document.querySelectorAll(".event-command-entry > [data-workspace-scroll-row]").forEach((row) => {
+        row.addEventListener("click", (event) => {
+            if (!window.matchMedia("(max-width: 767.98px)").matches
+                || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            const expanded = row.nextElementSibling;
+            if (expanded?.classList.contains("event-mobile-expanded")) {
+                event.preventDefault();
+                expanded.hidden = !expanded.hidden;
+                row.setAttribute("aria-expanded", String(!expanded.hidden));
+            } else {
+                event.preventDefault();
+                window.location.assign(`${row.href}#${row.parentElement.id}`);
+            }
+        });
+    });
+
+    document.querySelectorAll(".event-mobile-agenda-row").forEach((row) => {
+        row.addEventListener("click", (event) => {
+            if (!window.matchMedia("(max-width: 767.98px)").matches
+                || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            const selected = new URL(row.href).searchParams.get("selected");
+            if (!selected) return;
+            event.preventDefault();
+            window.location.assign(`${row.href}#eventRow${selected}`);
+        });
+    });
+
     const participationFilter = document.getElementById("eventParticipation");
     const presenceFilter = document.getElementById("eventPresence");
     const compatibilityNote = document.getElementById("eventFilterCompatibility");

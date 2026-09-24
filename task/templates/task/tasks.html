@@ -11,6 +11,8 @@
     <section
         class="task-command-centre card border-0 shadow-sm h-100"
         aria-label="Tasks command centre"
+        data-workspace-scroll-root="tasks"
+        data-navigation-query="{{ navigation_query }}"
         {% if open_modal %}data-modal-auto-open="{{ open_modal }}"{% endif %}
     >
         {% include "includes/my_work_nav.html" with active_section="tasks" task_count=task_count issue_count=issue_count %}
@@ -128,12 +130,13 @@
                         </form>
 
                         {% if page_obj.object_list %}
-                            <div class="task-command-list list-group list-group-flush" aria-label="Tasks">
+                            <div class="task-command-list list-group list-group-flush" aria-label="Tasks" data-workspace-scroll-list>
                                 {% for task in page_obj %}
                                     {% work_status task today as task_status %}
                                     <a
                                         class="task-command-row list-group-item list-group-item-action{% if task == selected_task %} is-selected{% endif %}{% if task.state != 'active' %} terminated{% endif %}"
                                         href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ task.pk }}"
+                                        data-workspace-scroll-row
                                         {% if task == selected_task %}aria-current="true"{% endif %}
                                     >
                                         <span class="d-flex justify-content-between align-items-start gap-3">
@@ -298,7 +301,7 @@
 
 {% if selected_task %}
     {% if selected_task.state == "active" %}
-        <div class="modal fade" id="editTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editTaskModalLabel" aria-hidden="true">
+        <div class="modal fade" id="editTaskModal" data-modal-clear-query="form_state open" tabindex="-1" aria-labelledby="editTaskModalLabel" aria-hidden="true">
             <div class="task-form-dialog modal-dialog modal-dialog-centered"><div class="modal-content">
                 <div class="modal-header"><h2 class="modal-title fs-5" id="editTaskModalLabel">Edit task</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'task:edit_task' selected_task.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off" data-task-form>
@@ -336,6 +339,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{% static 'js/workspace-list-scroll.js' %}"></script>
     <script src="{% static 'js/task-form.js' %}"></script>
     <script src="{% static 'js/task-command-centre.js' %}"></script>
 {% endblock %}

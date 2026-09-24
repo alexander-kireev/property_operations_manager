@@ -145,6 +145,12 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# Local registration confirmation email
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "noreply@property-operations-manager.local"
+# Console delivery is useful locally; set the SMTP values below for real delivery.
+EMAIL_BACKEND = os.environ.get("PMS_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.environ.get("PMS_EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("PMS_EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("PMS_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("PMS_EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("PMS_EMAIL_USE_TLS", "False").lower() == "true"
+EMAIL_USE_SSL = os.environ.get("PMS_EMAIL_USE_SSL", "False").lower() == "true"
+DEFAULT_FROM_EMAIL = os.environ.get("PMS_DEFAULT_FROM_EMAIL", "noreply@property-operations-manager.local")

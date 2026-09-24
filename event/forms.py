@@ -1,5 +1,6 @@
 from django import forms
 from django.db.models import Q
+from django.utils import timezone
 from .models import Event
 
 from property.models import Property
@@ -98,10 +99,36 @@ class EventForm(forms.ModelForm):
         cleaned_data = super().clean()
 
         all_day = cleaned_data.get("all_day")
+        scheduled_date = cleaned_data.get("scheduled_date")
         start_time = cleaned_data.get("start_time")
         end_time = cleaned_data.get("end_time")
         user_participation_required = cleaned_data.get("user_participation_required")
         user_presence_required = cleaned_data.get("user_presence_required")
+
+        if scheduled_date is not None:
+            today = timezone.localdate()
+            date_unchanged = (
+                self.instance.pk is not None
+                and scheduled_date == self.instance.scheduled_date
+            )
+            if scheduled_date < today and not date_unchanged:
+                self.add_error(
+                    "scheduled_date",
+                    "Choose today or a future date for a scheduled event.",
+                )
+            elif scheduled_date == today and not all_day:
+                event_end = end_time or start_time
+                time_unchanged = (
+                    date_unchanged
+                    and start_time == self.instance.start_time
+                    and end_time == self.instance.end_time
+                )
+                current_time = timezone.localtime().time().replace(tzinfo=None)
+                if event_end is not None and event_end <= current_time and not time_unchanged:
+                    self.add_error(
+                        "end_time" if end_time is not None else "start_time",
+                        "Choose a time that has not passed for a scheduled event.",
+                    )
 
         if all_day:
             if start_time is not None:

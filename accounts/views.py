@@ -7,10 +7,19 @@ from django.contrib.auth.forms import PasswordResetForm
 from .forms import AccountPasswordChangeForm, PendingRegistrationForm, EmailAuthenticationForm, ProfileForm, EmailChangeForm
 
 from .models import PendingRegistration, User
+from .models import PendingEmailChange
+from .email_change import (
+    EmailAlreadyTaken,
+    InvalidEmailChange,
+    confirm_email_change,
+    pending_change_for_token,
+    request_email_change,
+)
 
 from django.conf import settings
 from django.core.mail import send_mail
 from django.urls import reverse
+from django.utils import timezone
 from urllib.parse import urlencode
 
 from django.core import signing
@@ -253,7 +262,7 @@ def change_password_view(request):
 def change_email_view(request):
 
     if request.method == "POST":
-        form = EmailChangeForm(request.POST)
+        form = EmailChangeForm(request.POST, user=request.user)
 
         if form.is_valid():
 
@@ -265,8 +274,13 @@ def change_email_view(request):
                 "Your current password is incorrect."
                 )
             else:
-                request.user.email = form.cleaned_data["new_email"]
-                request.user.save(update_fields=["email"])
+                request_email_change(
+                    user=request.user,
+                    new_email=form.cleaned_data["new_email"],
+                    confirmation_url_for_token=lambda token: request.build_absolute_uri(
+                        reverse("accounts:confirm_email_change", kwargs={"token": token})
+                    ),
+                )
 
                 return redirect("accounts:change_email")
 
@@ -281,11 +295,32 @@ def change_email_view(request):
         state = _account_form_state(request, "change_email")
         form = EmailChangeForm(
             data=deserialise_form_data(state["data"]) if state else None,
+            user=request.user,
         )
         if state:
             form = _restore_account_form(state, form)
 
-    return render(request, "accounts/change_email.html", {"form": form})
+    pending = PendingEmailChange.objects.filter(user=request.user, expires_at__gt=timezone.now()).first()
+    return render(request, "accounts/change_email.html", {"form": form, "pending": pending})
+
+
+def confirm_email_change_view(request, token):
+    pending = pending_change_for_token(token)
+    if pending is None:
+        return render(request, "accounts/confirm_email_change.html", {"error": "This verification link is invalid or has expired."}, status=400)
+    if request.method == "POST":
+        try:
+            confirm_email_change(token)
+        except InvalidEmailChange:
+            return render(request, "accounts/confirm_email_change.html", {"error": "This verification link is invalid or has expired."}, status=400)
+        except EmailAlreadyTaken:
+            return render(request, "accounts/confirm_email_change.html", {"error": "This email address is already in use. Request a different address from your profile."}, status=409)
+        return redirect("accounts:email_change_complete")
+    return render(request, "accounts/confirm_email_change.html", {"pending": pending})
+
+
+def email_change_complete_view(request):
+    return render(request, "accounts/email_change_complete.html")
 
 
 @login_required

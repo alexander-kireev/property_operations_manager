@@ -258,6 +258,8 @@ def _issue_list_context(
             (issue for issue in page_obj if issue.pk == selected_id),
             None,
         )
+        if selected_issue is None and selected_id is not None and request.GET.get("open") in ("detail", "edit"):
+            selected_issue = issues_for_user(user=request.user).filter(pk=selected_id).first()
 
     if selected_issue is None and page_obj.object_list:
         selected_issue = page_obj.object_list[0]
@@ -368,10 +370,13 @@ def _issue_list_context(
 @login_required
 @require_GET
 def issues_view(request):
+    context = _issue_list_context(request, **_restore_issue_form_context(request))
+    if request.GET.get("open") == "edit" and context["edit_issue_form"] is not None:
+        context["open_modal"] = "editIssueModal"
     return render(
         request,
         "issue/issues.html",
-        _issue_list_context(request, **_restore_issue_form_context(request)),
+        context,
     )
 
 
@@ -424,6 +429,9 @@ def resolve_issue_view(request, issue_id):
         issue=issue,
         dismiss_linked_tasks=request.POST.get("affect_linked_tasks") == "yes",
     )
+    property_url = f"{reverse('property:property_detail', args=[issue.property_id])}?tab=work" if issue.property_id else None
+    if property_url and request.POST.get("next") == property_url:
+        return redirect(property_url)
     return redirect(_issue_workspace_url(request, issue_id=issue.pk))
 
 

@@ -35,7 +35,20 @@
     {% if user.is_authenticated %}
 
     <div class="collapse navbar-collapse" id="siteNavbar">
-        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+        <ul class="navbar-nav app-mobile-menu d-lg-none" aria-label="Mobile navigation">
+            <li class="nav-item"><a class="nav-link" href="{% url 'pages:dashboard' %}">Dashboard</a></li>
+            <li class="app-mobile-menu-label">My work</li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'task:tasks' %}">Tasks</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'issue:issues' %}">Issues</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'event:events' %}">Events</a></li>
+            <li class="app-mobile-menu-label">Records</li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'property:properties' %}">Properties</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'contact:contacts' %}">Contacts</a></li>
+            <li class="app-mobile-menu-label">Account</li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profile_page' %}">Profile</a></li>
+            <li class="nav-item"><form method="post" action="{% url 'accounts:logout' %}" autocomplete="off">{% csrf_token %}<button class="app-mobile-logout" type="submit">Log out</button></form></li>
+        </ul>
+        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1 d-none d-lg-flex">
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'pages:dashboard' %}">Dashboard</a>
             </li>

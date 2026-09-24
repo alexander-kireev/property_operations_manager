@@ -1,0 +1,50 @@
+<div class="modal fade" id="addPropertyModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addPropertyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered property-form-dialog"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="addPropertyModalLabel">Add property</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <form action="{% url 'property:add_property' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
+            {% csrf_token %}<div class="modal-body">{% include "property/includes/property_form_fields.html" with form=add_property_form %}</div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save property</button></div>
+        </form>
+    </div></div>
+</div>
+
+{% if selected_property and selected_property.state == "active" %}
+    <div class="modal fade" id="{% if is_detail_route %}editPropertyModal{% else %}listEditPropertyModal{% endif %}" data-modal-clear-query="form_state edit" tabindex="-1" aria-labelledby="editPropertyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered property-form-dialog"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="editPropertyModalLabel">Edit property</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <form action="{% url 'property:edit_property' selected_property.pk %}{% if not is_detail_route %}?{{ list_return_query }}{% endif %}" method="post" autocomplete="off">
+                {% csrf_token %}<div class="modal-body">{% if is_detail_route %}{% include "property/includes/property_form_fields.html" with form=edit_property_form %}{% else %}{% include "property/includes/property_form_fields.html" with form=list_edit_form %}{% endif %}</div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save changes</button></div>
+            </form>
+        </div></div>
+    </div>
+
+    <div class="modal fade modal-resilient" id="deactivatePropertyModal" data-modal-clear-query="deactivate" tabindex="-1" aria-labelledby="deactivatePropertyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="deactivatePropertyModalLabel">Deactivate property?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><p>This property will leave active-property views. Its work and history remain stored.</p><div class="modal-context"><span class="small text-body-secondary d-block">Property</span><span class="modal-context-value">{{ selected_property.name }}</span></div></div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep property</button><form action="{% url 'property:deactivate_property' selected_property.pk %}{% if not is_detail_route %}?{{ list_return_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Deactivate property</button></form></div>
+        </div></div>
+    </div>
+{% endif %}
+
+{% if selected_property %}
+    <div class="modal fade modal-resilient" id="deletePropertyModal" data-modal-clear-query="confirm_delete" tabindex="-1" aria-labelledby="deletePropertyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="deletePropertyModalLabel">Delete property?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><p>This property and its associated history will be removed from your workspace.</p><div class="modal-context mb-3"><span class="small text-body-secondary d-block">Property</span><span class="modal-context-value">{{ selected_property.name }}</span></div><p class="text-body-secondary mb-0">This action cannot be undone from the application.</p></div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep property</button><form action="{% url 'property:delete_property' selected_property.pk %}{% if not is_detail_route %}?{{ list_return_query }}{% endif %}" method="post">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete property</button></form></div>
+        </div></div>
+    </div>
+{% endif %}
+
+<div class="modal fade modal-resilient" id="propertyQuickActionModal" tabindex="-1" aria-labelledby="propertyQuickActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="propertyQuickActionModalLabel">Confirm action?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <form method="post" action="">
+            {% csrf_token %}<input type="hidden" name="next" value="">
+            <div class="modal-body"><p data-quick-question></p><div class="modal-context"><span class="small text-body-secondary d-block" data-quick-kind></span><span class="modal-context-value" data-quick-name></span></div><div class="form-check mt-3" data-quick-linked hidden><input class="form-check-input" id="quickLinkedTasks" name="affect_linked_tasks" value="yes" type="checkbox"><label class="form-check-label" for="quickLinkedTasks">Also dismiss active linked tasks</label></div></div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep record</button><button class="btn theme-action" type="submit" data-quick-submit>Confirm</button></div>
+        </form>
+    </div></div>
+</div>

@@ -1,5 +1,5 @@
-from django.db.models import OuterRef, Prefetch, Q, Subquery
-from django.db.models.functions import Lower
+from django.db.models import Case, Count, F, IntegerField, OuterRef, Prefetch, Q, Subquery, Value, When
+from django.db.models.functions import Coalesce, Lower
 
 from .models import Contact, ContactMethod
 
@@ -19,16 +19,32 @@ def contacts_for_user(*, user):
     first_method = ContactMethod.objects.filter(
         contact_id=OuterRef("pk"),
     ).order_by("pk")
+    method_total = (
+        ContactMethod.objects.filter(contact_id=OuterRef("pk"))
+        .order_by().values("contact_id")
+        .annotate(total=Count("pk")).values("total")[:1]
+    )
     return Contact.objects.filter(
         user=user,
         deleted_at__isnull=True,
     ).annotate(
+        method_count=Coalesce(Subquery(method_total, output_field=IntegerField()), Value(0)),
         first_email=Subquery(
             first_method.filter(type=ContactMethod.Type.EMAIL).values("value")[:1]
         ),
         first_telephone=Subquery(
             first_method.filter(type=ContactMethod.Type.TELEPHONE).values("value")[:1]
         ),
+    ).annotate(
+        displayed_method_count=Case(
+            When(first_email__isnull=False, first_telephone__isnull=False, then=Value(2)),
+            When(first_email__isnull=False, then=Value(1)),
+            When(first_telephone__isnull=False, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField(),
+        ),
+    ).annotate(
+        remaining_method_count=F("method_count") - F("displayed_method_count"),
     ).prefetch_related(
         Prefetch(
             "contact_methods",

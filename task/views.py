@@ -179,7 +179,12 @@ def _task_action_redirect(request, *, task, deleted=False):
             and parse_qs(parsed_next.query).get("selected")
             == [str(task.issue_id)]
         )
-        if is_task_workspace or is_own_issue_workspace:
+        property_id = task.property_id or (task.issue.property_id if task.issue_id else None)
+        is_own_property_workspace = (
+            property_id
+            and next_url == f"{reverse('property:property_detail', args=[property_id])}?tab=work"
+        )
+        if is_task_workspace or is_own_issue_workspace or is_own_property_workspace:
             return redirect(next_url)
 
     return redirect(
@@ -215,6 +220,8 @@ def _task_list_context(
             (task for task in page_obj if task.pk == selected_id),
             None,
         )
+        if selected_task is None and selected_id is not None and request.GET.get("open") in ("detail", "edit"):
+            selected_task = tasks_for_user(user=request.user).filter(pk=selected_id).first()
 
     if selected_task is None and page_obj.object_list:
         selected_task = page_obj.object_list[0]
@@ -305,10 +312,14 @@ def _task_list_context(
 @login_required
 @require_GET
 def tasks_view(request):
+    context = _task_list_context(request, **_restore_task_form_context(request))
+    if request.GET.get("open") == "edit" and context["edit_task_form"] is not None:
+        context["open_modal"] = "editTaskModal"
+        context["show_mobile_detail"] = True
     return render(
         request,
         "task/tasks.html",
-        _task_list_context(request, **_restore_task_form_context(request)),
+        context,
     )
 
 

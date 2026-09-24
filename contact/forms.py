@@ -27,6 +27,14 @@ class ContactForm(forms.ModelForm):
             "first_name",
             "last_name",
         )
+        error_messages = {
+            "first_name": {
+                "max_length": "First name must be %(limit_value)d characters or fewer. You entered %(show_value)d.",
+            },
+            "last_name": {
+                "max_length": "Last name must be %(limit_value)d characters or fewer. You entered %(show_value)d.",
+            },
+        }
 
 class ContactCreateForm(ContactForm):
     email = forms.EmailField(
@@ -51,6 +59,12 @@ class ContactMethodForm(forms.ModelForm):
         if self.contact is None and self.instance.pk:
             self.contact = self.instance.contact
 
+        self.fields["type"].label = "Contact method"
+        self.fields["type"].choices = [
+            ("", "Choose email or telephone"),
+            *ContactMethod.Type.choices,
+        ]
+        self.fields["value"].label = "Contact information"
         self.fields["type"].widget.attrs["class"] = "form-select"
         self.fields["value"].widget.attrs["class"] = "form-control"
         self.fields["value"].widget.attrs["autocomplete"] = "off"
