@@ -464,6 +464,21 @@ class UserAccountManagementTests(TestCase):
 
         return response.url
 
+    def test_account_change_forms_load_empty_with_fresh_field_guard(self):
+        user = self.create_user(self.USER_1)
+        self.client.force_login(user)
+
+        for route, fields in (
+            ("accounts:change_email", ("new_email", "current_password")),
+            ("accounts:change_password", ("old_password", "new_password1", "new_password2")),
+        ):
+            with self.subTest(route=route):
+                response = self.client.get(reverse(route))
+                self.assertContains(response, 'data-fresh-account-form')
+                self.assertContains(response, 'js/fresh-account-form.js')
+                for name in fields:
+                    self.assertIsNone(response.context["form"][name].value())
+
     def test_profile_page_loads_for_authenticated_user(self):
         user = self.create_user(self.USER_1)
         self.client.force_login(user)
@@ -595,7 +610,9 @@ class UserAccountManagementTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].errors)
+        self.assertEqual(response.context["form"]["new_email"].value(), user_2.email)
         self.assertIsNone(response.context["form"]["current_password"].value())
+        self.assertContains(response, "data-preserve-restored-email")
 
         user.refresh_from_db()
         self.assertEqual(user.email, self.USER_1["email"])
@@ -621,7 +638,9 @@ class UserAccountManagementTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].errors)
+        self.assertEqual(response.context["form"]["new_email"].value(), new_email)
         self.assertIsNone(response.context["form"]["current_password"].value())
+        self.assertContains(response, "data-preserve-restored-email")
 
         user.refresh_from_db()
         self.assertEqual(user.email, self.USER_1["email"])

@@ -1096,6 +1096,17 @@ class TaskViewTests(TestCase):
                 response = self.client.get(reverse("task:tasks"), query)
                 self.assertCountEqual(response.context["page_obj"].object_list, expected)
 
+    def test_workspace_wires_shared_list_scroll_restoration(self):
+        task = self.create_task()
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("task:tasks"), {"selected": task.pk})
+
+        self.assertContains(response, 'data-workspace-scroll-root="tasks"')
+        self.assertContains(response, 'data-workspace-scroll-list')
+        self.assertContains(response, 'data-workspace-scroll-row')
+        self.assertContains(response, 'js/workspace-list-scroll.js')
+
     def test_terminal_only_task_list_offers_all_states(self):
         self.create_task(state=Task.State.COMPLETED)
         self.client.force_login(self.user)
@@ -1355,6 +1366,12 @@ class TaskViewTests(TestCase):
         )
 
         self.assertEqual(response.context["selected_task"], tasks[0])
+
+        linked_response = self.client.get(
+            reverse("task:tasks"),
+            {"page": 1, "selected": tasks[-1].pk, "open": "detail"},
+        )
+        self.assertEqual(linked_response.context["selected_task"], tasks[-1])
 
     def test_task_detail_route_has_been_removed(self):
         with self.assertRaises(NoReverseMatch):

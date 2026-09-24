@@ -8,7 +8,7 @@
 
 {% block content %}
 <div class="container-xl h-100">
-    <section class="event-command-centre card border-0 shadow-sm h-100" aria-label="Events command centre">
+    <section class="event-command-centre card border-0 shadow-sm h-100" aria-label="Events command centre" data-workspace-scroll-root="events" data-navigation-query="{{ navigation_query }}">
         {% include "includes/my_work_nav.html" with active_section="events" task_count=task_count issue_count=issue_count event_count=event_count %}
 
         {% if event_count == 0 %}
@@ -22,9 +22,12 @@
             </div>
         {% else %}
             <div class="event-workspace row g-0{% if selected_event and active_tab == 'details' %} show-detail{% endif %}" id="eventWorkspace">
-                <aside class="event-list-column col-lg-4 border-end" aria-label="Event results">
+                <aside class="event-list-column col-lg-4 border-end" aria-label="Event results" id="eventResults">
                     <div class="event-pane">
                         <form class="event-list-controls border-bottom p-3" method="get" autocomplete="off">
+                            {% if selected_day %}<input type="hidden" name="day" value="{{ selected_day|date:'Y-m-d' }}">{% endif %}
+                            <input type="hidden" name="month" value="{{ calendar_month_number }}">
+                            <input type="hidden" name="year" value="{{ calendar_year }}">
                             <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
                                 <h1 class="h5 mb-0">Events</h1>
                                 <button class="btn btn-sm theme-action px-3" type="button" data-bs-toggle="modal" data-bs-target="#addEventModal"{% if not add_event_form %} disabled{% endif %}>+ Add event</button>
@@ -93,20 +96,27 @@
                             {% endif %}
                         </form>
 
-                        <div class="event-command-list list-group list-group-flush">
+                        {% if selected_day %}<div class="event-day-filter border-bottom px-3 py-2"><a class="event-day-chip" href="?{{ clear_day_query }}#eventResults" aria-label="Clear date filter for {{ selected_day|date:'j F Y' }}"><span>Date: {{ selected_day|date:"j M Y" }}</span><span class="event-day-chip-remove" aria-hidden="true">×</span></a></div>{% endif %}
+
+                        <div class="event-command-list list-group list-group-flush" data-workspace-scroll-list>
                             {% for event in page_obj %}
-                                <a class="event-command-row list-group-item list-group-item-action{% if selected_event.pk == event.pk %} is-selected{% endif %}{% if event.state != 'scheduled' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ event.pk }}&amp;tab=details"{% if selected_event.pk == event.pk %} aria-current="true"{% endif %}>
+                                <div class="event-command-entry" id="eventRow{{ event.pk }}">
+                                <a class="event-command-row list-group-item list-group-item-action{% if selected_event.pk == event.pk %} is-selected{% endif %}{% if event.state != 'scheduled' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ event.pk }}&amp;tab=details" data-workspace-scroll-row{% if mobile_expanded_event_id == event.pk %} data-mobile-event-expanded aria-expanded="true" aria-controls="eventInlineDetails{{ event.pk }}"{% endif %}{% if selected_event.pk == event.pk %} aria-current="true"{% endif %}>
                                     <div class="d-flex justify-content-between gap-3">
                                         <span class="event-command-title" title="{{ event.title }}">{{ event.title }}</span>
-                                        <span class="event-state-badge event-state-{{ event.state }}">{{ event.get_state_display }}</span>
+                                        <span class="d-flex align-items-center gap-2"><span class="event-state-badge event-state-{{ event.state }}">{{ event.get_state_display }}</span><span class="event-mobile-row-arrow" aria-hidden="true">⌄</span></span>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-start gap-3 mt-1">
                                         <span class="event-command-context"{% if event.property %} title="{{ event.property.name }}"{% endif %}>{% if event.property %}{{ event.property.name }}{% else %}No property{% endif %}</span>
                                         <span class="event-command-time text-end">{{ event.scheduled_date|date:"j M Y" }}<br>{% if event.all_day %}All day{% else %}{{ event.start_time|time:"H:i" }}{% if event.end_time %}–{{ event.end_time|time:"H:i" }}{% endif %}{% endif %}</span>
                                     </div>
                                 </a>
+                                {% if mobile_expanded_event_id == event.pk %}
+                                    {% include "event/includes/mobile_event_details.html" %}
+                                {% endif %}
+                                </div>
                             {% empty %}
-                                <div class="p-4 text-center text-body-secondary">No events match these filters.</div>
+                                <div class="p-4 text-center text-body-secondary">{% if selected_day %}No events match this date and the current filters.{% else %}No events match these filters.{% endif %}</div>
                             {% endfor %}
                         </div>
 
@@ -146,12 +156,31 @@
                                         <div class="event-calendar-grid" aria-label="{{ calendar_month_label }} event calendar">
                                             {% for weekday in calendar_weekdays %}<div class="event-calendar-weekday">{{ weekday }}</div>{% endfor %}
                                             {% for week in calendar_weeks %}{% for day in week %}
-                                                <div class="event-calendar-day{% if not day.in_month %} outside{% endif %}{% if day.is_today %} today{% endif %}">
-                                                    <span class="event-calendar-day-number">{{ day.date|date:"j" }}</span>
-                                                    {% for event in day.events %}<a class="event-calendar-item {{ event.state }}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ event.pk }}&amp;tab=details" title="{{ event.title }}">{% if not event.all_day %}{{ event.start_time|time:"H:i" }} {% endif %}{{ event.title }}</a>{% endfor %}
+                                                <div class="event-calendar-day{% if not day.in_month %} outside{% endif %}{% if day.is_today %} today{% endif %}{% if mobile_agenda_day == day.date %} agenda-selected{% endif %}" data-calendar-day-href="?{{ day_query_base }}&amp;day={{ day.date|date:'Y-m-d' }}#eventResults">
+                                                    <a class="event-calendar-day-number{% if selected_day == day.date %} is-selected{% endif %}" href="?{{ day_query_base }}&amp;day={{ day.date|date:'Y-m-d' }}#eventResults" aria-label="Show events on {{ day.date|date:'j F Y' }}">{{ day.date|date:"j" }}</a>
+                                                    {% if day.events %}<span class="event-calendar-count" aria-hidden="true">{{ day.events|length }}</span>{% endif %}
+                                                    {% if day.first_event %}<a class="event-calendar-item {{ day.first_event.state }}" href="?{{ day_query_base }}&amp;day={{ day.date|date:'Y-m-d' }}&amp;selected={{ day.first_event.pk }}&amp;tab=details" title="{{ day.first_event.title }}">{% if not day.first_event.all_day %}{{ day.first_event.start_time|time:"H:i" }} {% endif %}{{ day.first_event.title }}</a>{% endif %}
+                                                    {% if day.more_count %}<a class="event-calendar-more" href="?{{ day_query_base }}&amp;day={{ day.date|date:'Y-m-d' }}#eventResults" aria-label="Show all {{ day.events|length }} events on {{ day.date|date:'j F Y' }}">+{{ day.more_count }} more</a>{% endif %}
                                                 </div>
                                             {% endfor %}{% endfor %}
                                         </div>
+                                        <section class="event-mobile-agenda" id="eventAgenda" aria-labelledby="eventAgendaTitle">
+                                            <div class="event-mobile-agenda-heading">
+                                                <h3 id="eventAgendaTitle">{{ mobile_agenda_day|date:"l j F" }}</h3>
+                                                <span>{{ mobile_agenda_events|length }} event{{ mobile_agenda_events|length|pluralize }}</span>
+                                            </div>
+                                            <div class="event-mobile-agenda-list">
+                                                {% for event in mobile_agenda_events %}
+                                                    <a class="event-mobile-agenda-row" href="?{{ day_query_base }}&amp;day={{ mobile_agenda_day|date:'Y-m-d' }}&amp;selected={{ event.pk }}&amp;tab=details">
+                                                        <span class="event-mobile-agenda-time">{% if event.all_day %}All day{% else %}{{ event.start_time|time:"H:i" }}{% endif %}</span>
+                                                        <span class="event-mobile-agenda-copy"><strong>{{ event.title }}</strong>{% if event.property %}<small>{{ event.property.name }}</small>{% endif %}</span>
+                                                        <span aria-hidden="true">→</span>
+                                                    </a>
+                                                {% empty %}
+                                                    <p class="event-mobile-agenda-empty">No events on this day.</p>
+                                                {% endfor %}
+                                            </div>
+                                        </section>
                                     {% else %}
                                         <div class="event-calendar-empty d-flex align-items-center justify-content-center text-center text-body-secondary border rounded p-5"><p class="mb-0">Calendar data will appear here.</p></div>
                                     {% endif %}
@@ -162,7 +191,7 @@
                                 <div class="event-detail-pane">
                                     {% if selected_event %}
                                         <header class="event-detail-header p-3 p-md-4">
-                                            <a class="event-mobile-back btn btn-sm pom-quiet mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to events</a>
+                                            <a class="event-mobile-back btn btn-sm pom-quiet mb-2" href="?{% if navigation_query %}{{ navigation_query }}{% endif %}">← Back to events</a>
                                             <div class="event-detail-header-layout">
                                                 <div class="event-detail-heading-copy">
                                                     <h2 class="event-detail-title h3" title="{{ selected_event.title }}">{{ selected_event.title }}</h2>
@@ -302,7 +331,7 @@
         </div>
     {% endif %}
     {% if selected_event.state == "scheduled" and edit_event_form %}
-        <div class="modal fade" id="editEventModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
+        <div class="modal fade" id="editEventModal" data-modal-clear-query="form_state open" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
                 <div class="modal-header"><h2 class="modal-title fs-5" id="editEventModalLabel">Edit event</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form action="{% url 'event:edit_event' selected_event.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off" data-event-form>
@@ -349,4 +378,4 @@
 {% if open_modal %}<span hidden data-modal-auto-open="{{ open_modal }}"></span>{% endif %}
 {% endblock %}
 
-{% block extra_js %}<script src="{% static 'js/event-command-centre.js' %}"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/workspace-list-scroll.js' %}"></script><script src="{% static 'js/event-command-centre.js' %}"></script>{% endblock %}

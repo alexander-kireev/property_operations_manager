@@ -33,6 +33,12 @@ from .services import (
 
 
 PROPERTIES_PER_PAGE = 20
+PROPERTY_SECTIONS = (
+    {"name": "overview", "label": "Overview"},
+    {"name": "work", "label": "Work"},
+    {"name": "schedule", "label": "Schedule"},
+    {"name": "history", "label": "History"},
+)
 
 
 def _normalised_list_values(request):
@@ -99,6 +105,7 @@ def _restore_add_property_form(request, state):
     return PropertyForm(
         deserialise_form_data(state.get("data", {})),
         user=request.user,
+        auto_id="add_property_%s",
     )
 
 
@@ -112,6 +119,7 @@ def _restore_edit_property_form(request, state, property_record):
         deserialise_form_data(state.get("data", {})),
         user=request.user,
         instance=property_record,
+        auto_id="edit_property_%s",
     )
 
 
@@ -130,49 +138,121 @@ def _property_list_context(request, *, add_property_form=None, edit_property_for
     return_parameters["return_to"] = "list"
     if page_obj.number > 1:
         return_parameters["page"] = page_obj.number
+    navigation_parameters = query_parameters.copy()
+    if page_obj.number > 1:
+        navigation_parameters["page"] = page_obj.number
 
+    selected_property = edit_property_record or next(iter(page_obj.object_list), None)
     return {
         "add_property_form": (
             add_property_form
             if add_property_form is not None
-            else PropertyForm(user=request.user)
+            else PropertyForm(user=request.user, auto_id="add_property_%s")
         ),
         "page_obj": page_obj,
         "list_edit_form": edit_property_form or PropertyForm(user=request.user, auto_id="list_edit_%s"),
-        "list_edit_property": edit_property_record,
-        "list_edit_action": (
-            f"{reverse('property:edit_property', kwargs={'property_id': edit_property_record.pk})}?{urlencode(return_parameters)}"
-            if edit_property_record else ""
-        ),
         "list_return_query": urlencode(return_parameters),
+        "navigation_query": urlencode(navigation_parameters),
         "search": values["search"],
         "state": values["state"],
         "sort": values["sort"],
         "list_query": urlencode(query_parameters),
         "has_filters": bool(values["search"] or values["state"]),
         "property_count": properties_for_user(user=request.user).count(),
+        "selected_property": selected_property,
+        "selected_in_page": True,
+        "property_sections": PROPERTY_SECTIONS,
+        "active_section": request.GET.get("tab") if request.GET.get("tab") in ("overview", "work", "schedule", "history") else "overview",
+        "is_detail_route": False,
     }
 
 
-def _property_detail_context(request, property_record, *, edit_property_form=None):
+def _property_history(request, property_record):
     from event.models import Event
     from issue.models import Issue
     from task.models import Task
 
-    open_issues = Issue.objects.filter(user=request.user, property=property_record, state=Issue.State.ACTIVE, deleted_at__isnull=True).order_by("resolution_deadline", "pk")
-    open_tasks = Task.objects.filter(user=request.user, state=Task.State.ACTIVE, deleted_at__isnull=True).filter(Q(property=property_record) | Q(issue__property=property_record, issue__deleted_at__isnull=True)).order_by("completion_deadline", "pk").distinct()
-    next_events = Event.objects.filter(user=request.user, property=property_record, state=Event.State.SCHEDULED, deleted_at__isnull=True, scheduled_date__gte=timezone.localdate()).order_by("scheduled_date", "start_time", "pk")
-    return {
+    history = []
+    finished_issues = Issue.objects.filter(
+        user=request.user,
+        property=property_record,
+        state__in=(Issue.State.RESOLVED, Issue.State.DISMISSED),
+        deleted_at__isnull=True,
+        terminated_at__isnull=False,
+    )
+    for issue in finished_issues:
+        history.append({"kind": "issue", "label": issue.get_state_display(), "item": issue, "date": issue.terminated_at})
+
+    finished_tasks = Task.objects.filter(
+        user=request.user,
+        state__in=(Task.State.COMPLETED, Task.State.DISMISSED),
+        deleted_at__isnull=True,
+        terminated_at__isnull=False,
+    ).filter(
+        Q(property=property_record)
+        | Q(issue__property=property_record, issue__deleted_at__isnull=True)
+    ).distinct()
+    for task in finished_tasks:
+        history.append({"kind": "task", "label": task.get_state_display(), "item": task, "date": task.terminated_at})
+
+    finished_events = Event.objects.filter(
+        user=request.user,
+        property=property_record,
+        state__in=(Event.State.OCCURRED, Event.State.CANCELLED),
+        deleted_at__isnull=True,
+        terminated_at__isnull=False,
+    )
+    for event in finished_events:
+        history.append({"kind": "event", "label": event.get_state_display(), "item": event, "date": event.terminated_at})
+
+    history.sort(key=lambda entry: entry["date"], reverse=True)
+    return history
+
+
+def _property_detail_context(request, property_record, *, edit_property_form=None, list_context=None):
+    from event.models import Event
+    from issue.models import Issue
+    from task.models import Task
+
+    open_issues = Issue.objects.filter(
+        user=request.user,
+        property=property_record,
+        state=Issue.State.ACTIVE,
+        deleted_at__isnull=True,
+    ).order_by("resolution_deadline", "pk")
+    open_tasks = Task.objects.filter(
+        user=request.user,
+        state=Task.State.ACTIVE,
+        deleted_at__isnull=True,
+    ).filter(
+        Q(property=property_record)
+        | Q(issue__property=property_record, issue__deleted_at__isnull=True)
+    ).select_related("issue").order_by("completion_deadline", "pk").distinct()
+    next_events = Event.objects.filter(
+        user=request.user,
+        property=property_record,
+        state=Event.State.SCHEDULED,
+        deleted_at__isnull=True,
+        scheduled_date__gte=timezone.localdate(),
+    ).order_by("scheduled_date", "start_time", "pk")
+
+    context = list_context or _property_list_context(request)
+    context.update({
         "property": property_record,
+        "selected_property": property_record,
+        "selected_in_page": any(item.pk == property_record.pk for item in context["page_obj"].object_list),
+        "is_detail_route": list_context is None,
         "open_issues": open_issues,
         "open_tasks": open_tasks,
         "next_events": next_events,
+        "history": _property_history(request, property_record),
         "edit_property_form": (
             edit_property_form
             if edit_property_form is not None
-            else PropertyForm(user=request.user, instance=property_record)
+            else PropertyForm(user=request.user, instance=property_record, auto_id="edit_property_%s")
         ),
-    }
+    })
+    return context
 
 
 @login_required
@@ -189,10 +269,19 @@ def properties_view(request):
         if edit_property_record:
             edit_property_form = _restore_edit_property_form(request, state, edit_property_record)
 
+    context = _property_list_context(request, add_property_form=add_property_form, edit_property_form=edit_property_form, edit_property_record=edit_property_record)
+    if context["selected_property"] is not None:
+        context = _property_detail_context(request, context["selected_property"], list_context=context)
+        if edit_property_form is None:
+            context["list_edit_form"] = PropertyForm(
+                user=request.user,
+                instance=context["selected_property"],
+                auto_id="list_edit_%s",
+            )
     return render(
         request,
         "property/properties.html",
-        _property_list_context(request, add_property_form=add_property_form, edit_property_form=edit_property_form, edit_property_record=edit_property_record),
+        context,
     )
 
 

@@ -1,0 +1,7 @@
+<div class="property-history-record">
+    <div>
+        <small class="text-body-secondary">{{ entry.label }} {{ entry.kind }}</small>
+        {% if entry.kind == "issue" %}<a href="{% url 'issue:issues' %}?state=all&amp;selected={{ entry.item.pk }}&amp;open=detail">{{ entry.item.title }} →</a>{% elif entry.kind == "task" %}<a href="{% url 'task:tasks' %}?state=all&amp;selected={{ entry.item.pk }}&amp;open=detail">{{ entry.item.title }} →</a>{% else %}<a href="{% url 'event:events' %}?state=all&amp;selected={{ entry.item.pk }}&amp;tab=details">{{ entry.item.title }} →</a>{% endif %}
+    </div>
+    <time datetime="{{ entry.date|date:'c' }}">{{ entry.date|date:"j M Y" }}</time>
+</div>

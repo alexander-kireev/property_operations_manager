@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="container-xl h-100">
-    <section class="contact-command-centre card border-0 shadow-sm h-100" aria-label="Contacts command centre">
+    <section class="contact-command-centre card border-0 shadow-sm h-100" aria-label="Contacts command centre" data-workspace-scroll-root="contacts" data-navigation-query="{{ navigation_query }}">
         {% if contact_count == 0 %}
             <div class="contact-first-empty flex-grow-1 d-flex align-items-center justify-content-center p-4 p-md-5 text-center">
                 <div class="contact-first-empty-content">
@@ -57,11 +57,12 @@
                         </form>
 
                         {% if page_obj.object_list %}
-                            <div class="contact-command-list list-group list-group-flush" aria-label="Contacts">
+                            <div class="contact-command-list list-group list-group-flush" aria-label="Contacts" data-workspace-scroll-list>
                                 {% for contact in page_obj %}
                                     <a
                                         class="contact-command-row list-group-item list-group-item-action{% if contact == selected_contact %} is-selected{% endif %}{% if contact.state != 'active' %} terminated{% endif %}"
                                         href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ contact.pk }}"
+                                        data-workspace-scroll-row
                                         {% if contact == selected_contact %}aria-current="true"{% endif %}
                                     >
                                         <span class="contact-command-heading">
@@ -69,8 +70,11 @@
                                             {% if contact.state != "active" %}<span class="badge bg-secondary-subtle border text-secondary-emphasis">{{ contact.get_state_display }}</span>{% endif %}
                                         </span>
                                         <span class="contact-command-methods mt-2">
-                                            {% if contact.first_email %}<span class="contact-command-primary-method" title="{{ contact.first_email }}">{{ contact.first_email }}</span>{% elif contact.first_telephone %}<span class="contact-command-primary-method" title="{{ contact.first_telephone }}">{{ contact.first_telephone }}</span>{% else %}<span>No contact details</span>{% endif %}
-                                            {% if contact.method_count > 1 %}<span class="contact-command-more">+{{ contact.method_count|add:"-1" }} more</span>{% endif %}
+                                            {% if contact.first_telephone %}<span class="contact-command-primary-method" title="{{ contact.first_telephone }}">{{ contact.first_telephone }}</span>{% endif %}
+                                            {% if contact.first_telephone and contact.first_email %}<span aria-hidden="true">·</span>{% endif %}
+                                            {% if contact.first_email %}<span class="contact-command-primary-method" title="{{ contact.first_email }}">{{ contact.first_email }}</span>{% endif %}
+                                            {% if not contact.first_telephone and not contact.first_email %}<span>No contact details</span>{% endif %}
+                                            {% if contact.remaining_method_count %}<span class="contact-command-more">+{{ contact.remaining_method_count }} more</span>{% endif %}
                                         </span>
                                     </a>
                                 {% endfor %}
@@ -100,7 +104,7 @@
                     <div class="contact-pane">
                         {% if selected_contact %}
                             <header class="contact-detail-header">
-                                <a class="contact-mobile-back btn btn-sm pom-quiet mb-3" href="{% url 'contact:contacts' %}{% if list_query %}?{{ list_query }}{% endif %}">← Back to contacts</a>
+                                <a class="contact-mobile-back btn btn-sm pom-quiet mb-3" href="{% url 'contact:contacts' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}">← Back to contacts</a>
                                 <div class="contact-detail-header-layout">
                                     <div class="contact-detail-heading-copy">
                                         <h2 class="contact-detail-title h3" title="{{ selected_contact }}">{{ selected_contact }}</h2>
@@ -144,36 +148,24 @@
                                     <div class="contact-detail-scroll p-4">
                                         {% if selected_contact.state != "active" %}<div class="alert alert-secondary" role="status">This contact is read-only and retained as history. Reactivate it to make changes.</div>{% endif %}
 
-                                        <section class="contact-methods-card card" aria-labelledby="contact-methods-heading">
-                                            <div class="card-header bg-body d-flex align-items-center justify-content-between gap-3 p-3 p-md-4">
-                                                <div><h3 class="h5 mb-1" id="contact-methods-heading">Contact details</h3><p class="small text-body-secondary mb-0">Email addresses and telephone numbers.</p></div>
+                                        <section class="contact-methods-section" aria-labelledby="contact-methods-heading">
+                                            <div class="contact-methods-heading d-flex align-items-center justify-content-between gap-3 mb-3">
+                                                <h3 class="h5 mb-0" id="contact-methods-heading">Contact methods</h3>
                                                 {% if selected_contact.state == "active" %}<button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#addContactMethodModal">+ Add detail</button>{% endif %}
                                             </div>
                                             {% if contact_methods %}
-                                                <div class="contact-methods-grid card-body">
-                                                    <section class="contact-method-group" aria-labelledby="contact-emails-heading">
-                                                        <h4 class="contact-method-group-title" id="contact-emails-heading">Email addresses</h4>
-                                                        <div class="contact-method-list">
-                                                            {% for method in email_methods %}
-                                                                {% include "contact/includes/contact_method_row.html" %}
-                                                            {% empty %}
-                                                                <p class="contact-method-group-empty">No email addresses added.</p>
-                                                            {% endfor %}
-                                                        </div>
+                                                <div class="contact-methods-grid">
+                                                    <section class="contact-method-group card" aria-labelledby="contact-telephones-heading">
+                                                        <div class="contact-method-group-head"><h4 class="contact-method-group-title" id="contact-telephones-heading">Telephone numbers</h4><small>Tap a number to call</small></div>
+                                                        <div class="contact-method-list">{% for method in telephone_methods %}{% include "contact/includes/contact_method_row.html" %}{% empty %}<p class="contact-method-group-empty">No telephone numbers added.</p>{% endfor %}</div>
                                                     </section>
-                                                    <section class="contact-method-group" aria-labelledby="contact-telephones-heading">
-                                                        <h4 class="contact-method-group-title" id="contact-telephones-heading">Telephone numbers</h4>
-                                                        <div class="contact-method-list">
-                                                            {% for method in telephone_methods %}
-                                                                {% include "contact/includes/contact_method_row.html" %}
-                                                            {% empty %}
-                                                                <p class="contact-method-group-empty">No telephone numbers added.</p>
-                                                            {% endfor %}
-                                                        </div>
+                                                    <section class="contact-method-group card" aria-labelledby="contact-emails-heading">
+                                                        <div class="contact-method-group-head"><h4 class="contact-method-group-title" id="contact-emails-heading">Email addresses</h4><small>Tap an address to compose</small></div>
+                                                        <div class="contact-method-list">{% for method in email_methods %}{% include "contact/includes/contact_method_row.html" %}{% empty %}<p class="contact-method-group-empty">No email addresses added.</p>{% endfor %}</div>
                                                     </section>
                                                 </div>
                                             {% else %}
-                                                <div class="card-body p-4 text-center text-body-secondary">No contact details have been added.</div>
+                                                <div class="card p-4 text-center text-body-secondary">No contact details have been added.</div>
                                             {% endif %}
                                         </section>
                                     </div>
@@ -259,6 +251,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{% static 'js/workspace-list-scroll.js' %}"></script>
     <script src="{% static 'js/contact-method-form.js' %}"></script>
     <script src="{% static 'js/note-board.js' %}"></script>
     {% if open_modal %}<span hidden data-modal-auto-open="{{ open_modal }}"></span>{% endif %}

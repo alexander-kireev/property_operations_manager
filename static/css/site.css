@@ -90,6 +90,54 @@ body {
     border-color: rgba(255, 255, 255, 0.45);
 }
 
+@media (max-width: 991.98px) {
+    .app-navbar .navbar-collapse {
+        max-height: calc(100dvh - 4.9rem);
+        overflow-y: auto;
+    }
+
+    .app-mobile-menu {
+        padding: 0.75rem 0 1.25rem;
+    }
+
+    .app-navbar .app-mobile-menu .nav-link,
+    .app-mobile-logout {
+        display: block;
+        width: 100%;
+        min-height: 2.75rem;
+        padding: 0.65rem 0.75rem;
+        border: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+        color: #fff;
+        background: transparent;
+        font-size: 1rem;
+        text-align: left;
+        text-decoration: none;
+    }
+
+    .app-navbar .app-mobile-menu .nav-link:hover,
+    .app-navbar .app-mobile-menu .nav-link:focus-visible,
+    .app-mobile-logout:hover,
+    .app-mobile-logout:focus-visible {
+        background: rgba(255, 255, 255, 0.11);
+    }
+
+    .app-mobile-menu-label {
+        padding: 1.05rem 0.75rem 0.2rem;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .app-mobile-logout {
+        margin-top: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        border-radius: 0.5rem;
+    }
+}
+
 .card {
     --bs-card-border-color: var(--pom-border);
     --bs-card-border-radius: var(--pom-radius);
@@ -157,6 +205,12 @@ body {
     overflow-wrap: anywhere;
 }
 
+.profile-account-action {
+    width: 8.5rem;
+    max-width: 100%;
+    text-align: center;
+}
+
 .account-menu-button {
     width: 2.5rem;
     height: 2.5rem;
@@ -169,6 +223,53 @@ body {
 
 .account-menu-button::after {
     display: none;
+}
+
+.property-work-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.5rem 0;
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.property-work-row > span:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+}
+
+.property-work-row-arrow,
+.property-work-summary-link > span {
+    display: none;
+}
+
+@media (max-width: 767.98px) {
+    .property-work-row,
+    .property-work-summary-link {
+        display: flex;
+        min-height: 2.75rem;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        text-decoration: none;
+    }
+
+    .property-work-row:hover,
+    .property-work-row:focus-visible,
+    .property-work-summary-link:hover,
+    .property-work-summary-link:focus-visible {
+        background: var(--bs-tertiary-bg);
+    }
+
+    .property-work-row-arrow,
+    .property-work-summary-link > span {
+        display: inline;
+        flex: 0 0 auto;
+        font-size: 1.2rem;
+        line-height: 1;
+    }
 }
 
 @media (min-width: 992px) and (hover: hover) and (pointer: fine) {
@@ -2078,28 +2179,41 @@ body {
     overflow-wrap: anywhere;
 }
 
-.contact-methods-card {
+.contact-methods-section {
     container-type: inline-size;
-    overflow: hidden;
+}
+
+.contact-methods-heading .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .contact-methods-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    padding: 0;
+    gap: 0.875rem;
 }
 
 .contact-method-group {
     min-width: 0;
-    padding: 1.25rem;
+    overflow: hidden;
 }
 
-.contact-method-group + .contact-method-group {
-    border-top: var(--bs-border-width) solid var(--bs-border-color);
+.contact-method-group-head {
+    padding: 1rem 1.25rem;
+    border-bottom: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.contact-method-group-head small {
+    color: var(--bs-secondary-color);
+}
+
+.contact-method-list {
+    padding: 0 1.25rem;
 }
 
 .contact-method-group-title {
-    margin-bottom: 0.65rem;
+    margin-bottom: 0.15rem;
     font-size: 0.9rem;
     font-weight: 600;
 }
@@ -2203,16 +2317,10 @@ body {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .contact-method-group + .contact-method-group {
-        border-top: 0;
-        border-left: var(--bs-border-width) solid var(--bs-border-color);
-    }
-
     .contact-method-list {
         max-height: 23rem;
         overflow-y: auto;
         overscroll-behavior: contain;
-        padding-right: 0.35rem;
         scrollbar-width: thin;
     }
 }

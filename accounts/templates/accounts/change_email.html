@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Change email | Property Operations Manager{% endblock %}
 {% block content %}
 
@@ -27,7 +28,7 @@
             <div class="card-body p-4 p-md-5">
                 <h2 class="visually-hidden" id="change-email-heading">Change email form</h2>
 
-                <form action="" method="post">
+                <form action="" method="post" autocomplete="off" data-fresh-account-form{% if form.errors %} data-preserve-restored-email{% endif %}>
 
                     {% csrf_token %}
 
@@ -86,3 +87,4 @@
 
 
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/fresh-account-form.js' %}"></script>{% endblock %}

@@ -164,7 +164,7 @@ class PropertyViewTests(TestCase):
         self.assertEqual(listed.open_issues, 1)
         self.assertEqual(listed.open_direct_tasks + listed.open_issue_tasks, 2)
         self.assertEqual(listed.next_event_date, tomorrow)
-        self.assertContains(response, "2</div>")
+        self.assertContains(response, "1 issue · 2 tasks")
         self.assertNotContains(response, "Contacts</div>")
 
     def test_list_summary_handles_zero_and_large_counts(self):
@@ -191,7 +191,7 @@ class PropertyViewTests(TestCase):
                     next_event_date=Value(None, output_field=DateField()),
                 )
                 response = self.client.get(reverse("property:properties"))
-                self.assertContains(response, f">{count}</div>")
+                self.assertContains(response, f"{count} issues")
 
     def test_list_edit_and_state_actions_preserve_filters_and_page(self):
         property_record = self.create_property(name="Oak House")
@@ -443,6 +443,112 @@ class PropertyViewTests(TestCase):
         self.assertEqual(own_response.status_code, 200)
         self.assertTemplateUsed(own_response, "property/property_detail.html")
         self.assertEqual(other_response.status_code, 404)
+
+    def test_property_work_links_are_full_rows(self):
+        property_record = self.create_property()
+        issue = Issue.objects.create(user=self.user, property=property_record, title="Entry phone")
+        task = Task.objects.create(user=self.user, property=property_record, title="Arrange access")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
+        self.assertContains(response, f'href="{reverse("issue:issues")}?selected={issue.pk}&amp;open=detail"')
+        self.assertContains(response, f'href="{reverse("task:tasks")}?selected={task.pk}&amp;open=detail"')
+        self.assertContains(response, 'class="navbar-nav app-mobile-menu d-lg-none"')
+        self.assertContains(response, 'class="app-mobile-logout" type="submit">Log out</button>')
+
+    def test_command_centre_shows_four_tabs_on_list_and_detail_routes(self):
+        property_record = self.create_property()
+        self.client.force_login(self.user)
+
+        for url in (reverse("property:properties"), reverse("property:property_detail", args=[property_record.pk])):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.context["selected_property"], property_record)
+                for section in ("overview", "work", "schedule", "history"):
+                    self.assertContains(response, f'data-property-tab="{section}"')
+                self.assertContains(response, 'data-workspace-scroll-root="properties"')
+
+    def test_history_contains_terminated_records_but_not_deleted_or_other_users_records(self):
+        property_record = self.create_property()
+        now = timezone.now()
+        Issue.objects.create(user=self.user, property=property_record, title="Fixed leak", state=Issue.State.RESOLVED, terminated_at=now)
+        Task.objects.create(user=self.user, property=property_record, title="Finished job", state=Task.State.COMPLETED, terminated_at=now - timedelta(days=1))
+        Event.objects.create(user=self.user, property=property_record, title="Completed visit", scheduled_date=timezone.localdate(), all_day=True, state=Event.State.OCCURRED, terminated_at=now - timedelta(days=2))
+        Issue.objects.create(user=self.user, property=property_record, title="Hidden issue", state=Issue.State.RESOLVED, terminated_at=now, deleted_at=now)
+        Issue.objects.create(user=self.other_user, property=property_record, title="Other user issue", state=Issue.State.RESOLVED, terminated_at=now)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]), {"tab": "history"})
+
+        self.assertEqual([entry["item"].title for entry in response.context["history"]], ["Fixed leak", "Finished job", "Completed visit"])
+        self.assertContains(response, 'data-property-panel="history"')
+        self.assertNotContains(response, "Hidden issue")
+        self.assertNotContains(response, "Other user issue")
+
+    def test_property_task_quick_action_returns_to_property_workspace(self):
+        property_record = self.create_property()
+        task = Task.objects.create(user=self.user, property=property_record, title="Book visit")
+        self.client.force_login(self.user)
+        next_url = reverse("property:property_detail", args=[property_record.pk]) + "?tab=work"
+
+        response = self.client.post(reverse("task:complete_task", args=[task.pk]), {"next": next_url})
+
+        self.assertRedirects(response, next_url, fetch_redirect_response=False)
+        task.refresh_from_db()
+        self.assertEqual(task.state, Task.State.COMPLETED)
+
+    def test_property_issue_and_event_quick_actions_return_to_property(self):
+        property_record = self.create_property()
+        issue = Issue.objects.create(user=self.user, property=property_record, title="Repair tap")
+        event = Event.objects.create(user=self.user, property=property_record, title="Inspection", scheduled_date=timezone.localdate() + timedelta(days=1), all_day=True)
+        self.client.force_login(self.user)
+
+        for action_url, next_tab in (
+            (reverse("issue:resolve_issue", args=[issue.pk]), "work"),
+            (reverse("event:cancel_event", args=[event.pk]), "schedule"),
+        ):
+            with self.subTest(action_url=action_url):
+                next_url = reverse("property:property_detail", args=[property_record.pk]) + f"?tab={next_tab}"
+                response = self.client.post(action_url, {"next": next_url})
+                self.assertRedirects(response, next_url, fetch_redirect_response=False)
+
+    def test_related_edit_links_open_existing_edit_modals(self):
+        property_record = self.create_property()
+        issue = Issue.objects.create(user=self.user, property=property_record, title="Repair tap")
+        task = Task.objects.create(user=self.user, property=property_record, title="Book visit")
+        event = Event.objects.create(user=self.user, property=property_record, title="Inspection", scheduled_date=timezone.localdate() + timedelta(days=1), all_day=True)
+        self.client.force_login(self.user)
+
+        for route, record, modal in (
+            ("issue:issues", issue, "editIssueModal"),
+            ("task:tasks", task, "editTaskModal"),
+            ("event:events", event, "editEventModal"),
+        ):
+            with self.subTest(route=route):
+                response = self.client.get(reverse(route), {"selected": record.pk, "open": "edit"})
+                self.assertContains(response, modal)
+                self.assertEqual(response.context["open_modal"], modal)
+
+    def test_deactivated_property_has_no_related_quick_actions(self):
+        property_record = self.create_property(state=Property.State.DEACTIVATED)
+        Issue.objects.create(user=self.user, property=property_record, title="Retained issue")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("property:property_detail", args=[property_record.pk]), {"tab": "work"})
+
+        self.assertContains(response, "Retained issue")
+        self.assertNotContains(response, 'data-verb="Resolve"')
+
+    def test_related_action_cannot_return_to_another_property(self):
+        source = self.create_property(name="Source House")
+        other = self.create_property(name="Other House")
+        task = Task.objects.create(user=self.user, property=source, title="Book visit")
+        self.client.force_login(self.user)
+        wrong_next = reverse("property:property_detail", args=[other.pk]) + "?tab=work"
+
+        response = self.client.post(reverse("task:complete_task", args=[task.pk]), {"next": wrong_next})
+
+        self.assertRedirects(response, reverse("task:tasks") + f"?selected={task.pk}", fetch_redirect_response=False)
 
     def test_property_detail_query_actions_mark_the_correct_modal_to_open(self):
         property_record = self.create_property()

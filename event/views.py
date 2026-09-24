@@ -116,6 +116,13 @@ def _calendar_query(values, month):
     return urlencode(parameters)
 
 
+def _selected_day(request):
+    try:
+        return date.fromisoformat(request.GET.get("day", ""))
+    except (TypeError, ValueError):
+        return None
+
+
 def _event_workspace_url(
     request,
     *,
@@ -125,6 +132,9 @@ def _event_workspace_url(
     state=None,
 ):
     parameters = _list_query_parameters(_normalised_list_values(request))
+    selected_day = _selected_day(request)
+    if selected_day is not None:
+        parameters["day"] = selected_day.isoformat()
     if state is not None:
         if state == DEFAULT_EVENT_STATE:
             parameters.pop("state", None)
@@ -255,7 +265,12 @@ def _event_list_context(
     open_modal=None,
 ):
     values = _normalised_list_values(request)
+    selected_day = _selected_day(request)
     events = filtered_events_for_user(user=request.user, **values)
+    if selected_day is not None:
+        events = events.filter(scheduled_date=selected_day)
+        if values["sort"] == "scheduled_date":
+            events = events.order_by("-all_day", "start_time", "title", "pk")
     paginator = Paginator(events, EVENTS_PER_PAGE)
     page_obj = paginator.get_page(request.GET.get("page"))
 
@@ -274,6 +289,8 @@ def _event_list_context(
         requested_tab = "details" if request.GET.get("selected") else "calendar"
 
     list_parameters = _list_query_parameters(values)
+    if selected_day is not None:
+        list_parameters["day"] = selected_day.isoformat()
     navigation_parameters = dict(list_parameters)
     if page_obj.number > 1:
         navigation_parameters["page"] = page_obj.number
@@ -294,12 +311,28 @@ def _event_list_context(
         events_by_date[event.scheduled_date].append(event)
 
     today = timezone.localdate()
+    first_month_event = next(
+        (event.scheduled_date for event in calendar_events
+         if event.scheduled_date.month == displayed_month.month
+         and event.scheduled_date.year == displayed_month.year),
+        None,
+    )
+    mobile_agenda_day = selected_day or (
+        today if today.year == displayed_month.year
+        and today.month == displayed_month.month
+        and events_by_date[today] else first_month_event or displayed_month
+    )
     calendar_weeks = [[{
         "date": day,
         "in_month": day.month == displayed_month.month,
         "is_today": day == today,
         "events": events_by_date[day],
+        "first_event": events_by_date[day][0] if events_by_date[day] else None,
+        "more_count": max(0, len(events_by_date[day]) - 1),
     } for day in week] for week in month_dates]
+
+    day_query_parameters = _list_query_parameters(values)
+    day_query_parameters.update({"month": displayed_month.month, "year": displayed_month.year})
 
     navigation_parameters.update({
         "month": displayed_month.month,
@@ -318,6 +351,10 @@ def _event_list_context(
     return {
         "page_obj": page_obj,
         "selected_event": selected_event,
+        "mobile_expanded_event_id": (
+            selected_event.pk if selected_event is not None
+            and request.GET.get("selected") == str(selected_event.pk) else None
+        ),
         "participants": participants,
         "add_event_form": add_event_form if add_event_form is not None else EventForm(
             user=request.user, auto_id="add_event_%s"
@@ -356,10 +393,17 @@ def _event_list_context(
         "event_state_choices": Event.State.choices,
         "properties": properties,
         "list_query": urlencode(list_parameters),
+        "selected_day": selected_day,
+        "day_query_base": urlencode(day_query_parameters),
+        "clear_day_query": urlencode(day_query_parameters),
         "navigation_query": urlencode(navigation_parameters),
         "calendar_month_label": displayed_month.strftime("%B %Y"),
+        "calendar_month_number": displayed_month.month,
+        "calendar_year": displayed_month.year,
         "calendar_weekdays": ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
         "calendar_weeks": calendar_weeks,
+        "mobile_agenda_day": mobile_agenda_day,
+        "mobile_agenda_events": events_by_date[mobile_agenda_day],
         "calendar_event_count": len(calendar_events),
         "previous_month_query": _calendar_query(values, _shift_month(displayed_month, -1)),
         "next_month_query": _calendar_query(values, _shift_month(displayed_month, 1)),
@@ -388,10 +432,13 @@ def _event_list_context(
 @login_required
 @require_GET
 def events_view(request):
+    context = _event_list_context(request, **_restore_event_form_context(request))
+    if request.GET.get("open") == "edit" and context["edit_event_form"] is not None:
+        context["open_modal"] = "editEventModal"
     return render(
         request,
         "event/events.html",
-        _event_list_context(request, **_restore_event_form_context(request)),
+        context,
     )
 
 
@@ -470,6 +517,9 @@ def cancel_event_view(request, event_id):
         events_for_user(user=request.user), pk=event_id, state=Event.State.SCHEDULED
     )
     cancel_event(event=event)
+    property_url = f"{reverse('property:property_detail', args=[event.property_id])}?tab=schedule" if event.property_id else None
+    if property_url and request.POST.get("next") == property_url:
+        return redirect(property_url)
     return redirect(
         _event_workspace_url(request, event_id=event_id, state="all")
     )

@@ -8,7 +8,7 @@
 
 {% block content %}
 <div class="container-xl h-100">
-    <section class="issue-command-centre card border-0 shadow-sm h-100" aria-label="Issues command centre">
+    <section class="issue-command-centre card border-0 shadow-sm h-100" aria-label="Issues command centre" data-workspace-scroll-root="issues" data-navigation-query="{{ navigation_query }}">
         {% include "includes/my_work_nav.html" with active_section="issues" task_count=task_count issue_count=issue_count %}
 
         {% if issue_count == 0 %}
@@ -101,10 +101,10 @@
                         {% endif %}
                     </form>
 
-                    <div class="issue-list list-group list-group-flush">
+                    <div class="issue-list list-group list-group-flush" data-workspace-scroll-list>
                         {% for issue in page_obj %}
                             {% work_status issue today as issue_status %}
-                            <a class="issue-list-row list-group-item list-group-item-action{% if selected_issue.pk == issue.pk %} is-selected{% endif %}{% if issue.state != 'active' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ issue.pk }}"{% if selected_issue.pk == issue.pk %} aria-current="true"{% endif %}>
+                            <a class="issue-list-row list-group-item list-group-item-action{% if selected_issue.pk == issue.pk %} is-selected{% endif %}{% if issue.state != 'active' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ issue.pk }}" data-workspace-scroll-row{% if selected_issue.pk == issue.pk %} aria-current="true"{% endif %}>
                                 <div class="issue-list-primary d-flex justify-content-between align-items-start gap-3">
                                     <strong class="issue-list-title" title="{{ issue.title }}">{{ issue.title }}</strong>
                                     {% include "issue/includes/priority_badge.html" with issue=issue %}
@@ -137,7 +137,7 @@
                     {% if selected_issue %}
                         {% work_status selected_issue today as selected_status %}
                         <header class="issue-detail-header border-bottom p-3 p-md-4">
-                            <a class="issue-mobile-back btn btn-sm pom-quiet mb-2" href="?{% if list_query %}{{ list_query }}{% endif %}">← Back to issues</a>
+                            <a class="issue-mobile-back btn btn-sm pom-quiet mb-2" href="?{% if navigation_query %}{{ navigation_query }}{% endif %}">← Back to issues</a>
                             <div class="issue-detail-header-layout">
                                 <div class="issue-detail-heading-copy">
                                     <h2 class="issue-detail-title h3" title="{{ selected_issue.title }}">{{ selected_issue.title }}</h2>
@@ -245,7 +245,7 @@
 <div class="modal fade" id="addIssueModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addIssueModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="addIssueModalLabel">Add issue</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form action="{% url 'issue:add_issue' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<div class="modal-body p-4">{% include "issue/includes/issue_form_fields.html" with issue_form=add_issue_form %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Add issue</button></div></form></div></div></div>
 
 {% if selected_issue %}
-    {% if edit_issue_form %}<div class="modal fade" id="editIssueModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editIssueModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="editIssueModalLabel">Edit issue</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form action="{% url 'issue:edit_issue' selected_issue.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<div class="modal-body p-4">{% include "issue/includes/issue_form_fields.html" with issue_form=edit_issue_form %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save changes</button></div></form></div></div></div>{% endif %}
+    {% if edit_issue_form %}<div class="modal fade" id="editIssueModal" data-modal-clear-query="form_state open" tabindex="-1" aria-labelledby="editIssueModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="editIssueModalLabel">Edit issue</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form action="{% url 'issue:edit_issue' selected_issue.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<div class="modal-body p-4">{% include "issue/includes/issue_form_fields.html" with issue_form=edit_issue_form %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save changes</button></div></form></div></div></div>{% endif %}
     {% if add_task_form %}<div class="modal fade" id="addIssueTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="addIssueTaskModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="addIssueTaskModalLabel">Add task to issue</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form action="{% url 'issue:add_issue_task' selected_issue.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post">{% csrf_token %}<div class="modal-body p-4">{% include "issue/includes/issue_task_form_fields.html" with task_form=add_task_form %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Add task</button></div></form></div></div></div>{% endif %}
     {% if edit_task_form %}<div class="modal fade" id="editIssueTaskModal" data-modal-clear-query="form_state" tabindex="-1" aria-labelledby="editIssueTaskModalLabel" aria-hidden="true"><div class="task-form-dialog modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="editIssueTaskModalLabel">Edit task</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div><form id="editIssueTaskForm" action="{% if edit_task %}{% url 'issue:edit_issue_task' selected_issue.pk edit_task.pk %}{% else %}#{% endif %}" method="post" data-task-form>{% csrf_token %}<div class="modal-body p-4">{% include "task/includes/task_form_fields.html" with task_form=edit_task_form %}</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn theme-action" type="submit">Save changes</button></div></form></div></div></div>{% endif %}
 
@@ -257,4 +257,4 @@
 {% if open_modal %}<span hidden data-modal-auto-open="{{ open_modal }}"></span>{% endif %}
 {% endblock %}
 
-{% block extra_js %}<script src="{% static 'js/task-form.js' %}"></script><script src="{% static 'js/issue-command-centre.js' %}"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/workspace-list-scroll.js' %}"></script><script src="{% static 'js/task-form.js' %}"></script><script src="{% static 'js/issue-command-centre.js' %}"></script>{% endblock %}

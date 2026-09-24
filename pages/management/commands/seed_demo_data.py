@@ -1,4 +1,4 @@
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from itertools import cycle
 
 from django.conf import settings
@@ -122,6 +122,13 @@ EVENT_TITLES = (
     "Appliance engineer attendance", "Communal area inspection", "Pest-control follow-up",
     "Decorator quotation visit", "Plumber attendance", "Heating service",
     "Managing agent review", "Lease inspection", "Property photography appointment",
+)
+
+# A deliberately crowded calendar day for checking how the month grid behaves.
+OCTOBER_1_DENSITY_TITLES = (
+    "Morning contractor access", "Fire door inspection", "Tenant viewing",
+    "Boiler follow-up", "Inventory handover", "Roofing quotation",
+    "Cleaning team visit", "Owner walkthrough", "Evening key collection",
 )
 
 
@@ -403,6 +410,19 @@ class Command(BaseCommand):
                 user_participation_required=index % 3 == 0,
                 user_presence_required=index % 6 == 0,
                 terminated_at=terminated_at,
+            ))
+        for index, title in enumerate(OCTOBER_1_DENSITY_TITLES):
+            hour = 9 + index
+            records.append(Event(
+                user=user,
+                property=properties[index % len(properties)],
+                state=Event.State.SCHEDULED,
+                title=title,
+                description="Calendar density example: several appointments on one day.",
+                scheduled_date=date(2026, 10, 1),
+                all_day=False,
+                start_time=time(hour, 0),
+                end_time=time(hour + 1, 0),
             ))
         events = Event.objects.bulk_create(records)
 

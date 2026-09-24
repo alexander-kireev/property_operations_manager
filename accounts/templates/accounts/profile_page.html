@@ -64,7 +64,7 @@
                     <div class="col-sm-3 fw-medium">Email</div>
                     <div class="col-sm-9 d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <span class="profile-email-value">{{ request.user.email }}</span>
-                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:change_email' %}">Change email</a>
+                        <a class="btn btn-outline-secondary btn-sm profile-account-action" href="{% url 'accounts:change_email' %}">Change email</a>
                     </div>
                 </div>
 
@@ -72,7 +72,7 @@
                     <div class="col-sm-3 fw-medium">Password</div>
                     <div class="col-sm-9 d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <span class="text-body-secondary">Keep your account secure.</span>
-                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:change_password' %}">Change password</a>
+                        <a class="btn btn-outline-secondary btn-sm profile-account-action" href="{% url 'accounts:change_password' %}">Change password</a>
                     </div>
                 </div>
 
@@ -82,7 +82,7 @@
                         <span class="text-body-secondary">Signed in on this device.</span>
                         <form method="post" action="{% url 'accounts:logout' %}" autocomplete="off">
                             {% csrf_token %}
-                            <button class="btn btn-outline-secondary btn-sm" type="submit">Log out</button>
+                            <button class="btn btn-outline-secondary btn-sm profile-account-action" type="submit">Log out</button>
                         </form>
                     </div>
                 </div>

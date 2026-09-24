@@ -100,7 +100,7 @@ class EmailChangeForm(forms.Form):
 
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
-        self.fields["new_email"].widget.attrs["autocomplete"] = "email"
+        self.fields["new_email"].widget.attrs["autocomplete"] = "off"
         self.fields["current_password"].widget.attrs["autocomplete"] = "current-password"
 
     def clean_new_email(self):
