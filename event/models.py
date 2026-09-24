@@ -64,8 +64,8 @@ class Event(models.Model):
         default=State.SCHEDULED,
     )
 
-    title = models.CharField(max_length=150)
-    description = models.TextField(blank=True)
+    title = models.CharField(max_length=100)
+    description = models.CharField(max_length=1000, blank=True)
     scheduled_date = models.DateField()
     all_day = models.BooleanField()
     start_time = models.TimeField(null=True, blank=True)

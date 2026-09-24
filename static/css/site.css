@@ -829,6 +829,12 @@ body {
     border-bottom-color: var(--bs-emphasis-color);
 }
 
+.work-add-button {
+    width: 7.5rem;
+    min-height: 2rem;
+    white-space: nowrap;
+}
+
 .account-menu-button:hover,
 .account-menu-button:focus,
 .account-menu-button.show {

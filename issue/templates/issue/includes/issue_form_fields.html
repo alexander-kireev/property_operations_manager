@@ -1,5 +1,6 @@
 {% for error in issue_form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endfor %}
 {% for field in issue_form %}
+    {% if not property_context or field.name != 'property' %}
     <div class="row align-items-start mb-3">
         <label class="col-md-4 col-form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
         <div class="col-md-8{% if field.name == 'priority' or field.name == 'resolution_deadline' %} issue-form-field-compact{% endif %}">
@@ -8,4 +9,6 @@
             {% if field.name == 'resolution_deadline' %}<div class="form-text">Target date only; the issue will not resolve automatically.</div>{% endif %}
         </div>
     </div>
+    {% endif %}
 {% endfor %}
+{% if property_context %}{% for error in issue_form.property.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}{% endif %}

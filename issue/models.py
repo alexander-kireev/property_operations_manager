@@ -43,8 +43,8 @@ class Issue(models.Model):
         default=Priority.LOW
     )
 
-    title = models.CharField(max_length=150)
-    description = models.TextField(blank=True)
+    title = models.CharField(max_length=100)
+    description = models.CharField(max_length=1000, blank=True)
     resolution_deadline = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     terminated_at = models.DateTimeField(null=True, blank=True)

@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -30,15 +31,39 @@ from .services import (
     reactivate_property,
     update_property,
 )
+from .navigation import created_record_property_url
 
 
 PROPERTIES_PER_PAGE = 20
-PROPERTY_SECTIONS = (
-    {"name": "overview", "label": "Overview"},
-    {"name": "work", "label": "Work"},
-    {"name": "schedule", "label": "Schedule"},
-    {"name": "history", "label": "History"},
-)
+
+
+def _property_record_forms(request, property_record, *, data=None, kind=None):
+    """The three add forms share the property page, not the My work workspace."""
+    from event.forms import EventContactForm, EventForm
+    from issue.forms import IssueForm
+    from task.forms import TaskForm
+
+    def form_data(form_kind):
+        return data if kind == form_kind else None
+
+    return {
+        "property_add_task_form": TaskForm(
+            form_data("task"), user=request.user, auto_id="property_add_task_%s",
+            initial={"property": property_record.pk},
+        ),
+        "property_add_issue_form": IssueForm(
+            form_data("issue"), user=request.user, auto_id="property_add_issue_%s",
+            initial={"property": property_record.pk},
+        ),
+        "property_add_event_form": EventForm(
+            form_data("event"), user=request.user, auto_id="property_add_event_%s",
+            initial={"property": property_record.pk},
+        ),
+        "property_event_contacts_form": EventContactForm(
+            form_data("event"), user=request.user, auto_id="property_event_contacts_%s",
+        ),
+    }
+RELATED_RECORDS_PER_PAGE = 25
 
 
 def _normalised_list_values(request):
@@ -161,8 +186,6 @@ def _property_list_context(request, *, add_property_form=None, edit_property_for
         "property_count": properties_for_user(user=request.user).count(),
         "selected_property": selected_property,
         "selected_in_page": True,
-        "property_sections": PROPERTY_SECTIONS,
-        "active_section": request.GET.get("tab") if request.GET.get("tab") in ("overview", "work", "schedule", "history") else "overview",
         "is_detail_route": False,
     }
 
@@ -214,27 +237,70 @@ def _property_detail_context(request, property_record, *, edit_property_form=Non
     from issue.models import Issue
     from task.models import Task
 
-    open_issues = Issue.objects.filter(
+    issues = Issue.objects.filter(
         user=request.user,
         property=property_record,
-        state=Issue.State.ACTIVE,
         deleted_at__isnull=True,
-    ).order_by("resolution_deadline", "pk")
-    open_tasks = Task.objects.filter(
+    )
+    tasks = Task.objects.filter(
         user=request.user,
-        state=Task.State.ACTIVE,
         deleted_at__isnull=True,
     ).filter(
         Q(property=property_record)
         | Q(issue__property=property_record, issue__deleted_at__isnull=True)
-    ).select_related("issue").order_by("completion_deadline", "pk").distinct()
-    next_events = Event.objects.filter(
+    ).select_related("issue").distinct()
+    events = Event.objects.filter(
         user=request.user,
         property=property_record,
-        state=Event.State.SCHEDULED,
         deleted_at__isnull=True,
-        scheduled_date__gte=timezone.localdate(),
-    ).order_by("scheduled_date", "start_time", "pk")
+    )
+
+    record_type = request.GET.get("records_type", "all")
+    if record_type not in ("all", "issue", "task", "event"):
+        record_type = "all"
+    record_scope = request.GET.get("records_scope", "current")
+    if record_scope not in ("current", "past", "all"):
+        record_scope = "current"
+    record_sort = request.GET.get("records_sort", "date")
+    if record_sort not in ("date", "recent", "title"):
+        record_sort = "date"
+    record_search = request.GET.get("records_search", "").strip()
+
+    records = []
+    for kind, queryset, active_state in (
+        ("issue", issues, Issue.State.ACTIVE),
+        ("task", tasks, Task.State.ACTIVE),
+        ("event", events, Event.State.SCHEDULED),
+    ):
+        if record_type not in ("all", kind):
+            continue
+        if record_scope == "current":
+            queryset = queryset.filter(state=active_state)
+        elif record_scope == "past":
+            queryset = queryset.exclude(state=active_state)
+        if record_search:
+            queryset = queryset.filter(Q(title__icontains=record_search) | Q(description__icontains=record_search))
+        for item in queryset:
+            current = item.state == active_state
+            date = (item.resolution_deadline if kind == "issue" else
+                    item.completion_deadline if kind == "task" else item.scheduled_date)
+            records.append({"kind": kind, "item": item, "current": current, "date": date})
+
+    if record_sort == "title":
+        records.sort(key=lambda entry: (entry["item"].title.casefold(), entry["kind"], entry["item"].pk))
+    elif record_sort == "recent" or record_scope == "past":
+        records.sort(key=lambda entry: (entry["item"].terminated_at or entry["item"].created_at, entry["item"].pk), reverse=True)
+    else:
+        records.sort(key=lambda entry: (entry["date"] is None, entry["date"] or timezone.localdate(), entry["kind"], entry["item"].pk))
+
+    record_parameters = {
+        "records_type": record_type,
+        "records_scope": record_scope,
+        "records_sort": record_sort,
+    }
+    if record_search:
+        record_parameters["records_search"] = record_search
+    record_page = Paginator(records, RELATED_RECORDS_PER_PAGE).get_page(request.GET.get("records_page"))
 
     context = list_context or _property_list_context(request)
     context.update({
@@ -242,16 +308,20 @@ def _property_detail_context(request, property_record, *, edit_property_form=Non
         "selected_property": property_record,
         "selected_in_page": any(item.pk == property_record.pk for item in context["page_obj"].object_list),
         "is_detail_route": list_context is None,
-        "open_issues": open_issues,
-        "open_tasks": open_tasks,
-        "next_events": next_events,
-        "history": _property_history(request, property_record),
+        "related_page": record_page,
+        "related_type": record_type,
+        "related_scope": record_scope,
+        "related_sort": record_sort,
+        "related_search": record_search,
+        "related_query": urlencode(record_parameters),
         "edit_property_form": (
             edit_property_form
             if edit_property_form is not None
             else PropertyForm(user=request.user, instance=property_record, auto_id="edit_property_%s")
         ),
     })
+    if property_record.state == Property.State.ACTIVE:
+        context.update(_property_record_forms(request, property_record))
     return context
 
 
@@ -323,15 +393,84 @@ def property_detail_view(request, property_id):
             property_record,
         )
 
+    context = _property_detail_context(
+        request,
+        property_record,
+        edit_property_form=edit_property_form,
+    )
+    if (
+        isinstance(state, dict)
+        and state.get("action") == "property_add_record"
+        and state.get("property_id") == property_record.pk
+        and state.get("kind") in ("task", "issue", "event")
+        and property_record.state == Property.State.ACTIVE
+    ):
+        kind = state["kind"]
+        context.update(_property_record_forms(
+            request, property_record,
+            data=deserialise_form_data(state.get("data", {})), kind=kind,
+        ))
+        context["property_record_modal"] = {
+            "task": "propertyAddTaskModal",
+            "issue": "propertyAddIssueModal",
+            "event": "propertyAddEventModal",
+        }[kind]
+
     return render(
         request,
         "property/property_detail.html",
-        _property_detail_context(
-            request,
-            property_record,
-            edit_property_form=edit_property_form,
-        ),
+        context,
     )
+
+
+@login_required
+@require_POST
+def add_property_record_view(request, property_id, kind):
+    """Create a work item in property context and return to the same property."""
+    if kind not in ("task", "issue", "event"):
+        raise Http404
+    property_record = get_object_or_404(
+        properties_for_user(user=request.user),
+        pk=property_id, state=Property.State.ACTIVE,
+    )
+
+    # The URL, not a hidden field, decides which property owns the new record.
+    data = request.POST.copy()
+    data["property"] = str(property_record.pk)
+    if kind == "task":
+        data["relationship_type"] = "property"
+        data["issue"] = ""
+    forms = _property_record_forms(request, property_record, data=data, kind=kind)
+    form = forms[f"property_add_{kind}_form"]
+    valid = form.is_valid()
+    contacts_form = forms["property_event_contacts_form"]
+    if kind == "event":
+        valid = contacts_form.is_valid() and valid
+
+    if valid:
+        if kind == "task":
+            from task.services import create_task
+            record = create_task(user=request.user, **form.cleaned_data)
+        elif kind == "issue":
+            from issue.services import create_issue
+            record = create_issue(user=request.user, **form.cleaned_data)
+        else:
+            from event.services import create_event
+            record = create_event(
+                user=request.user,
+                contacts=contacts_form.cleaned_data["contacts"],
+                **form.cleaned_data,
+            )
+        return redirect(created_record_property_url(record, property_record.pk, kind))
+
+    token = store_form_state(request, {
+        "action": "property_add_record",
+        "property_id": property_record.pk,
+        "kind": kind,
+        "data": serialise_form_data(data),
+    })
+    detail_url = reverse("property:property_detail", args=[property_record.pk])
+    return redirect(f"{detail_url}?{urlencode({'form_state': token})}")
 
 
 @login_required

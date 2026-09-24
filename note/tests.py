@@ -85,6 +85,12 @@ class NoteFormTests(NoteTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("content", form.errors)
 
+    def test_content_limit_is_250_characters(self):
+        self.assertTrue(NoteForm(data={"content": "n" * 250}).is_valid())
+        form = NoteForm(data={"content": "n" * 251})
+        self.assertFalse(form.is_valid())
+        self.assertIn("content", form.errors)
+
 
 class NoteSelectorTests(NoteTestMixin, TestCase):
     def setUp(self):

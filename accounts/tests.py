@@ -13,7 +13,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from .forms import PendingRegistrationForm, ProfileForm
+from .forms import EmailChangeForm, PendingRegistrationForm, ProfileForm
 
 from .tokens import create_confirmation_token
 
@@ -78,6 +78,16 @@ class PendingRegistrationFormTests(TestCase):
         self.assertEqual(form.cleaned_data["last_name"], "Smith")
         self.assertEqual(form.cleaned_data["email"], "alice.smith@example.com")
 
+    def test_name_and_email_limits(self):
+        for field, length in (("first_name", 50), ("last_name", 50), ("email", 254)):
+            data = self.VALID_DATA.copy()
+            data[field] = ("a" * (length - 12) + "@example.com") if field == "email" else "A" * length
+            self.assertTrue(PendingRegistrationForm(data=data).is_valid(), field)
+            data[field] = ("a" * (length - 11) + "@example.com") if field == "email" else "A" * (length + 1)
+            form = PendingRegistrationForm(data=data)
+            self.assertFalse(form.is_valid())
+            self.assertIn(field, form.errors)
+
     def test_weak_passwords_are_rejected(self):
         data = self.VALID_DATA.copy()
         data["password_1"] = "Password"
@@ -105,6 +115,7 @@ class PendingRegistrationFormTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors)
+
 
     def test_passwords_dont_match(self):
         data = self.VALID_DATA.copy()
@@ -148,6 +159,18 @@ class PendingRegistrationFormTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors)
+
+
+class EmailChangeFormLimitTests(TestCase):
+    def test_new_email_limit(self):
+        user = User.objects.create_user(email="current@example.com", password="HolidayHome123!")
+        valid_email = "a" * 242 + "@example.com"
+        form = EmailChangeForm(data={"new_email": valid_email, "current_password": "HolidayHome123!"}, user=user)
+        self.assertTrue(form.is_valid(), form.errors)
+
+        form = EmailChangeForm(data={"new_email": "a" + valid_email, "current_password": "HolidayHome123!"}, user=user)
+        self.assertFalse(form.is_valid())
+        self.assertIn("new_email", form.errors)
 
 
 class RegistrationViewTests(TestCase):

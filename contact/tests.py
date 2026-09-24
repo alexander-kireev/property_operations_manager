@@ -142,30 +142,30 @@ class ContactFormTests(ContactTestMixin, TestCase):
 
         self.assertEqual(list(form.fields), ["first_name", "last_name"])
 
-    def test_edit_form_does_not_apply_browser_name_length_limits(self):
+    def test_create_and_edit_forms_apply_browser_name_length_limits(self):
         contact = self.create_contact(self.create_user())
         edit_form = ContactForm(instance=contact)
         create_form = ContactCreateForm()
 
         for name in ("first_name", "last_name"):
             with self.subTest(name=name):
-                self.assertNotIn("maxlength", edit_form.fields[name].widget.attrs)
+                self.assertEqual(edit_form.fields[name].widget.attrs["maxlength"], "50")
                 self.assertEqual(
                     create_form.fields[name].widget.attrs["maxlength"],
-                    "150",
+                    "50",
                 )
 
     def test_overlong_names_receive_field_specific_errors(self):
-        form = ContactForm(data={"first_name": "A" * 151, "last_name": "B" * 152})
+        form = ContactForm(data={"first_name": "A" * 51, "last_name": "B" * 52})
 
         self.assertFalse(form.is_valid())
         self.assertEqual(
             list(form.errors["first_name"]),
-            ["First name must be 150 characters or fewer. You entered 151."],
+            ["First name must be 50 characters or fewer. You entered 51."],
         )
         self.assertEqual(
             list(form.errors["last_name"]),
-            ["Last name must be 150 characters or fewer. You entered 152."],
+            ["Last name must be 50 characters or fewer. You entered 52."],
         )
 
     def test_contact_method_form_uses_clear_choices_and_value_label(self):
@@ -176,12 +176,12 @@ class ContactFormTests(ContactTestMixin, TestCase):
         self.assertEqual(form.fields["type"].choices[0], ("", "Choose email or telephone"))
 
     def test_create_form_uses_the_same_friendly_name_error(self):
-        form = ContactCreateForm(data={"first_name": "A" * 151})
+        form = ContactCreateForm(data={"first_name": "A" * 51})
 
         self.assertFalse(form.is_valid())
         self.assertEqual(
             list(form.errors["first_name"]),
-            ["First name must be 150 characters or fewer. You entered 151."],
+            ["First name must be 50 characters or fewer. You entered 51."],
         )
 
     def test_create_form_accepts_optional_initial_methods(self):
@@ -524,7 +524,7 @@ class ContactViewTests(ContactTestMixin, TestCase):
         self.assertEqual(response.context["selected_contact"], contact)
 
     def test_confirmation_dialogs_keep_long_contact_values_out_of_titles(self):
-        long_name = "A" * 80
+        long_name = "A" * 50
         contact = self.create_contact(self.user, first_name=long_name)
         long_email = f"contact{'2' * 85}@example.com"
         self.create_method(contact, value=long_email)

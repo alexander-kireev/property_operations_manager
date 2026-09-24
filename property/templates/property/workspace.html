@@ -4,7 +4,7 @@
 {% block title %}{% if is_detail_route %}{{ selected_property.name }}{% else %}Properties{% endif %} | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary property-command-page{% endblock %}
 {% block main_class %}property-command-main flex-grow-1 py-3{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/property-workspace.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/event.css' %}"><link rel="stylesheet" href="{% static 'css/property-workspace.css' %}">{% endblock %}
 
 {% block content %}
 <div class="container-xl h-100">
@@ -12,9 +12,9 @@
         <div class="property-workspace{% if is_detail_route %} show-detail{% endif %}">
             <aside class="property-list-column" aria-label="Property results">
                 <form class="property-list-controls border-bottom p-3" method="get" autocomplete="off">
-                    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                    <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
                         <h1 class="h5 mb-0">Properties</h1>
-                        <button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#addPropertyModal">+ Add property</button>
+                        <button class="btn btn-sm theme-action px-3" type="button" data-bs-toggle="modal" data-bs-target="#addPropertyModal">+ Add property</button>
                     </div>
                     <div class="property-control-row">
                         <label class="visually-hidden" for="propertySearch">Search properties</label>
@@ -22,18 +22,18 @@
                         <button class="btn btn-sm theme-action" type="submit">Apply</button>
                     </div>
                     <div class="property-control-row mt-2">
-                        <label class="visually-hidden" for="propertyState">Property state</label>
-                        <select class="form-select form-select-sm" id="propertyState" name="state">
-                            <option value="active" {% if not state or state == "active" %}selected{% endif %}>Active</option>
-                            <option value="deactivated" {% if state == "deactivated" %}selected{% endif %}>Deactivated</option>
-                            <option value="all" {% if state == "all" %}selected{% endif %}>All states</option>
-                        </select>
                         <label class="visually-hidden" for="propertySort">Sort properties</label>
                         <select class="form-select form-select-sm" id="propertySort" name="sort">
                             <option value="name" {% if sort == "name" %}selected{% endif %}>Name: A–Z</option>
                             <option value="-name" {% if sort == "-name" %}selected{% endif %}>Name: Z–A</option>
                             <option value="-created_at" {% if sort == "-created_at" %}selected{% endif %}>Newest first</option>
                             <option value="created_at" {% if sort == "created_at" %}selected{% endif %}>Oldest first</option>
+                        </select>
+                        <label class="visually-hidden" for="propertyState">Property state</label>
+                        <select class="form-select form-select-sm" id="propertyState" name="state">
+                            <option value="active" {% if not state or state == "active" %}selected{% endif %}>Active</option>
+                            <option value="deactivated" {% if state == "deactivated" %}selected{% endif %}>Deactivated</option>
+                            <option value="all" {% if state == "all" %}selected{% endif %}>All states</option>
                         </select>
                     </div>
                 </form>
@@ -67,13 +67,17 @@
 
             <div class="property-detail-column">
                 {% if selected_property %}
-                    <div class="property-detail-header">
-                        <a class="property-mobile-back btn btn-sm pom-quiet" href="{% url 'property:properties' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}">← Back to properties</a>
+                    <div class="property-command-header">
+                        <div class="property-mobile-back-row">
+                            <a class="property-mobile-back btn btn-sm pom-quiet" href="{% url 'property:properties' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}">← Back to properties</a>
+                        </div>
                         <div class="property-heading-row">
                             <div class="property-heading-copy">
-                                <h2 class="h3 mb-1">{{ selected_property.name }}</h2>
-                                <p class="text-body-secondary mb-2">{{ selected_property.address|default:"No address provided" }}</p>
-                                {% if selected_property.state == "active" %}<span class="work-pill work-pill--active">Active</span>{% else %}<span class="work-pill work-pill--terminal">Deactivated</span>{% endif %}
+                                <div class="property-heading-title-row">
+                                    <h2 class="h3 mb-1">{{ selected_property.name }}</h2>
+                                    <span class="property-heading-status work-pill {% if selected_property.state == 'active' %}work-pill--active{% else %}work-pill--terminal{% endif %}">{{ selected_property.get_state_display }}</span>
+                                </div>
+                                <p class="text-body-secondary mb-0">{{ selected_property.address|default:"No address provided" }}</p>
                             </div>
                             <div class="property-heading-actions">
                                 {% if selected_property.state == "active" %}
@@ -90,97 +94,52 @@
                                 </div>
                             </div>
                         </div>
+                        <section class="property-heading-description" aria-label="Property description">
+                            <h3>Description</h3>
+                            {% if selected_property.description %}
+                                <p class="property-description-preview mb-0" data-property-description-preview>{{ selected_property.description|linebreaksbr }}</p>
+                                <button class="property-description-open" type="button" data-bs-toggle="modal" data-bs-target="#propertyDescriptionModal" data-property-description-open hidden>Read full description</button>
+                            {% else %}<p class="text-body-secondary mb-0">No description provided.</p>{% endif %}
+                            <small class="property-description-added text-body-secondary">Added {{ selected_property.created_at|date:"j M Y" }}</small>
+                        </section>
                     </div>
-                    <div class="property-tabs" role="tablist" aria-label="Property sections">
-                        {% for section in property_sections %}
-                            <button
-                                class="property-tab{% if active_section == section.name %} is-active{% endif %}"
-                                type="button"
-                                role="tab"
-                                id="propertyTab{{ section.label }}"
-                                aria-controls="propertyPanel{{ section.label }}"
-                                aria-selected="{% if active_section == section.name %}true{% else %}false{% endif %}"
-                                data-property-tab="{{ section.name }}"
-                            >{{ section.label }}</button>
-                        {% endfor %}
-                    </div>
-
                     <div class="property-panel-area">
-                        <section id="propertyPanelOverview" role="tabpanel" aria-labelledby="propertyTabOverview" data-property-panel="overview"{% if active_section != 'overview' %} hidden{% endif %}>
-                            {% if selected_property.state == "deactivated" %}
-                                <div class="property-attention"><strong>Read-only</strong><span>This property is deactivated; its records remain available.</span></div>
-                            {% elif open_issues or open_tasks or next_events %}
-                                <div class="property-attention">
-                                    <strong>At a glance</strong>
-                                    <span>{{ open_issues.count }} open issue{{ open_issues.count|pluralize }} · {{ open_tasks.count }} open task{{ open_tasks.count|pluralize }}{% if next_events %} · next event {{ next_events.0.scheduled_date|date:"j M" }}{% endif %}</span>
+                        {% if selected_property.state == "deactivated" %}<div class="property-attention"><strong>Read-only</strong><span>This property is deactivated; its records remain available.</span></div>{% endif %}
+                        <div class="property-related-heading">
+                            <div><h3 class="h5 mb-1">Related records</h3><p class="small text-body-secondary mb-0">Issues, tasks and events for this property.</p></div>
+                            {% if selected_property.state == "active" %}
+                                <div class="dropdown">
+                                    <button class="btn btn-sm theme-action dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">+ Add</button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#propertyAddIssueModal">Issue</button></li>
+                                        <li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#propertyAddTaskModal">Task</button></li>
+                                        <li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#propertyAddEventModal">Event</button></li>
+                                    </ul>
                                 </div>
                             {% endif %}
-                            <div class="property-overview-grid">
-                                <div class="property-panel-stack">
-                                    <section class="property-panel-card">
-                                        <h3 class="h6">Current work</h3>
-                                        <p>{{ open_issues.count }} open issue{{ open_issues.count|pluralize }} · {{ open_tasks.count }} open task{{ open_tasks.count|pluralize }}</p>
-                                        {% if open_issues %}{% include "property/includes/work_record.html" with kind="issue" item=open_issues.0 %}
-                                        {% elif open_tasks %}{% include "property/includes/work_record.html" with kind="task" item=open_tasks.0 %}{% endif %}
-                                        <button class="property-section-link" type="button" data-property-tab-shortcut="work">See all work →</button>
-                                    </section>
-                                    <section class="property-panel-card">
-                                        <h3 class="h6">Next scheduled event</h3>
-                                        {% if next_events %}{% include "property/includes/work_record.html" with kind="event" item=next_events.0 %}
-                                        {% else %}<p class="text-body-secondary mb-0">No upcoming events.</p>{% endif %}
-                                        <button class="property-section-link" type="button" data-property-tab-shortcut="schedule">See schedule →</button>
-                                    </section>
-                                </div>
-                                <div class="property-panel-stack">
-                                    <section class="property-panel-card">
-                                        <h3 class="h6">Description</h3>
-                                        <p class="mb-2">{{ selected_property.description|default:"No description provided."|linebreaksbr }}</p>
-                                        <small class="text-body-secondary">Added {{ selected_property.created_at|date:"j M Y" }}</small>
-                                    </section>
-                                    <section class="property-panel-card">
-                                        <h3 class="h6">Recent operational history</h3>
-                                        {% for entry in history|slice:":2" %}{% include "property/includes/history_record.html" with entry=entry %}
-                                        {% empty %}<p class="text-body-secondary mb-0">No completed records yet.</p>{% endfor %}
-                                        <button class="property-section-link" type="button" data-property-tab-shortcut="history">See history →</button>
-                                    </section>
-                                </div>
+                        </div>
+                        <form class="property-related-filters" method="get" action="{% url 'property:property_detail' selected_property.pk %}">
+                            <label><span class="visually-hidden">Record type</span><select class="form-select form-select-sm" name="records_type"><option value="all"{% if related_type == 'all' %} selected{% endif %}>All types</option><option value="issue"{% if related_type == 'issue' %} selected{% endif %}>Issues</option><option value="task"{% if related_type == 'task' %} selected{% endif %}>Tasks</option><option value="event"{% if related_type == 'event' %} selected{% endif %}>Events</option></select></label>
+                            <label><span class="visually-hidden">Record status</span><select class="form-select form-select-sm" name="records_scope"><option value="current"{% if related_scope == 'current' %} selected{% endif %}>Current</option><option value="past"{% if related_scope == 'past' %} selected{% endif %}>Past</option><option value="all"{% if related_scope == 'all' %} selected{% endif %}>All statuses</option></select></label>
+                            <label><span class="visually-hidden">Sort records</span><select class="form-select form-select-sm" name="records_sort"><option value="date"{% if related_sort == 'date' %} selected{% endif %}>Date: soonest</option><option value="recent"{% if related_sort == 'recent' %} selected{% endif %}>Latest activity</option><option value="title"{% if related_sort == 'title' %} selected{% endif %}>Title: A–Z</option></select></label>
+                            <label class="property-related-search"><span class="visually-hidden">Search related records</span><input class="form-control form-control-sm" type="search" name="records_search" value="{{ related_search }}" placeholder="Search titles or descriptions"></label>
+                            <button class="btn btn-sm theme-action" type="submit">Apply</button>
+                        </form>
+                        <div class="property-related-results" aria-live="polite">
+                            <div class="property-related-result-heading">{{ related_page.paginator.count }} record{{ related_page.paginator.count|pluralize }}</div>
+                            <div class="property-related-scroll" tabindex="0" aria-label="Related records list">
+                                {% for entry in related_page %}{% include "property/includes/related_record.html" with entry=entry %}
+                                {% empty %}<p class="property-related-empty text-body-secondary">No records match these filters.</p>{% endfor %}
                             </div>
-                        </section>
-
-                        <section id="propertyPanelWork" role="tabpanel" aria-labelledby="propertyTabWork" data-property-panel="work"{% if active_section != 'work' %} hidden{% endif %}>
-                            <div class="property-panel-stack">
-                                <section class="property-panel-card">
-                                    <h3 class="h6">Open issues <span class="text-body-secondary">{{ open_issues.count }}</span></h3>
-                                    {% for issue in open_issues %}{% include "property/includes/work_record.html" with kind="issue" item=issue %}
-                                    {% empty %}<p class="text-body-secondary mb-0">No open issues.</p>{% endfor %}
-                                </section>
-                                <section class="property-panel-card">
-                                    <h3 class="h6">Open tasks <span class="text-body-secondary">{{ open_tasks.count }}</span></h3>
-                                    {% for task in open_tasks %}{% include "property/includes/work_record.html" with kind="task" item=task %}
-                                    {% empty %}<p class="text-body-secondary mb-0">No open tasks.</p>{% endfor %}
-                                </section>
-                            </div>
-                        </section>
-
-                        <section id="propertyPanelSchedule" role="tabpanel" aria-labelledby="propertyTabSchedule" data-property-panel="schedule"{% if active_section != 'schedule' %} hidden{% endif %}>
-                            <section class="property-panel-card">
-                                <h3 class="h6">Upcoming events</h3>
-                                {% for event in next_events %}{% include "property/includes/work_record.html" with kind="event" item=event %}
-                                {% empty %}<p class="text-body-secondary mb-0">No upcoming events.</p>{% endfor %}
-                            </section>
-                        </section>
-
-                        <section id="propertyPanelHistory" role="tabpanel" aria-labelledby="propertyTabHistory" data-property-panel="history"{% if active_section != 'history' %} hidden{% endif %}>
-                            <section class="property-panel-card">
-                                <h3 class="h6">Operational history</h3>
-                                {% for entry in history %}{% include "property/includes/history_record.html" with entry=entry %}
-                                {% empty %}<p class="text-body-secondary mb-0">No completed records yet.</p>{% endfor %}
-                            </section>
-                            <p class="small text-body-secondary mt-3">Resolved or dismissed issues, completed or dismissed tasks, and occurred or cancelled events. This is not a property edit audit log.</p>
-                        </section>
+                        </div>
+                        {% if related_page.paginator.num_pages > 1 %}<nav class="property-related-pagination" aria-label="Related record pages">
+                            {% if related_page.has_previous %}<a href="{% url 'property:property_detail' selected_property.pk %}?{{ related_query }}&amp;records_page={{ related_page.previous_page_number }}">← Previous</a>{% endif %}
+                            <span>Page {{ related_page.number }} of {{ related_page.paginator.num_pages }}</span>
+                            {% if related_page.has_next %}<a href="{% url 'property:property_detail' selected_property.pk %}?{{ related_query }}&amp;records_page={{ related_page.next_page_number }}">Next →</a>{% endif %}
+                        </nav>{% endif %}
                     </div>
                 {% else %}
-                    <div class="property-detail-empty p-5 text-center"><h2 class="h5">Select a property</h2><p class="text-body-secondary mb-0">Choose a property from the list to see its work, schedule and history.</p></div>
+                    <div class="property-detail-empty p-5 text-center"><h2 class="h5">Select a property</h2><p class="text-body-secondary mb-0">Choose a property from the list to see its related records.</p></div>
                 {% endif %}
             </div>
         </div>
@@ -193,5 +152,7 @@
 {% block extra_js %}
 <script src="{% static 'js/workspace-list-scroll.js' %}"></script>
 <script src="{% static 'js/property-workspace.js' %}"></script>
-{% if add_property_form.errors %}<span hidden data-modal-auto-open="addPropertyModal"></span>{% elif is_detail_route and edit_property_form.errors %}<span hidden data-modal-auto-open="editPropertyModal"></span>{% elif not is_detail_route and list_edit_form.errors %}<span hidden data-modal-auto-open="listEditPropertyModal"></span>{% elif request.GET.confirm_delete == "1" %}<span hidden data-modal-auto-open="deletePropertyModal"></span>{% elif request.GET.edit == "1" %}<span hidden data-modal-auto-open="{% if is_detail_route %}editPropertyModal{% else %}listEditPropertyModal{% endif %}"></span>{% elif request.GET.deactivate == "1" %}<span hidden data-modal-auto-open="deactivatePropertyModal"></span>{% endif %}
+<script src="{% static 'js/task-form.js' %}"></script>
+<script src="{% static 'js/event-command-centre.js' %}"></script>
+{% if property_record_modal %}<span hidden data-modal-auto-open="{{ property_record_modal }}"></span>{% elif add_property_form.errors %}<span hidden data-modal-auto-open="addPropertyModal"></span>{% elif is_detail_route and edit_property_form.errors %}<span hidden data-modal-auto-open="editPropertyModal"></span>{% elif not is_detail_route and list_edit_form.errors %}<span hidden data-modal-auto-open="listEditPropertyModal"></span>{% elif request.GET.confirm_delete == "1" %}<span hidden data-modal-auto-open="deletePropertyModal"></span>{% elif request.GET.edit == "1" %}<span hidden data-modal-auto-open="{% if is_detail_route %}editPropertyModal{% else %}listEditPropertyModal{% endif %}"></span>{% elif request.GET.deactivate == "1" %}<span hidden data-modal-auto-open="deactivatePropertyModal"></span>{% endif %}
 {% endblock %}

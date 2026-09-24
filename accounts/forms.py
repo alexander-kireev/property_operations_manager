@@ -20,9 +20,9 @@ class CustomUserChangeForm(UserChangeForm):
 
 
 class PendingRegistrationForm(forms.Form):
-    first_name = forms.CharField(max_length=150)
-    last_name = forms.CharField(max_length=150)
-    email = forms.EmailField()
+    first_name = forms.CharField(max_length=50)
+    last_name = forms.CharField(max_length=50)
+    email = forms.EmailField(max_length=254)
     password_1 = forms.CharField(strip=False, widget=forms.PasswordInput)
     password_2 = forms.CharField(strip=False, widget=forms.PasswordInput)
 
@@ -62,7 +62,7 @@ class PendingRegistrationForm(forms.Form):
 
 
 class EmailAuthenticationForm(AuthenticationForm):
-    username = forms.EmailField(label="Email")
+    username = forms.EmailField(label="Email", max_length=254)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -91,7 +91,7 @@ class ProfileForm(forms.ModelForm):
 
 
 class EmailChangeForm(forms.Form):
-    new_email = forms.EmailField(label="New email")
+    new_email = forms.EmailField(label="New email", max_length=254)
     current_password = forms.CharField(strip=False, widget=forms.PasswordInput)
 
     def __init__(self, *args, user, **kwargs):

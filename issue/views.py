@@ -15,6 +15,7 @@ from config.form_state import (
 )
 
 from property.selectors import properties_for_user
+from property.navigation import active_property_for_user, created_record_property_url
 from event.selectors import events_for_user
 from task.forms import TaskForm
 from task.models import Task
@@ -371,6 +372,15 @@ def _issue_list_context(
 @require_GET
 def issues_view(request):
     context = _issue_list_context(request, **_restore_issue_form_context(request))
+    origin = None
+    if request.GET.get("open") == "add" and not context["open_modal"]:
+        origin = active_property_for_user(request.user, request.GET.get("property"))
+        if origin:
+            context["add_issue_form"].initial["property"] = origin.pk
+            context["open_modal"] = "addIssueModal"
+    elif context["open_modal"] == "addIssueModal":
+        origin = active_property_for_user(request.user, context["add_issue_form"].data.get("return_property"))
+    context["return_property_id"] = origin.pk if origin else None
     if request.GET.get("open") == "edit" and context["edit_issue_form"] is not None:
         context["open_modal"] = "editIssueModal"
     return render(
@@ -390,6 +400,9 @@ def add_issue_view(request):
     )
     if form.is_valid():
         issue = create_issue(user=request.user, **form.cleaned_data)
+        property_url = created_record_property_url(issue, request.POST.get("return_property"), "issue")
+        if property_url:
+            return redirect(property_url)
         return redirect(_issue_workspace_url(request, issue_id=issue.pk))
     return _redirect_with_issue_form_state(
         request,

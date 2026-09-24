@@ -29,6 +29,18 @@
 {% endif %}
 
 {% if selected_property %}
+    {% if selected_property.state == "active" %}
+        {% include "property/includes/record_add_modals.html" %}
+    {% endif %}
+    {% if selected_property.description %}
+        <div class="modal fade modal-resilient" id="propertyDescriptionModal" tabindex="-1" aria-labelledby="propertyDescriptionModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title fs-5" id="propertyDescriptionModalLabel">{{ selected_property.name }} · Description</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body property-description-full">{{ selected_property.description|linebreaksbr }}</div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+            </div></div>
+        </div>
+    {% endif %}
     <div class="modal fade modal-resilient" id="deletePropertyModal" data-modal-clear-query="confirm_delete" tabindex="-1" aria-labelledby="deletePropertyModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
             <div class="modal-header"><h2 class="modal-title fs-5" id="deletePropertyModalLabel">Delete property?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
@@ -37,14 +49,3 @@
         </div></div>
     </div>
 {% endif %}
-
-<div class="modal fade modal-resilient" id="propertyQuickActionModal" tabindex="-1" aria-labelledby="propertyQuickActionModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-        <div class="modal-header"><h2 class="modal-title fs-5" id="propertyQuickActionModalLabel">Confirm action?</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
-        <form method="post" action="">
-            {% csrf_token %}<input type="hidden" name="next" value="">
-            <div class="modal-body"><p data-quick-question></p><div class="modal-context"><span class="small text-body-secondary d-block" data-quick-kind></span><span class="modal-context-value" data-quick-name></span></div><div class="form-check mt-3" data-quick-linked hidden><input class="form-check-input" id="quickLinkedTasks" name="affect_linked_tasks" value="yes" type="checkbox"><label class="form-check-label" for="quickLinkedTasks">Also dismiss active linked tasks</label></div></div>
-            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Keep record</button><button class="btn theme-action" type="submit" data-quick-submit>Confirm</button></div>
-        </form>
-    </div></div>
-</div>

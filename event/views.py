@@ -18,6 +18,7 @@ from config.form_state import (
 )
 
 from property.selectors import properties_for_user
+from property.navigation import active_property_for_user, created_record_property_url
 from issue.selectors import issues_for_user
 from task.selectors import tasks_for_user
 
@@ -433,6 +434,15 @@ def _event_list_context(
 @require_GET
 def events_view(request):
     context = _event_list_context(request, **_restore_event_form_context(request))
+    origin = None
+    if request.GET.get("open") == "add" and not context["open_modal"]:
+        origin = active_property_for_user(request.user, request.GET.get("property"))
+        if origin:
+            context["add_event_form"].initial["property"] = origin.pk
+            context["open_modal"] = "addEventModal"
+    elif context["open_modal"] == "addEventModal":
+        origin = active_property_for_user(request.user, context["add_event_form"].data.get("return_property"))
+    context["return_property_id"] = origin.pk if origin else None
     if request.GET.get("open") == "edit" and context["edit_event_form"] is not None:
         context["open_modal"] = "editEventModal"
     return render(
@@ -459,6 +469,9 @@ def add_event_view(request):
             contacts=contacts_form.cleaned_data["contacts"],
             **event_form.cleaned_data,
         )
+        property_url = created_record_property_url(event, request.POST.get("return_property"), "event")
+        if property_url:
+            return redirect(property_url)
         return redirect(_event_workspace_url(request, event_id=event.pk))
     return _redirect_with_event_form_state(
         request,
