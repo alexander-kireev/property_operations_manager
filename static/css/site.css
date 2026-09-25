@@ -196,6 +196,63 @@ body {
     max-width: 760px;
 }
 
+.profile-settings-content .card {
+    border-color: var(--pom-border);
+}
+
+.profile-card-body {
+    padding: 1.5rem;
+}
+
+.profile-setting-row {
+    display: grid;
+    grid-template-columns: 9.5rem minmax(0, 1fr) 9.5rem;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+    padding: 1rem 0;
+}
+
+.profile-setting-row-first {
+    border-top: 1px solid var(--pom-border);
+}
+
+.profile-setting-row > * {
+    min-width: 0;
+}
+
+.profile-setting-row-last {
+    padding-bottom: 0;
+}
+
+.profile-setting-value {
+    overflow-wrap: anywhere;
+}
+
+.profile-setting-action {
+    width: 100%;
+    white-space: nowrap;
+}
+
+.profile-danger-card {
+    border-color: var(--bs-danger-border-subtle) !important;
+}
+
+@media (max-width: 575.98px) {
+    .profile-card-body {
+        padding: 1.25rem;
+    }
+
+    .profile-setting-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.5rem;
+    }
+
+    .profile-setting-action {
+        margin-top: 0.25rem;
+    }
+}
+
 .account-content {
     max-width: 760px;
 }

@@ -18,6 +18,7 @@ urlpatterns = [
     path("change_email/complete/", views.email_change_complete_view, name="email_change_complete"),
     path("change_password/", views.change_password_view, name="change_password"),
     path("delete_account/", views.delete_account_view, name="delete_account"),
+    path("delete_account/complete/", views.delete_account_complete_view, name="delete_account_complete"),
     path("password/reset/email/", views.reset_password_protected_view, name="reset_password_protected"),
     path(
         "password/reset/<uidb64>/<token>/",

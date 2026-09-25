@@ -119,6 +119,29 @@ class EmailChangeForm(forms.Form):
         return new_email
 
 
+class DeleteAccountForm(forms.Form):
+    current_password = forms.CharField(strip=False, widget=forms.PasswordInput)
+    confirmation = forms.CharField()
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        self.fields["current_password"].widget.attrs.update({"class": "form-control", "autocomplete": "current-password"})
+        self.fields["confirmation"].widget.attrs.update({"class": "form-control", "autocomplete": "off"})
+
+    def clean_current_password(self):
+        password = self.cleaned_data["current_password"]
+        if not self.user.check_password(password):
+            raise forms.ValidationError("Your current password is incorrect.")
+        return password
+
+    def clean_confirmation(self):
+        confirmation = self.cleaned_data["confirmation"]
+        if confirmation != "DELETE":
+            raise forms.ValidationError('Type DELETE to confirm.')
+        return confirmation
+
+
 class PasswordResetConfirmForm(SetPasswordForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
