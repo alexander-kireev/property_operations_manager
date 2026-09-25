@@ -1,10 +1,13 @@
+import logging
+
 from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash, views as auth_views
 from django.contrib.auth.decorators import login_required
 
 from django.contrib.auth.forms import PasswordResetForm
 
-from .forms import AccountPasswordChangeForm, PendingRegistrationForm, EmailAuthenticationForm, ProfileForm, EmailChangeForm
+from .forms import AccountPasswordChangeForm, DeleteAccountForm, PendingRegistrationForm, EmailAuthenticationForm, ProfileForm, EmailChangeForm
 
 from .models import PendingRegistration, User
 from .models import PendingEmailChange
@@ -37,6 +40,9 @@ from config.form_state import (
     serialise_form_errors,
     store_form_state,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def _redirect_with_account_form_state(
@@ -216,18 +222,57 @@ def profile_page_view(request):
         )
 
     else:
-        state = _account_form_state(request, "profile")
+        state = pop_form_state(request)
+        action = state.get("action") if isinstance(state, dict) else None
+        profile_state = state if action == "profile" else None
         profile_form = ProfileForm(
-            data=deserialise_form_data(state["data"]) if state else None,
+            data=deserialise_form_data(profile_state["data"]) if profile_state else None,
             instance=request.user,
         )
-        if state:
-            profile_form = _restore_account_form(state, profile_form)
-    
-    return render(request, "accounts/profile_page.html", {"profile_form": profile_form})
+        if profile_state:
+            profile_form = _restore_account_form(profile_state, profile_form)
+
+        email_state = state if action == "change_email" else None
+        email_form = EmailChangeForm(
+            data=deserialise_form_data(email_state["data"]) if email_state else None,
+            user=request.user,
+        )
+        if email_state:
+            email_form = _restore_account_form(email_state, email_form)
+
+        password_state = state if action == "change_password" else None
+        password_form = AccountPasswordChangeForm(
+            user=request.user,
+            data=deserialise_form_data(password_state["data"]) if password_state else None,
+        )
+        if password_state:
+            password_form = _restore_account_form(password_state, password_form)
+
+        delete_state = state if action == "delete_account" else None
+        delete_form = DeleteAccountForm(
+            user=request.user,
+            data=deserialise_form_data(delete_state["data"]) if delete_state else None,
+        )
+        if delete_state:
+            delete_form = _restore_account_form(delete_state, delete_form)
+
+    pending = PendingEmailChange.objects.filter(user=request.user, expires_at__gt=timezone.now()).first()
+    return render(request, "accounts/profile_page.html", {
+        "profile_form": profile_form,
+        "email_form": email_form,
+        "password_form": password_form,
+        "delete_form": delete_form,
+        "pending_email_change": pending,
+        "open_modal": {
+            "change_email": "changeEmailModal",
+            "change_password": "changePasswordModal",
+            "delete_account": "deleteAccountConfirmModal",
+        }.get(action),
+    })
 
 
 @login_required
+@require_POST
 def change_password_view(request):
 
     if request.method == "POST":
@@ -236,29 +281,19 @@ def change_password_view(request):
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)
-            return redirect("accounts:change_password")
+            messages.success(request, "Your password has been changed.")
+            return redirect("accounts:profile_page")
 
         return _redirect_with_account_form_state(
             request,
             action="change_password",
             form=form,
-            url=reverse("accounts:change_password"),
+            url=reverse("accounts:profile_page"),
             exclude=("old_password", "new_password1", "new_password2"),
         )
 
-    else:
-        state = _account_form_state(request, "change_password")
-        form = AccountPasswordChangeForm(
-            user=request.user,
-            data=deserialise_form_data(state["data"]) if state else None,
-        )
-        if state:
-            form = _restore_account_form(state, form)
-
-    return render(request, "accounts/change_password.html", {"form": form })
-
-
 @login_required
+@require_POST
 def change_email_view(request):
 
     if request.method == "POST":
@@ -282,28 +317,16 @@ def change_email_view(request):
                     ),
                 )
 
-                return redirect("accounts:change_email")
+                messages.success(request, "Verification email sent. Your current sign-in email remains active until you confirm the new address.")
+                return redirect("accounts:profile_page")
 
         return _redirect_with_account_form_state(
             request,
             action="change_email",
             form=form,
-            url=reverse("accounts:change_email"),
+            url=reverse("accounts:profile_page"),
             exclude=("current_password",),
         )
-    else:
-        state = _account_form_state(request, "change_email")
-        form = EmailChangeForm(
-            data=deserialise_form_data(state["data"]) if state else None,
-            user=request.user,
-        )
-        if state:
-            form = _restore_account_form(state, form)
-
-    pending = PendingEmailChange.objects.filter(user=request.user, expires_at__gt=timezone.now()).first()
-    return render(request, "accounts/change_email.html", {"form": form, "pending": pending})
-
-
 def confirm_email_change_view(request, token):
     pending = pending_change_for_token(token)
     if pending is None:
@@ -324,9 +347,34 @@ def email_change_complete_view(request):
 
 
 @login_required
+@require_POST
 def delete_account_view(request):
+    form = DeleteAccountForm(request.POST, user=request.user)
+    if form.is_valid():
+        try:
+            with transaction.atomic():
+                request.user.delete()
+        except Exception:
+            logger.exception("Account deletion failed for user %s", request.user.pk)
+            form.add_error(None, "We couldn't delete your account. Please try again later.")
+        else:
+            logout(request)
+            request.session["account_deleted"] = True
+            return redirect("accounts:delete_account_complete")
 
-    pass
+    return _redirect_with_account_form_state(
+        request,
+        action="delete_account",
+        form=form,
+        url=reverse("accounts:profile_page"),
+        exclude=("current_password", "confirmation"),
+    )
+
+
+def delete_account_complete_view(request):
+    if not request.session.pop("account_deleted", False):
+        return redirect("accounts:login")
+    return render(request, "accounts/delete_account_complete.html")
 
 
 @login_required
