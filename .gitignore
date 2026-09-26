@@ -23,8 +23,9 @@ htmlcov/
 # Notes folder
 notes/
 
-# Wireframes folder
+# Wireframes folder 
 wireframes/
 
 # For internal build docs
 build_docs/
+docs/
