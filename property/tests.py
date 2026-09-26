@@ -463,14 +463,13 @@ class PropertyViewTests(TestCase):
 
         response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
 
-        self.assertContains(response, 'class="property-command-header"')
+        self.assertContains(response, 'class="property-command-header workspace-detail-header"')
         self.assertNotContains(response, 'class="property-detail-header"')
-        self.assertContains(response, 'class="property-mobile-back-row"')
-        self.assertContains(response, 'class="property-heading-title-row"')
-        self.assertContains(response, f'<h2 class="h3 mb-1">{name}</h2>')
-        self.assertContains(response, 'class="property-heading-status work-pill work-pill--active"')
+        self.assertContains(response, 'class="workspace-mobile-back btn btn-sm pom-quiet mb-3"')
+        self.assertContains(response, f'<h2 class="property-heading-title workspace-detail-title h3">{name}</h2>')
+        self.assertContains(response, 'class="work-pill work-pill--active"')
         self.assertContains(response, 'class="property-heading-description"')
-        self.assertContains(response, 'class="property-heading-actions"')
+        self.assertContains(response, 'class="property-heading-actions workspace-detail-actions"')
         self.assertContains(response, 'aria-label="Property actions"')
 
     def test_property_rows_show_existing_work_and_event_flags(self):
@@ -537,6 +536,11 @@ class PropertyViewTests(TestCase):
         response = self.client.get(reverse("property:property_detail", args=[property_record.pk]))
 
         self.assertContains(response, 'class="property-related-record"', count=3)
+        self.assertContains(response, 'class="property-related-summary"', count=3)
+        self.assertContains(response, 'Open record →', count=3)
+        self.assertContains(response, 'Water is leaking.')
+        self.assertContains(response, 'Call the contractor.')
+        self.assertContains(response, 'Meet at the entrance.')
         self.assertNotContains(response, '<details class="property-record">')
         self.assertContains(response, 'Repair tap')
         self.assertContains(response, 'Book plumber')

@@ -628,7 +628,7 @@ class ContactViewTests(ContactTestMixin, TestCase):
 
         response = self.client.get(reverse("contact:contacts"), {"page": 2, "selected": Contact.objects.order_by("pk").last().pk})
 
-        self.assertContains(response, 'class="contact-mobile-back btn btn-sm pom-quiet mb-3" href="/contacts/?page=2"')
+        self.assertContains(response, 'class="workspace-mobile-back btn btn-sm pom-quiet mb-3" href="/contacts/?page=2"')
         self.assertContains(response, 'js/workspace-list-scroll.js')
         self.assertContains(response, 'data-workspace-scroll-root="contacts"')
 

@@ -4,7 +4,7 @@
 {% block title %}Events | Property Operations Manager{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/event.css' %}">{% endblock %}
 {% block body_class %}bg-body-tertiary event-command-page{% endblock %}
-{% block main_class %}event-command-main flex-grow-1 py-3{% endblock %}
+{% block main_class %}event-command-main flex-grow-1 app-main{% endblock %}
 
 {% block content %}
 <div class="container-xl h-100">
@@ -21,7 +21,7 @@
                 </div>
             </div>
         {% else %}
-            <div class="event-workspace row g-0{% if selected_event and active_tab == 'details' %} show-detail{% endif %}" id="eventWorkspace">
+            <div class="event-workspace row g-0{% if request.GET.open == 'detail' %} show-detail{% endif %}" id="eventWorkspace">
                 <aside class="event-list-column col-lg-4 border-end" aria-label="Event results" id="eventResults">
                     <div class="event-pane">
                         <form class="event-list-controls border-bottom p-3" method="get" autocomplete="off">
@@ -104,7 +104,7 @@
                                 <a class="event-command-row list-group-item list-group-item-action{% if selected_event.pk == event.pk %} is-selected{% endif %}{% if event.state != 'scheduled' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ event.pk }}&amp;tab=details" data-workspace-scroll-row{% if mobile_expanded_event_id == event.pk %} data-mobile-event-expanded aria-expanded="true" aria-controls="eventInlineDetails{{ event.pk }}"{% endif %}{% if selected_event.pk == event.pk %} aria-current="true"{% endif %}>
                                     <div class="d-flex justify-content-between gap-3">
                                         <span class="event-command-title" title="{{ event.title }}">{{ event.title }}</span>
-                                        <span class="d-flex align-items-center gap-2"><span class="event-state-badge event-state-{{ event.state }}">{{ event.get_state_display }}</span><span class="event-mobile-row-arrow" aria-hidden="true">⌄</span></span>
+                                        <span class="d-flex align-items-center gap-2"><span class="event-state-badge event-state-{{ event.state }}">{{ event.get_state_display }}</span><span class="work-mobile-chevron event-mobile-row-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m5 9 7 7 7-7"/></svg></span></span>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-start gap-3 mt-1">
                                         <span class="event-command-context"{% if event.property %} title="{{ event.property.name }}"{% endif %}>{% if event.property %}{{ event.property.name }}{% else %}No property{% endif %}</span>

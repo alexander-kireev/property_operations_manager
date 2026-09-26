@@ -4,7 +4,7 @@
 
 {% block title %}Issues | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary issue-command-page{% endblock %}
-{% block main_class %}issue-command-main flex-grow-1 py-3{% endblock %}
+{% block main_class %}issue-command-main flex-grow-1 app-main{% endblock %}
 
 {% block content %}
 <div class="container-xl h-100">
@@ -104,10 +104,10 @@
                     <div class="issue-list list-group list-group-flush" data-workspace-scroll-list>
                         {% for issue in page_obj %}
                             {% work_status issue today as issue_status %}
-                            <a class="issue-list-row list-group-item list-group-item-action{% if selected_issue.pk == issue.pk %} is-selected{% endif %}{% if issue.state != 'active' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ issue.pk }}" data-workspace-scroll-row{% if selected_issue.pk == issue.pk %} aria-current="true"{% endif %}>
+                            <a class="issue-list-row list-group-item list-group-item-action{% if selected_issue.pk == issue.pk %} is-selected{% endif %}{% if issue.state != 'active' %} terminated{% endif %}" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ issue.pk }}" data-workspace-scroll-row{% if mobile_expanded_issue_id == issue.pk %} aria-expanded="true" aria-controls="issueInlineDetails{{ issue.pk }}"{% endif %}{% if selected_issue.pk == issue.pk %} aria-current="true"{% endif %}>
                                 <div class="issue-list-primary d-flex justify-content-between align-items-start gap-3">
                                     <strong class="issue-list-title" title="{{ issue.title }}">{{ issue.title }}</strong>
-                                    {% include "issue/includes/priority_badge.html" with issue=issue %}
+                                    <span class="d-flex align-items-center gap-2">{% include "issue/includes/priority_badge.html" with issue=issue %}<span class="work-mobile-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m5 9 7 7 7-7"/></svg></span></span>
                                 </div>
                                 <div class="issue-list-meta d-flex justify-content-between gap-3 mt-2 small">
                                     <span class="issue-list-context text-body-secondary"{% if issue.property %} title="{{ issue.property.name }}"{% endif %}>{% if issue.property %}{{ issue.property.name }}{% else %}&nbsp;{% endif %}</span>
@@ -117,6 +117,7 @@
                                     {% else %}<span class="issue-list-status">{{ issue.resolution_deadline|date:"j M Y" }}</span>{% endif %}
                                 </div>
                             </a>
+                            {% if mobile_expanded_issue_id == issue.pk %}{% include "issue/includes/mobile_issue_details.html" %}{% endif %}
                         {% empty %}
                             <div class="p-4 text-center text-body-secondary">{% if has_filters %}No issues match these filters.{% else %}No active issues. <a href="{% url 'issue:issues' %}?state=all">Show all states</a>.{% endif %}</div>
                         {% endfor %}

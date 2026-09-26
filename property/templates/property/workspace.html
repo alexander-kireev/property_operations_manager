@@ -3,25 +3,25 @@
 
 {% block title %}{% if is_detail_route %}{{ selected_property.name }}{% else %}Properties{% endif %} | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary property-command-page{% endblock %}
-{% block main_class %}property-command-main flex-grow-1 py-3{% endblock %}
+{% block main_class %}property-command-main flex-grow-1 app-main{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/event.css' %}"><link rel="stylesheet" href="{% static 'css/property-workspace.css' %}">{% endblock %}
 
 {% block content %}
 <div class="container-xl h-100">
     <section class="property-command-centre card border-0 shadow-sm h-100" aria-label="Properties command centre" data-workspace-scroll-root="properties" data-workspace-scroll-path="{% url 'property:properties' %}" data-navigation-query="{{ navigation_query }}">
-        <div class="property-workspace{% if is_detail_route %} show-detail{% endif %}">
+        <div class="property-workspace{% if is_detail_route %} show-detail{% endif %}" data-align-headers data-align-from="992">
             <aside class="property-list-column" aria-label="Property results">
-                <form class="property-list-controls border-bottom p-3" method="get" autocomplete="off">
+                <form class="property-list-controls workspace-list-controls border-bottom p-3" data-list-header method="get" autocomplete="off">
                     <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
                         <h1 class="h5 mb-0">Properties</h1>
-                        <button class="btn btn-sm theme-action px-3" type="button" data-bs-toggle="modal" data-bs-target="#addPropertyModal">+ Add property</button>
+                        <button class="btn btn-sm theme-action work-add-button" type="button" data-bs-toggle="modal" data-bs-target="#addPropertyModal">+ Add property</button>
                     </div>
-                    <div class="property-control-row">
+                    <div class="workspace-control-row">
                         <label class="visually-hidden" for="propertySearch">Search properties</label>
                         <input class="form-control form-control-sm" id="propertySearch" name="search" type="search" value="{{ search }}" placeholder="Search name or address">
                         <button class="btn btn-sm theme-action" type="submit">Apply</button>
                     </div>
-                    <div class="property-control-row mt-2">
+                    <div class="workspace-control-row mt-2">
                         <label class="visually-hidden" for="propertySort">Sort properties</label>
                         <select class="form-select form-select-sm" id="propertySort" name="sort">
                             <option value="name" {% if sort == "name" %}selected{% endif %}>Name: A–Z</option>
@@ -67,19 +67,18 @@
 
             <div class="property-detail-column">
                 {% if selected_property %}
-                    <div class="property-command-header">
-                        <div class="property-mobile-back-row">
-                            <a class="property-mobile-back btn btn-sm pom-quiet" href="{% url 'property:properties' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}">← Back to properties</a>
-                        </div>
-                        <div class="property-heading-row">
-                            <div class="property-heading-copy">
-                                <div class="property-heading-title-row">
-                                    <h2 class="h3 mb-1">{{ selected_property.name }}</h2>
-                                    <span class="property-heading-status work-pill {% if selected_property.state == 'active' %}work-pill--active{% else %}work-pill--terminal{% endif %}">{{ selected_property.get_state_display }}</span>
+                    <div class="property-command-header workspace-detail-header" data-detail-header>
+                        <a class="workspace-mobile-back btn btn-sm pom-quiet mb-3" href="{% url 'property:properties' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}">← Back to properties</a>
+                        <div class="property-heading-row workspace-detail-header-layout">
+                            <div class="property-heading-copy workspace-detail-heading-copy">
+                                <h2 class="property-heading-title workspace-detail-title h3">{{ selected_property.name }}</h2>
+                                <div class="property-heading-meta workspace-detail-meta">
+                                    <span class="work-pill {% if selected_property.state == 'active' %}work-pill--active{% else %}work-pill--terminal{% endif %}">{{ selected_property.get_state_display }}</span>
+                                    <span class="text-body-secondary">{{ selected_property.address|default:"No address provided" }}</span>
+                                    <span class="small text-body-secondary">Added {{ selected_property.created_at|date:"j M Y" }}</span>
                                 </div>
-                                <p class="text-body-secondary mb-0">{{ selected_property.address|default:"No address provided" }}</p>
                             </div>
-                            <div class="property-heading-actions">
+                            <div class="property-heading-actions workspace-detail-actions">
                                 {% if selected_property.state == "active" %}
                                     <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#{% if is_detail_route %}editPropertyModal{% else %}listEditPropertyModal{% endif %}">Edit property</button>
                                 {% else %}
@@ -94,17 +93,16 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    <div class="property-panel-area">
+                        {% if selected_property.state == "deactivated" %}<div class="property-attention"><strong>Read-only</strong><span>This property is deactivated; its records remain available.</span></div>{% endif %}
                         <section class="property-heading-description" aria-label="Property description">
                             <h3>Description</h3>
                             {% if selected_property.description %}
                                 <p class="property-description-preview mb-0" data-property-description-preview>{{ selected_property.description|linebreaksbr }}</p>
                                 <button class="property-description-open" type="button" data-bs-toggle="modal" data-bs-target="#propertyDescriptionModal" data-property-description-open hidden>Read full description</button>
                             {% else %}<p class="text-body-secondary mb-0">No description provided.</p>{% endif %}
-                            <small class="property-description-added text-body-secondary">Added {{ selected_property.created_at|date:"j M Y" }}</small>
                         </section>
-                    </div>
-                    <div class="property-panel-area">
-                        {% if selected_property.state == "deactivated" %}<div class="property-attention"><strong>Read-only</strong><span>This property is deactivated; its records remain available.</span></div>{% endif %}
                         <div class="property-related-heading">
                             <div><h3 class="h5 mb-1">Related records</h3><p class="small text-body-secondary mb-0">Issues, tasks and events for this property.</p></div>
                             {% if selected_property.state == "active" %}
@@ -151,6 +149,7 @@
 
 {% block extra_js %}
 <script src="{% static 'js/workspace-list-scroll.js' %}"></script>
+<script src="{% static 'js/workspace-header-align.js' %}"></script>
 <script src="{% static 'js/property-workspace.js' %}"></script>
 <script src="{% static 'js/task-form.js' %}"></script>
 <script src="{% static 'js/event-command-centre.js' %}"></script>

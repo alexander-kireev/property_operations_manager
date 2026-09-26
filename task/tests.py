@@ -1337,6 +1337,20 @@ class TaskViewTests(TestCase):
         self.assertContains(response, 'aria-current="true"')
         self.assertContains(response, "task-command-row list-group-item list-group-item-action is-selected")
 
+    def test_selected_task_expands_inline_until_full_record_is_requested(self):
+        task = self.create_task(title="Mobile preview")
+        self.client.force_login(self.user)
+
+        preview = self.client.get(reverse("task:tasks"), {"selected": task.pk})
+        self.assertEqual(preview.context["mobile_expanded_task_id"], task.pk)
+        self.assertFalse(preview.context["show_mobile_detail"])
+        self.assertContains(preview, f'id="taskInlineDetails{task.pk}"')
+        self.assertContains(preview, "Open record →")
+
+        full_record = self.client.get(reverse("task:tasks"), {"selected": task.pk, "open": "detail"})
+        self.assertTrue(full_record.context["show_mobile_detail"])
+        self.assertIsNone(full_record.context["mobile_expanded_task_id"])
+
     def test_tasks_view_rejects_inaccessible_selected_task(self):
         visible_task = self.create_task(title="Visible task")
         other_task = self.create_task(user=self.other_user, title="Other task")

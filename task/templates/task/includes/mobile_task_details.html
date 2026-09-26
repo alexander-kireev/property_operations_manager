@@ -1,0 +1,22 @@
+<section class="work-mobile-expanded" id="taskInlineDetails{{ task.pk }}" aria-label="Details for {{ task.title }}">
+    <p class="work-mobile-description">{{ task.description|default:"No description supplied."|linebreaksbr }}</p>
+    <dl class="work-mobile-facts">
+        <dt>Status</dt><dd>{{ task.get_state_display }}</dd>
+        <dt>Scheduled</dt><dd>{{ task.scheduled_date|date:"j M Y"|default:"Not scheduled" }}</dd>
+        <dt>Deadline</dt><dd>{{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}</dd>
+        <dt>Related to</dt><dd>{% if task.issue %}Issue: {{ task.issue.title }}{% elif task.property %}Property: {{ task.property.name }}{% else %}Standalone{% endif %}</dd>
+    </dl>
+    <div class="work-mobile-actions">
+        {% if task.state == "active" %}
+            <button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#completeTaskModal">Complete</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editTaskModal">Edit</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#dismissTaskModal">Dismiss</button>
+        {% else %}
+            <form action="{% url 'task:reactivate_task' task.pk %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" method="post" autocomplete="off">
+                {% csrf_token %}<input type="hidden" name="next" value="{{ task_workspace_url }}"><button class="btn btn-sm theme-action" type="submit">Reactivate</button>
+            </form>
+        {% endif %}
+        <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteTaskModal">Delete</button>
+        <a class="btn btn-sm btn-outline-secondary work-mobile-open" href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ task.pk }}&amp;open=detail">Open record →</a>
+    </div>
+</section>

@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const workspace = document.getElementById("eventWorkspace");
     const parameters = new URLSearchParams(window.location.search);
 
-    if (workspace && parameters.get("tab") === "details" && parameters.has("selected")) {
+    if (workspace && parameters.get("open") === "detail" && parameters.has("selected")) {
         workspace.classList.add("show-detail");
     }
 

@@ -38,6 +38,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let confirmTarget = null;
     let dragged = null;
     let toastTimer = null;
+    let workPending = false;
+    let confirmPending = false;
 
     function hideToast() {
         const toast = get("dashboardToast");
@@ -67,12 +69,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     async function send(fields) {
         const body = new URLSearchParams(fields);
-        const response = await fetch(dashboard.dataset.actionUrl, {
-            method: "POST", headers: {"X-CSRFToken": csrfToken, "Content-Type": "application/x-www-form-urlencoded"},
-            credentials: "same-origin", body,
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(recordError(result));
+        let response;
+        try {
+            response = await fetch(dashboard.dataset.actionUrl, {
+                method: "POST", headers: {"X-CSRFToken": csrfToken, "Content-Type": "application/x-www-form-urlencoded"},
+                credentials: "same-origin", body,
+            });
+        } catch {
+            throw new Error("Could not connect. Check your connection and try again.");
+        }
+        const result = await response.json().catch(() => null);
+        if (!result) throw new Error("The server could not process that request. Please try again.");
+        if (!response.ok) {
+            const error = new Error(recordError(result));
+            error.fieldErrors = result.errors || null;
+            throw error;
+        }
         return result;
     }
     async function load({keepScroll = true} = {}) {
@@ -110,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     function badge(item) {
-        if (item.priority) return `<span class="dashboard-priority ${item.priority.toLowerCase()}">${escapeHtml(item.priority)}</span>`;
+        if (item.priority) return `<span class="work-pill work-pill--priority-${item.priority_id}">${escapeHtml(item.priority)}</span>`;
         return "";
     }
     function recordMeta(item) {
@@ -125,6 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const finish = {task: "Complete", issue: "Resolve", event: "Mark occurred"}[item.kind];
         const fullUrl = `${dashboard.dataset[`${item.kind}Url`]}?selected=${item.id}&open=detail`;
         const chevron = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m5 9 7 7 7-7"/></svg>';
+        const typeCue = area === "due" ? `<span class="dashboard-type-cue"><span aria-hidden="true">${{task: "▤", issue: "◇"}[item.kind]}</span> ${item.kind === "task" ? "Task" : "Issue"}</span>` : "";
         const menuId = `dashboard-actions-${key}`;
         const actions = `<div class="dashboard-row-actions">
             <button type="button" class="dashboard-action-primary" data-action="finish">${finish}</button>
@@ -141,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>`;
         return `<article class="${area === "queue" ? "dashboard-work-row" : "dashboard-day-row"}" data-area="${area}" data-kind="${item.kind}" data-id="${item.id}" ${canDrag ? 'draggable="true"' : ""} ${area === "due" && item.due ? `data-scheduled-date="${item.due}"` : item.date ? `data-scheduled-date="${item.date}"` : ""}>
             <button class="dashboard-row-toggle" type="button" aria-expanded="${isExpanded}" aria-label="${isExpanded ? "Collapse" : "Expand"} ${escapeHtml(item.title)}">
-                <span class="dashboard-row-main"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(recordMeta(item))}</small></span>
+                <span class="dashboard-row-main"><strong>${escapeHtml(item.title)}</strong><small>${typeCue}${escapeHtml(recordMeta(item))}</small></span>
                 <span class="dashboard-row-side">${badge(item)}<span class="dashboard-row-chevron">${chevron}</span></span>
             </button>
             <div class="dashboard-row-detail" ${isExpanded ? "" : "hidden"}>
@@ -152,13 +165,17 @@ document.addEventListener("DOMContentLoaded", () => {
         </article>`;
     }
     function renderQueue() {
-        for (const type of ["task", "issue", "event"]) get("dashboard").querySelector(`[data-count="${type}"]`).textContent = data.records[type].length;
+        const items = visibleRecords();
+        for (const type of ["task", "issue", "event"]) {
+            const count = type === kind ? items.length : data.records[type].length;
+            get("dashboard").querySelector(`[data-count="${type}"]`).textContent = count;
+        }
         document.querySelectorAll("[data-kind][role=tab]").forEach((button) => button.setAttribute("aria-selected", String(button.dataset.kind === kind)));
         get("workSearch").placeholder = `Search ${kind}s`;
         const options = get("workFilter");
         options.innerHTML = filters[kind].map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
         options.value = filter;
-        const items = visibleRecords();
+        window.SearchableSelect?.refresh(options);
         get("workList").innerHTML = items.length ? items.slice(0, shown).map((item) => recordRow(item, "queue")).join("") : '<p class="dashboard-empty">No records match this search and filter.</p>';
     }
     function appendMore() {
@@ -191,6 +208,8 @@ document.addEventListener("DOMContentLoaded", () => {
         yearSelect.innerHTML = Array.from({length: 21}, (_, index) => `<option value="${year - 10 + index}">${year - 10 + index}</option>`).join("");
         monthSelect.value = String(monthNumber);
         yearSelect.value = String(year);
+        window.SearchableSelect?.refresh(monthSelect);
+        window.SearchableSelect?.refresh(yearSelect);
         const start = calendarStart();
         const lastDay = new Date(Date.UTC(year, monthNumber + 1, 0));
         const weeks = Math.ceil((lastDay.getUTCDate() + ((month.getUTCDay() + 6) % 7)) / 7);
@@ -237,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderNotes() {
         get("notesCount").textContent = data.notes.length;
         get("notesList").innerHTML = data.notes.length ? data.notes.map((note) => `<article class="dashboard-note" data-note="${note.id}">
-            ${editingNote === note.id ? `<textarea maxlength="250" aria-label="Edit note">${escapeHtml(note.content)}</textarea><div class="dashboard-note-edit-actions"><button type="button" data-note-action="cancel">Cancel</button><button type="button" data-note-action="save">Save</button></div>` : `<p>${escapeHtml(note.content)}</p><div class="dashboard-note-actions"><button type="button" data-note-action="edit" aria-label="Edit note">✎</button><button type="button" data-note-action="delete" aria-label="Delete note">×</button></div><small>${escapeHtml(note.created)}</small>`}
+            ${editingNote === note.id ? `<textarea maxlength="250" aria-label="Edit note">${escapeHtml(note.content)}</textarea><div class="dashboard-note-edit-actions"><button type="button" data-note-action="cancel">Cancel</button><button type="button" data-note-action="save">Save</button></div>` : `<p>${escapeHtml(note.content)}</p><div class="dashboard-note-actions"><button type="button" data-note-action="edit" aria-label="Edit note"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false"><path d="M12.9 1.7a1.5 1.5 0 0 1 2.1 2.1l-9.5 9.5-3.1.8.8-3.1 9.7-9.3Zm-8.8 9.9-.3 1.1 1.1-.3 8.2-8.2-.8-.8-8.2 8.2Z"/></svg></button><button type="button" class="dashboard-note-delete" data-note-action="delete" aria-label="Delete note"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false"><path d="M3.3 2.3 8 7l4.7-4.7 1 1L9 8l4.7 4.7-1 1L8 9l-4.7 4.7-1-1L7 8 2.3 3.3l1-1Z"/></svg></button></div><small>${escapeHtml(note.created)}</small>`}
         </article>`).join("") : '<p class="dashboard-empty">No notes yet.</p>';
     }
     function render() { renderQueue(); renderCalendar(); renderDay(); renderNotes(); }
@@ -264,19 +283,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function formField(name, label, value = "", type = "text") {
-        return `<label>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}" ${name === "title" ? 'maxlength="100" required' : ""}></label>`;
+        return `<label>${label}<input class="form-control" name="${name}" type="${type}" value="${escapeHtml(value)}" ${name === "title" ? 'maxlength="100" required' : ""}><span class="dashboard-field-error" data-error-for="${name}" role="alert"></span></label>`;
     }
     function selectField(name, label, choices, selectedValue) {
-        return `<label>${label}<select name="${name}">${choices.map(([value, text]) => `<option value="${escapeHtml(value)}" ${String(value) === String(selectedValue ?? "") ? "selected" : ""}>${escapeHtml(text)}</option>`).join("")}</select></label>`;
+        return `<label>${label}<select class="form-select" name="${name}">${choices.map(([value, text]) => `<option value="${escapeHtml(value)}" ${String(value) === String(selectedValue ?? "") ? "selected" : ""}>${escapeHtml(text)}</option>`).join("")}</select><span class="dashboard-field-error" data-error-for="${name}" role="alert"></span></label>`;
     }
     function workFields(type, item) {
         const properties = [["", "No property"], ...data.properties.map((property) => [property.id, property.name])];
         const priorities = [[1, "Low"], [2, "Medium"], [3, "High"], [4, "Urgent"]];
         let html = formField("title", "Title", item?.title);
-        html += `<label>Description<textarea name="description" maxlength="1000">${escapeHtml(item?.description)}</textarea></label>`;
+        html += `<label>Description<textarea class="form-control" name="description" maxlength="1000">${escapeHtml(item?.description)}</textarea><span class="dashboard-field-error" data-error-for="description" role="alert"></span></label>`;
         if (type === "task") {
             const relationship = item?.issue_id ? "issue" : item?.property_id ? "property" : "standalone";
             html += selectField("relationship_type", "Related to", [["standalone", "Standalone"], ["property", "Property"], ["issue", "Issue"]], relationship);
+            html += `<div class="dashboard-relation-placeholder" data-relation="standalone"><span>Related record</span><span class="dashboard-unlinked-field">No linked record</span></div>`;
             html += `<div data-relation="property">${selectField("property", "Property", properties, item?.property_id)}</div>`;
             html += `<div data-relation="issue">${selectField("issue", "Issue", [["", "No issue"], ...data.issues.map((issue) => [issue.id, issue.title])], item?.issue_id)}</div>`;
             html += selectField("priority", "Priority", priorities, item?.priority_id || 1);
@@ -301,13 +321,41 @@ document.addEventListener("DOMContentLoaded", () => {
         const item = id ? findRecord(type, id) : null;
         recordTarget = {type, id};
         get("workDialogHeading").textContent = `${id ? "Edit" : "Add"} ${type}`;
+        window.SearchableSelect?.destroyWithin(get("workFormFields"));
         get("workFormFields").innerHTML = workFields(type, item);
+        window.SearchableSelect?.init(get("workFormFields"));
         if (proposedDate) get("workForm").elements.namedItem("scheduled_date").value = proposedDate;
         get("workFormErrors").textContent = "";
         updateRelationshipFields();
         updateEventTimeFields();
         get("workDialog").showModal();
         get("workForm").elements.namedItem("title").focus();
+    }
+    function showWorkErrors(error) {
+        const errors = error.fieldErrors;
+        if (!errors) { get("workFormErrors").textContent = error.message; return; }
+        const summary = [...(errors.__all__ || [])];
+        let firstInvalid = null;
+        for (const [name, messages] of Object.entries(errors)) {
+            if (name === "__all__") continue;
+            const field = get("workForm").elements.namedItem(name);
+            const slot = [...get("workFormFields").querySelectorAll("[data-error-for]")].find((element) => element.dataset.errorFor === name);
+            if (!field || !slot || field.closest("[hidden]")) { summary.push(...messages); continue; }
+            slot.textContent = messages.join(" ");
+            slot.id = `workError_${name}`;
+            field.setAttribute("aria-invalid", "true");
+            field.setAttribute("aria-describedby", slot.id);
+            field.classList.add("is-invalid");
+            const trigger = field.closest(".app-select")?.querySelector(".app-select-trigger");
+            if (trigger) { trigger.setAttribute("aria-invalid", "true"); trigger.setAttribute("aria-describedby", slot.id); }
+            firstInvalid ||= field;
+        }
+        get("workFormErrors").textContent = summary.join(" ");
+        if (firstInvalid) (firstInvalid.closest(".app-select")?.querySelector(".app-select-trigger") || firstInvalid).focus();
+    }
+    function clearWorkErrors() {
+        get("workFormErrors").textContent = "";
+        get("workFormFields").querySelectorAll("[name]").forEach(clearFieldError);
     }
     function updateRelationshipFields() {
         const relation = get("workForm").elements.namedItem("relationship_type")?.value;
@@ -329,6 +377,7 @@ document.addEventListener("DOMContentLoaded", () => {
         get("confirmHeading").textContent = heading;
         const verb = action === "delete" ? "Delete" : action === "cancel" ? "Cancel" : {task: "Complete", issue: "Resolve", event: "Mark occurred"}[type];
         get("confirmText").textContent = `${verb} “${item.title}”?`;
+        get("confirmError").textContent = "";
         get("confirmDialog").showModal();
     }
     async function changeDate(type, id, date, field = "date") {
@@ -511,8 +560,26 @@ document.addEventListener("DOMContentLoaded", () => {
         if (event.target.name === "relationship_type") updateRelationshipFields();
         if (event.target.name === "all_day") updateEventTimeFields();
     });
+    function clearFieldError(field) {
+        if (!field?.name) return;
+        field.classList.remove("is-invalid");
+        field.removeAttribute("aria-invalid");
+        field.removeAttribute("aria-describedby");
+        const trigger = field.closest(".app-select")?.querySelector(".app-select-trigger");
+        trigger?.removeAttribute("aria-invalid");
+        trigger?.removeAttribute("aria-describedby");
+        const slot = [...get("workFormFields").querySelectorAll("[data-error-for]")].find((element) => element.dataset.errorFor === field.name);
+        if (slot) slot.textContent = "";
+    }
+    get("workForm").addEventListener("input", (event) => clearFieldError(event.target));
+    get("workForm").addEventListener("change", (event) => clearFieldError(event.target));
     get("workForm").addEventListener("submit", async (event) => {
         event.preventDefault();
+        const saveButton = get("workForm").querySelector('[type="submit"]');
+        if (workPending) return;
+        workPending = true;
+        clearWorkErrors();
+        saveButton.disabled = true;
         const fields = Object.fromEntries(new FormData(get("workForm")));
         fields.action = recordTarget.id ? "edit" : "add";
         fields.kind = recordTarget.type;
@@ -528,9 +595,14 @@ document.addEventListener("DOMContentLoaded", () => {
             get("workDialog").close();
             kind = recordTarget.type; filter = "all";
             await load(); message(`${label} ${operation}.`);
-        } catch (error) { get("workFormErrors").textContent = error.message; }
+        } catch (error) { showWorkErrors(error); }
+        finally { workPending = false; saveButton.disabled = false; }
     });
     get("confirmAction").addEventListener("click", async () => {
+        const confirmButton = get("confirmAction");
+        if (confirmPending) return;
+        confirmPending = true;
+        confirmButton.disabled = true;
         try {
             const {type, action} = confirmTarget;
             await send({action, kind: type, id: confirmTarget.id});
@@ -538,9 +610,17 @@ document.addEventListener("DOMContentLoaded", () => {
             const label = {task: "Task", issue: "Issue", event: "Event"}[type];
             const verb = action === "finish" ? {task: "completed", issue: "resolved", event: "marked as occurred"}[type] : action === "cancel" ? "cancelled" : "deleted";
             message(`${label} ${verb}.`);
-        } catch (error) { message(error.message, {error: true}); }
+        } catch (error) { get("confirmError").textContent = error.message; }
+        finally { confirmPending = false; confirmButton.disabled = false; }
     });
-    document.querySelectorAll("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
+    document.querySelectorAll("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => {
+        const dialog = button.closest("dialog");
+        if ((dialog.id === "workDialog" && workPending) || (dialog.id === "confirmDialog" && confirmPending)) return;
+        dialog.close();
+    }));
+    for (const [id, pending] of [["workDialog", () => workPending], ["confirmDialog", () => confirmPending]]) {
+        get(id).addEventListener("cancel", (event) => { if (pending()) event.preventDefault(); });
+    }
 
     get("noteForm").addEventListener("submit", async (event) => {
         event.preventDefault();
