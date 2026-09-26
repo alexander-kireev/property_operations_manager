@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
             value.type = isEmail ? "email" : isTelephone ? "tel" : "text";
             value.placeholder = isEmail ? "name@example.com" : isTelephone ? "+44 7700 900123" : "";
             value.inputMode = isTelephone ? "tel" : "";
-            help.hidden = !isTelephone;
+            help.hidden = !isTelephone || Boolean(value.parentElement.querySelector(".invalid-feedback"));
         }
 
         method.addEventListener("change", update);

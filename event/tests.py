@@ -786,6 +786,19 @@ class EventViewTests(EventTestMixin, TestCase):
         self.assertIn("scheduled_date", response.context["add_event_form"].errors)
         self.assertFalse(Event.objects.exists())
 
+    def test_time_guidance_is_hidden_when_time_has_validation_error(self):
+        post_response = self.client.post(
+            reverse("event:add_event"),
+            self.valid_form_data(all_day="", start_time="not-a-time"),
+        )
+        response = self.client.get(post_response.url)
+
+        self.assertIn("start_time", response.context["add_event_form"].errors)
+        self.assertContains(
+            response,
+            '<p class="form-text mt-0 mb-0" hidden>Use 24-hour time (HH:MM)',
+        )
+
     def test_invalid_initial_contact_creates_no_event(self):
         other_contact = self.create_contact(
             self.create_user("bob@example.com"), "Other"

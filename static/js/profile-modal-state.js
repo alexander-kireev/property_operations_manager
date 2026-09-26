@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
             field.removeAttribute("aria-invalid");
         });
         form.querySelectorAll(".invalid-feedback, .alert-danger").forEach((error) => error.remove());
+        form.querySelectorAll("[data-validation-help]").forEach((help) => { help.hidden = false; });
         form.removeAttribute("data-preserve-restored-email");
     };
 

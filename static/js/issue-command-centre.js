@@ -2,9 +2,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const workspace = document.getElementById("issueWorkspace");
     const parameters = new URLSearchParams(window.location.search);
 
-    if (workspace && parameters.has("selected")) {
+    if (workspace && ["detail", "edit"].includes(parameters.get("open"))) {
         workspace.classList.add("show-detail");
     }
+
+    document.querySelectorAll(".issue-list-row[aria-expanded]").forEach((row) => {
+        row.addEventListener("click", (event) => {
+            if (!window.matchMedia("(max-width: 991.98px)").matches || event.button !== 0 ||
+                event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            const expanded = row.nextElementSibling;
+            if (expanded?.classList.contains("work-mobile-expanded")) {
+                event.preventDefault();
+                expanded.hidden = !expanded.hidden;
+                row.setAttribute("aria-expanded", String(!expanded.hidden));
+            }
+        });
+    });
 
     document.querySelectorAll("[data-no-task-toggle]").forEach((element) => {
         element.addEventListener("click", (event) => event.stopPropagation());

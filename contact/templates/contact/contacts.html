@@ -3,7 +3,7 @@
 
 {% block title %}Contacts | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary contact-command-page{% endblock %}
-{% block main_class %}contact-command-main flex-grow-1 py-3{% endblock %}
+{% block main_class %}contact-command-main flex-grow-1 app-main{% endblock %}
 
 {% block content %}
 <div class="container-xl h-100">
@@ -19,22 +19,22 @@
                 </div>
             </div>
         {% else %}
-            <div class="contact-workspace row g-0{% if show_mobile_detail %} show-detail{% endif %}" id="contactWorkspace">
+            <div class="contact-workspace row g-0{% if show_mobile_detail %} show-detail{% endif %}" id="contactWorkspace" data-align-headers data-align-from="992">
                 <aside class="contact-list-column col-lg-4 border-end" aria-label="Contact results">
                     <div class="contact-pane">
-                        <form class="contact-list-controls border-bottom p-3" method="get" autocomplete="off">
+                        <form class="contact-list-controls workspace-list-controls border-bottom p-3" data-list-header method="get" autocomplete="off">
                             <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
                                 <h1 class="h5 mb-0">Contacts</h1>
-                                <button class="btn btn-sm theme-action px-3" type="button" data-bs-toggle="modal" data-bs-target="#addContactModal">+ Add contact</button>
+                                <button class="btn btn-sm theme-action work-add-button" type="button" data-bs-toggle="modal" data-bs-target="#addContactModal">+ Add contact</button>
                             </div>
 
-                            <div class="contact-local-control-row">
+                            <div class="workspace-control-row">
                                 <label class="visually-hidden" for="contactSearch">Search contacts</label>
                                 <input class="form-control form-control-sm" id="contactSearch" name="search" type="search" value="{{ search }}" placeholder="Search contacts">
                                 <button class="btn btn-sm theme-action" type="submit">Apply</button>
                             </div>
 
-                            <div class="contact-local-control-row contact-local-filter-row mt-2">
+                            <div class="workspace-control-row mt-2">
                                 <label class="visually-hidden" for="contactSort">Sort contacts</label>
                                 <select class="form-select form-select-sm" id="contactSort" name="sort">
                                     <option value="name" {% if sort == "name" %}selected{% endif %}>Name: A–Z</option>
@@ -49,15 +49,11 @@
                                 </select>
                             </div>
 
-                            {% if has_filters %}
-                                <div class="mt-2">
-                                    <a class="command-filter-clear" href="{% url 'contact:contacts' %}">Clear all</a>
-                                </div>
-                            {% endif %}
                         </form>
 
                         {% if page_obj.object_list %}
                             <div class="contact-command-list list-group list-group-flush" aria-label="Contacts" data-workspace-scroll-list>
+                                {% if has_filters %}<div class="workspace-list-filter-summary"><a class="command-filter-clear" href="{% url 'contact:contacts' %}">Clear all</a></div>{% endif %}
                                 {% for contact in page_obj %}
                                     <a
                                         class="contact-command-row list-group-item list-group-item-action{% if contact == selected_contact %} is-selected{% endif %}{% if contact.state != 'active' %} terminated{% endif %}"
@@ -103,17 +99,17 @@
                 <section class="contact-detail-column col-lg-8" aria-label="Selected contact">
                     <div class="contact-pane">
                         {% if selected_contact %}
-                            <header class="contact-detail-header">
-                                <a class="contact-mobile-back btn btn-sm pom-quiet mb-3" href="{% url 'contact:contacts' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}">← Back to contacts</a>
-                                <div class="contact-detail-header-layout">
-                                    <div class="contact-detail-heading-copy">
-                                        <h2 class="contact-detail-title h3" title="{{ selected_contact }}">{{ selected_contact }}</h2>
-                                        <div class="contact-detail-meta">
-                                            <span class="badge {% if selected_contact.state == 'active' %}text-bg-success-subtle border border-success-subtle text-success-emphasis{% else %}bg-secondary-subtle border text-secondary-emphasis{% endif %}">{{ selected_contact.get_state_display }}</span>
+                            <header class="contact-detail-header workspace-detail-header" data-detail-header>
+                                <a class="workspace-mobile-back btn btn-sm pom-quiet mb-3" href="{% url 'contact:contacts' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}">← Back to contacts</a>
+                                <div class="contact-detail-header-layout workspace-detail-header-layout">
+                                    <div class="contact-detail-heading-copy workspace-detail-heading-copy">
+                                        <h2 class="contact-detail-title workspace-detail-title h3" title="{{ selected_contact }}">{{ selected_contact }}</h2>
+                                        <div class="contact-detail-meta workspace-detail-meta">
+                                            <span class="work-pill {% if selected_contact.state == 'active' %}work-pill--active{% else %}work-pill--terminal{% endif %}">{{ selected_contact.get_state_display }}</span>
                                             <span class="small text-body-secondary">Added {{ selected_contact.created_at|date:"j M Y" }}</span>
                                         </div>
                                     </div>
-                                    <div class="contact-detail-actions">
+                                    <div class="contact-detail-actions workspace-detail-actions">
                                         {% if selected_contact.state == "active" %}
                                             <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editContactModal">Edit contact</button>
                                         {% else %}
@@ -252,6 +248,7 @@
 
 {% block extra_js %}
     <script src="{% static 'js/workspace-list-scroll.js' %}"></script>
+    <script src="{% static 'js/workspace-header-align.js' %}"></script>
     <script src="{% static 'js/contact-method-form.js' %}"></script>
     <script src="{% static 'js/note-board.js' %}"></script>
     {% if open_modal %}<span hidden data-modal-auto-open="{{ open_modal }}"></span>{% endif %}

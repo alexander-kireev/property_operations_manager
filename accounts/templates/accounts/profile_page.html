@@ -171,7 +171,7 @@
                         {% for error in password_form.new_password1.errors %}
                             <div class="invalid-feedback d-block">{{ error }}</div>
                         {% endfor %}
-                        <div class="form-text">Use at least eight characters and avoid common or entirely numeric passwords.</div>
+                        <div class="form-text" data-validation-help{% if password_form.new_password1.errors or password_form.new_password2.errors %} hidden{% endif %}>Use at least eight characters and avoid common or entirely numeric passwords.</div>
                     </div>
                     <div>
                         <label class="form-label" for="{{ password_form.new_password2.id_for_label }}">Confirm new password</label>

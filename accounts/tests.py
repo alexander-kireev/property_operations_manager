@@ -894,6 +894,7 @@ class UserAccountManagementTests(TestCase):
         self.assertTrue(response.context["form"].errors)
         self.assertIsNone(response.context["form"]["new_password1"].value())
         self.assertIsNone(response.context["form"]["new_password2"].value())
+        self.assertNotContains(response, 'class="form-text"')
 
         user.refresh_from_db()
         self.assertTrue(user.check_password(self.USER_1["password"]))
@@ -922,6 +923,10 @@ class UserAccountManagementTests(TestCase):
         self.assertIsNone(response.context["password_form"]["old_password"].value())
         self.assertIsNone(response.context["password_form"]["new_password1"].value())
         self.assertEqual(response.context["open_modal"], "changePasswordModal")
+        self.assertContains(response, 'data-validation-help hidden')
+
+        fresh_response = self.client.get(reverse("accounts:profile_page"))
+        self.assertContains(fresh_response, 'data-validation-help>Use at least eight characters')
 
         user.refresh_from_db()
         self.assertTrue(user.check_password(self.USER_1["password"]))

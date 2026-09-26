@@ -383,6 +383,16 @@ class IssueViewTests(IssueTestMixin, TestCase):
         self.assertEqual(list(response.context["selected_tasks"]), [task])
         self.assertEqual(response.context["active_tab"], "tasks")
 
+    def test_selected_issue_expands_inline_until_full_record_is_requested(self):
+        preview = self.client.get(reverse("issue:issues"), {"selected": self.issue.pk})
+        self.assertEqual(preview.context["mobile_expanded_issue_id"], self.issue.pk)
+        self.assertContains(preview, f'id="issueInlineDetails{self.issue.pk}"')
+        self.assertContains(preview, "Open record →")
+
+        full_record = self.client.get(reverse("issue:issues"), {"selected": self.issue.pk, "open": "detail"})
+        self.assertIsNone(full_record.context["mobile_expanded_issue_id"])
+        self.assertNotContains(full_record, f'id="issueInlineDetails{self.issue.pk}"')
+
     def test_genuine_empty_state_uses_full_width_onboarding(self):
         self.issue.delete()
 

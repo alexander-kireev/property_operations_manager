@@ -299,8 +299,11 @@ def _task_list_context(
             else _task_workspace_url(request)
         ),
         "task_list_url": _task_workspace_url(request),
-        "show_mobile_detail": bool(request.GET.get("selected")) or (
-            open_modal == "editTaskModal"
+        "show_mobile_detail": request.GET.get("open") in ("detail", "edit") or open_modal == "editTaskModal",
+        "mobile_expanded_task_id": (
+            selected_task.pk if selected_task is not None
+            and request.GET.get("selected") == str(selected_task.pk)
+            and request.GET.get("open") not in ("detail", "edit") else None
         ),
         "relationship_moved": (
             request.GET.get("moved") == "1"

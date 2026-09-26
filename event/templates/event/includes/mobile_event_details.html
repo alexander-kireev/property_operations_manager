@@ -28,5 +28,6 @@
             <button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#reactivateEventModal">Reactivate</button>
         {% endif %}
         <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteEventModal">Delete event</button>
+        <a class="btn btn-sm btn-outline-secondary work-mobile-open" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ event.pk }}&amp;tab=details&amp;open=detail">Open record →</a>
     </div>
 </section>

@@ -26,7 +26,7 @@
         <div class="page-shell">
         {% include "includes/navbar.html" %}
 
-        <main class="{% block main_class %}flex-grow-1 py-5{% endblock %}">
+        <main class="{% block main_class %}flex-grow-1 {% if request.user.is_authenticated %}app-main{% else %}py-5{% endif %}{% endblock %}">
             {% block content %}{% endblock %}
         </main>
 

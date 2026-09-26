@@ -40,7 +40,7 @@
         {{ event_form.end_time }}
         {% for error in event_form.end_time.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     </div>
-    <div class="col-12"><p class="form-text mt-0 mb-0">Use 24-hour time (HH:MM), for example 09:30.</p></div>
+    <div class="col-12"><p class="form-text mt-0 mb-0"{% if event_form.start_time.errors or event_form.end_time.errors %} hidden{% endif %}>Use 24-hour time (HH:MM), for example 09:30.</p></div>
     <div class="col-md-6">
         <div class="form-check">
             {{ event_form.user_participation_required }}

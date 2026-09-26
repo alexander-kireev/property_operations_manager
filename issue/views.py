@@ -284,6 +284,11 @@ def _issue_list_context(
     return {
         "page_obj": page_obj,
         "selected_issue": selected_issue,
+        "mobile_expanded_issue_id": (
+            selected_issue.pk if selected_issue is not None
+            and request.GET.get("selected") == str(selected_issue.pk)
+            and request.GET.get("open") not in ("detail", "edit") else None
+        ),
         "selected_tasks": selected_tasks,
         "active_task_count": selected_tasks.filter(state=Task.State.ACTIVE).count(),
         "linked_task_count": selected_tasks.count(),

@@ -1,9 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
     const controls = new WeakMap();
     let openControl = null;
+    let nextId = 0;
 
-    document.querySelectorAll("select.form-select:not([multiple])").forEach((select, number) => {
-        if (select.hasAttribute("data-native-select") || select.size > 1) return;
+    function initialize(root = document) {
+    root.querySelectorAll("select.form-select:not([multiple])").forEach((select) => {
+        if (controls.has(select) || select.hasAttribute("data-native-select") || select.size > 1) return;
+        const listeners = new AbortController();
 
         let wrapper = select.closest("[data-searchable-select]");
         if (!wrapper) {
@@ -13,12 +16,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         wrapper.classList.add("app-select");
 
-        if (!select.id) select.id = `app_select_${number}`;
+        if (!select.id) select.id = `app_select_${nextId++}`;
         const label = [...document.querySelectorAll("label[for]")].find(
             (candidate) => candidate.htmlFor === select.id
         );
-        const modal = wrapper.closest(".modal");
-        const options = [...select.options];
+        const modal = wrapper.closest(".modal, dialog");
+        let options = [...select.options];
         const searchable = wrapper.hasAttribute("data-searchable-select") ||
             ["property", "issue"].includes(select.name) || options.length > 12;
         const trigger = document.createElement("button");
@@ -62,6 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
         popup.append(results);
 
         function sync() {
+            options = [...select.options];
             const selected = select.selectedOptions[0];
             trigger.textContent = selected?.textContent.trim() || "Choose an option";
             trigger.title = trigger.textContent;
@@ -208,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        trigger.addEventListener("click", () => popup.hidden ? open() : close());
+        trigger.addEventListener("click", () => popup.hidden ? open() : close(), {signal: listeners.signal});
         trigger.addEventListener("keydown", (event) => {
             if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
@@ -226,18 +230,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
                 if (match >= 0) markActive(match);
             }
-        });
-        search?.addEventListener("input", () => render(search.value));
-        search?.addEventListener("keydown", handleNavigation);
+        }, {signal: listeners.signal});
+        search?.addEventListener("input", () => render(search.value), {signal: listeners.signal});
+        search?.addEventListener("keydown", handleNavigation, {signal: listeners.signal});
         document.addEventListener("pointerdown", (event) => {
             if (!wrapper.contains(event.target) && !popup.contains(event.target)) close();
-        });
+        }, {signal: listeners.signal});
         document.addEventListener("scroll", (event) => {
             if (event.target !== results) positionPopup();
-        }, true);
-        window.addEventListener("resize", positionPopup);
-        modal?.addEventListener("hidden.bs.modal", close);
-        select.addEventListener("change", sync);
+        }, {capture: true, signal: listeners.signal});
+        window.addEventListener("resize", positionPopup, {signal: listeners.signal});
+        modal?.addEventListener(modal.tagName === "DIALOG" ? "close" : "hidden.bs.modal", close, {signal: listeners.signal});
+        select.addEventListener("change", sync, {signal: listeners.signal});
 
         wrapper.append(trigger);
         (modal || document.body).append(popup);
@@ -246,12 +250,33 @@ document.addEventListener("DOMContentLoaded", () => {
         select.setAttribute("aria-hidden", "true");
         if (label) label.htmlFor = trigger.id;
         sync();
-        controls.set(select, {refresh: sync});
+        controls.set(select, {
+            refresh() { sync(); if (!popup.hidden) render(search?.value || ""); },
+            destroy() {
+                close();
+                listeners.abort();
+                popup.remove();
+                trigger.remove();
+                select.style.display = "";
+                select.removeAttribute("aria-hidden");
+                select.removeAttribute("tabindex");
+                if (label) label.htmlFor = select.id;
+            },
+        });
     });
+    }
 
     window.SearchableSelect = {
+        init: initialize,
         refresh(select) {
             controls.get(select)?.refresh();
         },
+        destroyWithin(root) {
+            root.querySelectorAll("select.form-select:not([multiple])").forEach((select) => {
+                controls.get(select)?.destroy();
+                controls.delete(select);
+            });
+        },
     };
+    initialize();
 });

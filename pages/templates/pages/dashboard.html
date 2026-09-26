@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}Dashboard | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary dashboard-page{% endblock %}
-{% block main_class %}flex-grow-1 dashboard-main{% endblock %}
+{% block main_class %}flex-grow-1 app-main dashboard-main{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">{% endblock %}
 {% block content %}
 <div class="dashboard-shell" id="dashboard" data-data-url="{% url 'pages:dashboard_data' %}" data-action-url="{% url 'pages:dashboard_action' %}" data-task-url="{% url 'task:tasks' %}" data-issue-url="{% url 'issue:issues' %}" data-event-url="{% url 'event:events' %}">
@@ -13,11 +13,11 @@
             <header class="dashboard-panel-heading">
                 <h2 id="operationsHeading">Operations</h2>
                 <div class="dashboard-add-wrap">
-                    <button id="dashboardAddToggle" class="dashboard-add-toggle" type="button" aria-expanded="false" aria-controls="dashboardAddMenu">+ Add <span aria-hidden="true">▾</span></button>
+                    <button id="dashboardAddToggle" class="dashboard-add-toggle" type="button" aria-expanded="false" aria-controls="dashboardAddMenu"><span class="dashboard-add-plus" aria-hidden="true">+</span> Add <span class="dashboard-add-caret" aria-hidden="true"></span></button>
                     <div id="dashboardAddMenu" class="dashboard-add-menu" aria-label="Add work item" hidden>
-                        <button type="button" data-add="task">Task</button>
-                        <button type="button" data-add="issue">Issue</button>
-                        <button type="button" data-add="event">Event</button>
+                        <button type="button" data-add="task">Add task</button>
+                        <button type="button" data-add="issue">Add issue</button>
+                        <button type="button" data-add="event">Add event</button>
                     </div>
                 </div>
             </header>
@@ -28,9 +28,9 @@
             </div>
             <div class="dashboard-filters">
                 <label class="visually-hidden" for="workSearch">Search work items</label>
-                <input id="workSearch" type="search" placeholder="Search tasks">
+                <input class="form-control form-control-sm" id="workSearch" type="search" placeholder="Search tasks">
                 <label class="visually-hidden" for="workFilter">Filter work items</label>
-                <select id="workFilter"></select>
+                <select class="form-select form-select-sm" id="workFilter"></select>
             </div>
             <div class="dashboard-work-list" id="workList" aria-live="polite"></div>
         </section>
@@ -40,9 +40,9 @@
             <div class="dashboard-calendar-toolbar">
                 <div class="dashboard-calendar-jump">
                     <label class="visually-hidden" for="calendarMonth">Calendar month</label>
-                    <select id="calendarMonth" aria-label="Calendar month"></select>
+                    <select class="form-select form-select-sm" id="calendarMonth" aria-label="Calendar month"></select>
                     <label class="visually-hidden" for="calendarYear">Calendar year</label>
-                    <select id="calendarYear" aria-label="Calendar year"></select>
+                    <select class="form-select form-select-sm" id="calendarYear" aria-label="Calendar year"></select>
                     <button id="calendarToday" type="button">Today</button>
                 </div>
                 <div class="dashboard-calendar-actions">
@@ -68,9 +68,9 @@
             </section>
             <section class="dashboard-notes" id="notesView" role="tabpanel" aria-labelledby="notesViewToggle" hidden>
                 <div id="notesList" class="dashboard-notes-list"></div>
-                <form id="noteForm" class="dashboard-note-composer">
+                <form id="noteForm" class="dashboard-note-composer" autocomplete="off">
                     <label class="visually-hidden" for="noteContent">New note</label>
-                    <input id="noteContent" name="content" maxlength="250" placeholder="Write a note…" required>
+                    <input id="noteContent" name="content" maxlength="250" placeholder="Write a note…" autocomplete="off" required>
                     <button type="submit">Add note</button>
                 </form>
             </section>
@@ -94,7 +94,8 @@
 </dialog>
 <dialog id="confirmDialog" class="dashboard-dialog">
     <header><h2 id="confirmHeading">Confirm action</h2><button type="button" data-close-dialog aria-label="Close">×</button></header>
-    <p id="confirmText" class="dashboard-confirm-text"></p>
+        <p id="confirmText" class="dashboard-confirm-text"></p>
+        <p id="confirmError" class="dashboard-form-errors" role="alert"></p>
     <footer><button type="button" data-close-dialog>Cancel</button><button type="button" id="confirmAction" class="dashboard-solid-button">Confirm</button></footer>
 </dialog>
 {% endblock %}

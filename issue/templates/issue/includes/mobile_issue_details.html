@@ -1,0 +1,20 @@
+<section class="work-mobile-expanded" id="issueInlineDetails{{ issue.pk }}" aria-label="Details for {{ issue.title }}">
+    <p class="work-mobile-description">{{ issue.description|default:"No description supplied."|linebreaksbr }}</p>
+    <dl class="work-mobile-facts">
+        <dt>Status</dt><dd>{{ issue.get_state_display }}</dd>
+        <dt>Resolve by</dt><dd>{{ issue.resolution_deadline|date:"j M Y"|default:"No deadline" }}</dd>
+        <dt>Property</dt><dd>{{ issue.property.name|default:"None" }}</dd>
+        <dt>Linked tasks</dt><dd>{{ linked_task_count }}</dd>
+    </dl>
+    <div class="work-mobile-actions">
+        {% if issue.state == "active" %}
+            <button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#resolveIssueModal">Resolve</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editIssueModal">Edit</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#dismissIssueModal">Dismiss</button>
+        {% else %}
+            <button class="btn btn-sm theme-action" type="button" data-bs-toggle="modal" data-bs-target="#reactivateIssueModal">Reactivate</button>
+        {% endif %}
+        <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteIssueModal">Delete</button>
+        <a class="btn btn-sm btn-outline-secondary work-mobile-open" href="?{% if navigation_query %}{{ navigation_query }}&amp;{% endif %}selected={{ issue.pk }}&amp;open=detail">Open record →</a>
+    </div>
+</section>

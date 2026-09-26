@@ -4,7 +4,7 @@
 
 {% block title %}Tasks | Property Operations Manager{% endblock %}
 {% block body_class %}bg-body-tertiary task-command-page{% endblock %}
-{% block main_class %}task-command-main flex-grow-1 py-3{% endblock %}
+{% block main_class %}task-command-main flex-grow-1 app-main{% endblock %}
 
 {% block content %}
 <div class="container-xl h-100">
@@ -137,6 +137,7 @@
                                         class="task-command-row list-group-item list-group-item-action{% if task == selected_task %} is-selected{% endif %}{% if task.state != 'active' %} terminated{% endif %}"
                                         href="{% if navigation_query %}?{{ navigation_query }}&amp;{% else %}?{% endif %}selected={{ task.pk }}"
                                         data-workspace-scroll-row
+                                        {% if mobile_expanded_task_id == task.pk %}aria-expanded="true" aria-controls="taskInlineDetails{{ task.pk }}"{% endif %}
                                         {% if task == selected_task %}aria-current="true"{% endif %}
                                     >
                                         <span class="d-flex justify-content-between align-items-start gap-3">
@@ -154,9 +155,11 @@
                                                 <span class="task-command-deadline">
                                                     {{ task.completion_deadline|date:"j M Y"|default:"No deadline" }}
                                                 </span>
+                                                <span class="work-mobile-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m5 9 7 7 7-7"/></svg></span>
                                             </span>
                                         </span>
                                     </a>
+                                    {% if mobile_expanded_task_id == task.pk %}{% include "task/includes/mobile_task_details.html" %}{% endif %}
                                 {% endfor %}
                             </div>
 
